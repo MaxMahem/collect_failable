@@ -33,8 +33,8 @@ assert_eq!(ok.unwrap(), HashMap::from([(1, 2), (2, 3)]));
 
 Licensed under either of
 
- * [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
- * [MIT license](http://opensource.org/licenses/MIT)
+ * [Apache License, Version 2.0](LICENSE-APACHE.md)
+ * [MIT license](LICENSE-MIT.md)
 
 at your option.
 
