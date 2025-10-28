@@ -28,6 +28,17 @@ pub struct KeyCollision<K> {
     pub key: K,
 }
 
+pub(crate) trait SizeGuess {
+    fn size_guess(&self) -> usize;
+}
+
+impl<I: Iterator> SizeGuess for I {
+    fn size_guess(&self) -> usize {
+        let (low, high) = self.size_hint();
+        high.unwrap_or(low)
+    }
+}
+
 #[cfg(feature = "hash_map")]
 pub mod hash_map {
     use std::collections::hash_map::Entry;
@@ -39,15 +50,17 @@ pub mod hash_map {
 
     use crate::{KeyCollision, TryFromIterator};
 
+    use super::SizeGuess;
+
     impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
         type Error = KeyCollision<K>;
 
         /// Converts an iterator of key-value pairs into a hash-map, failing if a key would collide.
-        /// 
-        /// Note: In the case of a collision, technically the key returned by [KeyCollision] is the 
+        ///
+        /// Note: In the case of a collision, technically the key returned by [KeyCollision] is the
         /// first key that was seen during iteration, not the second key that collided. This may be
         /// relevant for keys that are [Eq] but still have different values.
-        /// 
+        ///
         /// # Example
         ///
         /// ```rust
@@ -62,8 +75,7 @@ pub mod hash_map {
         where
             Self: Sized,
         {
-            let (low, high) = iter.size_hint();
-            let size_guess = high.unwrap_or(low);
+            let size_guess = iter.size_guess();
 
             iter.try_fold(
                 HashMap::with_capacity(size_guess),
@@ -96,11 +108,11 @@ pub mod btree_map {
         type Error = KeyCollision<K>;
 
         /// Converts an iterator of key-value pairs into a hash-map, failing if a key would collide.
-        /// 
-        /// Note: In the case of a collision, technically the key returned by [KeyCollision] is the 
+        ///
+        /// Note: In the case of a collision, technically the key returned by [KeyCollision] is the
         /// first key that was seen during iteration, not the second key that collided. This may be
         /// relevant for keys that are [Eq] but still have different values.
-        /// 
+        ///
         /// # Example
         ///
         /// ```rust
@@ -134,12 +146,29 @@ pub mod hashbrown {
 
     use crate::{KeyCollision, TryFromIterator};
 
+    use super::SizeGuess;
+
     impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
         type Error = KeyCollision<K>;
 
+        /// Converts an iterator of key-value pairs into a hash-map, failing if a key would collide.
+        ///
+        /// Note: In the case of a collision, technically the key returned by [KeyCollision] is the
+        /// first key that was seen during iteration, not the second key that collided. This may be
+        /// relevant for keys that are [Eq] but still have different values.
+        ///
+        /// # Example
+        ///
+        /// ```rust
+        /// use hashbrown::HashMap;
+        /// use collect_failable::TryFromIterator;
+        ///
+        /// let result = HashMap::try_from_iter([(1, 2), (1, 3)].into_iter());
+        /// assert!(result.is_err());
+        /// assert_eq!(result.unwrap_err().key, 1);
+        /// ```
         fn try_from_iter<I: Iterator<Item = (K, V)>>(mut iter: I) -> Result<Self, Self::Error> {
-            let (low, high) = iter.size_hint();
-            let size_guess = high.unwrap_or(low);
+            let size_guess = iter.size_guess();
 
             iter.try_fold(
                 HashMap::with_capacity(size_guess),

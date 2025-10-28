@@ -24,7 +24,7 @@ assert_eq!(err.unwrap_err().key, 1);
 
 // or any iterator via the FailableCollectExt trait
 // like normal collect a turbofish or type ascription is often necessary to disambiguate
-let ok = [(1, 2), (2, 3)].into_iter().try_collect_ext::<HashMap<_, _>>();
+let ok = [(1, 2), (2, 3)].into_iter().try_collect_ex::<HashMap<_, _>>();
 assert!(ok.is_ok());
 assert_eq!(ok.unwrap(), HashMap::from([(1, 2), (2, 3)]));
 ```

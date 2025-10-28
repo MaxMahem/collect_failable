@@ -1,7 +1,7 @@
 use crate::TryFromIterator;
 
 /// Extends [Iterator] with a failable collect method.
-pub trait FailableCollectExt {
+pub trait FailableCollectEx {
     type Item;
 
     /// Collects the iterator into a container, returning an error if construcing the container fails.
@@ -18,25 +18,25 @@ pub trait FailableCollectExt {
     /// use std::collections::HashMap;
     /// use collect_failable::{FailableCollectExt, TryFromIterator};
     ///
-    /// let result = [(1, 2), (2, 3)].into_iter().try_collect_ext::<HashMap<_, _>>();
+    /// let result = [(1, 2), (2, 3)].into_iter().try_collect_ex::<HashMap<_, _>>();
     /// assert!(result.is_ok());
     ///
-    /// let result = [(1, 2), (1, 3)].into_iter().try_collect_ext::<HashMap<_, _>>();
+    /// let result = [(1, 2), (1, 3)].into_iter().try_collect_ex::<HashMap<_, _>>();
     /// assert!(result.is_err());
     /// ```
-    fn try_collect_ext<C>(self) -> Result<C, C::Error>
+    fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where
         C: TryFromIterator<Self::Item>,
         Self: Sized;
 }
 
-impl<I, T> FailableCollectExt for I
+impl<I, T> FailableCollectEx for I
 where
     I: Iterator<Item = T>,
 {
     type Item = T;
 
-    fn try_collect_ext<C>(self) -> Result<C, C::Error>
+    fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where
         C: TryFromIterator<Self::Item>,
     {
@@ -46,7 +46,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::FailableCollectExt;
+    use crate::FailableCollectEx;
 
     use std::collections::HashMap;
 
@@ -56,7 +56,7 @@ mod tests {
 
         let try_collect = [(1, 2), (2, 3)]
             .into_iter()
-            .try_collect_ext::<HashMap<_, _>>();
+            .try_collect_ex::<HashMap<_, _>>();
 
         assert!(try_collect.is_ok());
         assert_eq!(collect, try_collect.unwrap());
@@ -66,7 +66,7 @@ mod tests {
     fn failable_collect_collision_fails() {
         let try_collect = [(1, 2), (1, 3)]
             .into_iter()
-            .try_collect_ext::<HashMap<_, _>>();
+            .try_collect_ex::<HashMap<_, _>>();
 
         assert!(try_collect.is_err());
 
