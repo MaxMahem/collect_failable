@@ -16,6 +16,7 @@ dependencies = [
  "derive_more",
  "fluent_result",
  "hashbrown",
+ "size_guess",
  "tap",
  "thiserror",
 ]
@@ -85,6 +86,11 @@ checksum = "ce25767e7b499d1b604768e7cde645d14cc8584231ea6b295e9c9eb22c02e1d1"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "size_guess"
+version = "0.1.0"
+source = "git+https://github.com/MaxMahem/size_guess.git#fdff68f477bef256135ee90cbe2dcc44888870f6"
 
 [[package]]
 name = "syn"

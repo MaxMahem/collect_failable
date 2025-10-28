@@ -28,17 +28,6 @@ pub struct KeyCollision<K> {
     pub key: K,
 }
 
-pub(crate) trait SizeGuess {
-    fn size_guess(&self) -> usize;
-}
-
-impl<I: Iterator> SizeGuess for I {
-    fn size_guess(&self) -> usize {
-        let (low, high) = self.size_hint();
-        high.unwrap_or(low)
-    }
-}
-
 #[cfg(feature = "hash_map")]
 pub mod hash_map {
     use std::collections::hash_map::Entry;
@@ -46,11 +35,10 @@ pub mod hash_map {
     use std::hash::Hash;
 
     use fluent_result::IntoResult;
+    use size_guess::SizeGuess;
     use tap::Pipe;
 
     use crate::{KeyCollision, TryFromIterator};
-
-    use super::SizeGuess;
 
     impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
         type Error = KeyCollision<K>;
@@ -142,11 +130,10 @@ pub mod hashbrown {
     use fluent_result::IntoResult;
     use hashbrown::hash_map::Entry;
     use hashbrown::HashMap;
+    use size_guess::SizeGuess;
     use tap::Pipe;
 
     use crate::{KeyCollision, TryFromIterator};
-
-    use super::SizeGuess;
 
     impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
         type Error = KeyCollision<K>;
