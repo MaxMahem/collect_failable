@@ -42,6 +42,22 @@ pub mod hash_map {
     impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
         type Error = KeyCollision<K>;
 
+        /// Converts an iterator of key-value pairs into a hash-map, failing if a key would collide.
+        /// 
+        /// Note: In the case of a collision, technically the key returned by [KeyCollision] is the 
+        /// first key that was seen during iteration, not the second key that collided. This may be
+        /// relevant for keys that are [Eq] but still have different values.
+        /// 
+        /// # Example
+        ///
+        /// ```rust
+        /// use std::collections::HashMap;
+        /// use collect_failable::TryFromIterator;
+        ///
+        /// let result = HashMap::try_from_iter([(1, 2), (1, 3)].into_iter());
+        /// assert!(result.is_err());
+        /// assert_eq!(result.unwrap_err().key, 1);
+        /// ```
         fn try_from_iter<I: Iterator<Item = (K, V)>>(mut iter: I) -> Result<Self, Self::Error>
         where
             Self: Sized,
@@ -79,6 +95,22 @@ pub mod btree_map {
     impl<K: Eq + Hash + Ord, V> TryFromIterator<(K, V)> for BTreeMap<K, V> {
         type Error = KeyCollision<K>;
 
+        /// Converts an iterator of key-value pairs into a hash-map, failing if a key would collide.
+        /// 
+        /// Note: In the case of a collision, technically the key returned by [KeyCollision] is the 
+        /// first key that was seen during iteration, not the second key that collided. This may be
+        /// relevant for keys that are [Eq] but still have different values.
+        /// 
+        /// # Example
+        ///
+        /// ```rust
+        /// use std::collections::BTreeMap;
+        /// use collect_failable::TryFromIterator;
+        ///
+        /// let result = BTreeMap::try_from_iter([(1, 2), (1, 3)].into_iter());
+        /// assert!(result.is_err());
+        /// assert_eq!(result.unwrap_err().key, 1);
+        /// ```
         fn try_from_iter<I: Iterator<Item = (K, V)>>(mut iter: I) -> Result<Self, Self::Error> {
             iter.try_fold(BTreeMap::new(), |mut map, (k, v)| match map.entry(k) {
                 Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
