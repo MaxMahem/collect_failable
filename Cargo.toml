@@ -1,0 +1,25 @@
+[package]
+name = "collect_failable"
+version = "0.1.0"
+edition = "2021"
+description = "A trait for collecting values into a container which has an invariant to uphold and whose construction may fail"
+repository = "https://github.com/MaxMahem/collect_failable"
+keywords = ["iterator", "collect", "container"]
+authors = ["Austin Stanley <maxtmahem@gmail>"]
+license = "MIT OR Apache-2.0"
+
+[features]
+hash_map = ["tap", "fluent_result"]
+hash_set = ["tap", "fluent_result"]
+btree_map = ["tap", "fluent_result"]
+hash_brown = ["tap", "fluent_result", "hashbrown"]
+
+[dependencies]
+tap = { version = "1.0.1", optional = true }
+fluent_result = { git = "https://github.com/MaxMahem/fluent_result.git", optional = true }
+thiserror = { version = "2.0.17" }
+hashbrown = { version = "0.16.0", optional = true }
+derive_more = { version = "2.0.1", features = ["constructor"] }
+
+[dev-dependencies]
+collect_failable = { path = ".", features = ["hash_map", "btree_map", "hash_brown", "hash_set"] }
