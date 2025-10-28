@@ -46,13 +46,21 @@ pub mod hash_map {
         where
             Self: Sized,
         {
-            iter.try_fold(HashMap::new(), |mut map, (k, v)| match map.entry(k) {
-                Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
-                Entry::Vacant(entry) => {
-                    entry.insert(v);
-                    Ok(map)
-                }
-            })
+            let (low, high) = iter.size_hint();
+            let size_guess = high.unwrap_or(low);
+
+            iter.try_fold(
+                HashMap::with_capacity(size_guess),
+                |mut map, (k, v)| match map.entry(k) {
+                    Entry::Occupied(entry) => {
+                        entry.remove_entry().0.pipe(KeyCollision::new).into_err()
+                    }
+                    Entry::Vacant(entry) => {
+                        entry.insert(v);
+                        Ok(map)
+                    }
+                },
+            )
         }
     }
 }
@@ -98,13 +106,21 @@ pub mod hashbrown {
         type Error = KeyCollision<K>;
 
         fn try_from_iter<I: Iterator<Item = (K, V)>>(mut iter: I) -> Result<Self, Self::Error> {
-            iter.try_fold(HashMap::new(), |mut map, (k, v)| match map.entry(k) {
-                Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
-                Entry::Vacant(entry) => {
-                    entry.insert(v);
-                    Ok(map)
-                }
-            })
+            let (low, high) = iter.size_hint();
+            let size_guess = high.unwrap_or(low);
+
+            iter.try_fold(
+                HashMap::with_capacity(size_guess),
+                |mut map, (k, v)| match map.entry(k) {
+                    Entry::Occupied(entry) => {
+                        entry.remove_entry().0.pipe(KeyCollision::new).into_err()
+                    }
+                    Entry::Vacant(entry) => {
+                        entry.insert(v);
+                        Ok(map)
+                    }
+                },
+            )
         }
     }
 }
