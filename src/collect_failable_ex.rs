@@ -16,7 +16,7 @@ pub trait FailableCollectEx {
     ///
     /// ```rust
     /// use std::collections::HashMap;
-    /// use collect_failable::{FailableCollectExt, TryFromIterator};
+    /// use collect_failable::{FailableCollectEx, TryFromIterator};
     ///
     /// let result = [(1, 2), (2, 3)].into_iter().try_collect_ex::<HashMap<_, _>>();
     /// assert!(result.is_ok());

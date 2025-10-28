@@ -15,7 +15,7 @@ Implementations for various containers are provided, gated behind similarly name
 
 ```rust
 use std::collections::HashMap;
-use collect_failable::{TryFromIterator, FailableCollectExt};
+use collect_failable::{TryFromIterator, FailableCollectEx};
 
 // can be called on any type that implements TryFromIterator
 let err = HashMap::try_from_iter([(1, 2), (1, 3)].into_iter());
