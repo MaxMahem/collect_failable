@@ -52,24 +52,26 @@ mod tests {
 
     #[test]
     fn failable_collect_no_collision_matches_collect() {
-        let collect = [(1, 2), (2, 3)].into_iter().collect::<HashMap<_, _>>();
+        let data = [(1, 2), (2, 3)];
 
-        let try_collect = [(1, 2), (2, 3)]
+        let collect_map = data.into_iter().collect::<HashMap<_, _>>();
+        let try_collect_map = data
             .into_iter()
-            .try_collect_ex::<HashMap<_, _>>();
+            .try_collect_ex::<HashMap<_, _>>()
+            .expect("should be ok");
 
-        assert!(try_collect.is_ok());
-        assert_eq!(collect, try_collect.unwrap());
+        // matches collect implementation
+        assert_eq!(collect_map, try_collect_map);
     }
 
     #[test]
     fn failable_collect_collision_fails() {
-        let try_collect = [(1, 2), (1, 3)]
+        // colliding keys errors
+        let try_collect_err = [(1, 2), (1, 3)]
             .into_iter()
-            .try_collect_ex::<HashMap<_, _>>();
+            .try_collect_ex::<HashMap<_, _>>()
+            .expect_err("should be err");
 
-        assert!(try_collect.is_err());
-
-        assert_eq!(try_collect.unwrap_err().key, 1);
+        assert_eq!(try_collect_err.key, 1);
     }
 }

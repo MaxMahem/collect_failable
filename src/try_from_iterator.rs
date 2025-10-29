@@ -15,7 +15,7 @@ pub trait TryFromIterator<T> {
     /// assert!(result.is_err());
     /// assert_eq!(result.unwrap_err().key, 1);
     /// ```
-    fn try_from_iter<I: Iterator<Item = T>>(iter: I) -> Result<Self, Self::Error>
+    fn try_from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Result<Self, Self::Error>
     where
         Self: Sized;
 }
@@ -55,14 +55,16 @@ pub mod hash_map {
         /// use std::collections::HashMap;
         /// use collect_failable::TryFromIterator;
         ///
-        /// let result = HashMap::try_from_iter([(1, 2), (1, 3)].into_iter());
+        /// let result = HashMap::try_from_iter([(1, 2), (1, 3)]);
         /// assert!(result.is_err());
         /// assert_eq!(result.unwrap_err().key, 1);
         /// ```
-        fn try_from_iter<I: Iterator<Item = (K, V)>>(mut iter: I) -> Result<Self, Self::Error>
+        fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
         where
             Self: Sized,
+            I: IntoIterator<Item = (K, V)>,
         {
+            let mut iter = into_iter.into_iter();
             let size_guess = iter.size_guess();
 
             iter.try_fold(
@@ -107,11 +109,15 @@ pub mod btree_map {
         /// use std::collections::BTreeMap;
         /// use collect_failable::TryFromIterator;
         ///
-        /// let result = BTreeMap::try_from_iter([(1, 2), (1, 3)].into_iter());
+        /// let result = BTreeMap::try_from_iter([(1, 2), (1, 3)]);
         /// assert!(result.is_err());
         /// assert_eq!(result.unwrap_err().key, 1);
         /// ```
-        fn try_from_iter<I: Iterator<Item = (K, V)>>(mut iter: I) -> Result<Self, Self::Error> {
+        fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+        where
+            I: IntoIterator<Item = (K, V)>,
+        {
+            let mut iter = into_iter.into_iter();
             iter.try_fold(BTreeMap::new(), |mut map, (k, v)| match map.entry(k) {
                 Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
                 Entry::Vacant(entry) => {
@@ -150,11 +156,15 @@ pub mod hashbrown {
         /// use hashbrown::HashMap;
         /// use collect_failable::TryFromIterator;
         ///
-        /// let result = HashMap::try_from_iter([(1, 2), (1, 3)].into_iter());
+        /// let result = HashMap::try_from_iter([(1, 2), (1, 3)]);
         /// assert!(result.is_err());
         /// assert_eq!(result.unwrap_err().key, 1);
         /// ```
-        fn try_from_iter<I: Iterator<Item = (K, V)>>(mut iter: I) -> Result<Self, Self::Error> {
+        fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+        where
+            I: IntoIterator<Item = (K, V)>,
+        {
+            let mut iter = into_iter.into_iter();
             let size_guess = iter.size_guess();
 
             iter.try_fold(
@@ -188,14 +198,14 @@ mod tests {
 
                 #[test]
                 fn key_collision() {
-                    let result = <$map_type>::try_from_iter([(1, 2), (1, 3)].into_iter());
+                    let result = <$map_type>::try_from_iter([(1, 2), (1, 3)]);
                     assert!(result.is_err());
                     assert_eq!(result.unwrap_err().key, 1);
                 }
 
                 #[test]
                 fn no_collision() {
-                    let result = <$map_type>::try_from_iter([(1, 2), (2, 3)].into_iter());
+                    let result = <$map_type>::try_from_iter([(1, 2), (2, 3)]);
                     assert!(result.is_ok());
                     let map = result.unwrap();
                     assert_eq!(map.len(), 2);
