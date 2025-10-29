@@ -1,7 +1,7 @@
 use crate::TryFromIterator;
 
 /// Extends [Iterator] with a failable collect method.
-pub trait FailableCollectEx {
+pub trait TryCollectEx {
     type Item;
 
     /// Collects the iterator into a container, returning an error if construcing the container fails.
@@ -16,7 +16,7 @@ pub trait FailableCollectEx {
     ///
     /// ```rust
     /// use std::collections::HashMap;
-    /// use collect_failable::{FailableCollectEx, TryFromIterator};
+    /// use collect_failable::{TryCollectEx, TryFromIterator};
     ///
     /// let result = [(1, 2), (2, 3)].into_iter().try_collect_ex::<HashMap<_, _>>();
     /// assert!(result.is_ok());
@@ -30,7 +30,7 @@ pub trait FailableCollectEx {
         Self: Sized;
 }
 
-impl<I, T> FailableCollectEx for I
+impl<I, T> TryCollectEx for I
 where
     I: Iterator<Item = T>,
 {
@@ -46,7 +46,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::FailableCollectEx;
+    use crate::TryCollectEx;
 
     use std::collections::HashMap;
 

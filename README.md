@@ -17,14 +17,14 @@ Implementations for various containers are provided, gated behind similarly name
 
 ```rust
 use std::collections::HashMap;
-use collect_failable::{TryFromIterator, FailableCollectEx};
+use collect_failable::{TryFromIterator, TryCollectEx};
 
 // can be called on any type that implements TryFromIterator
 let err = HashMap::try_from_iter([(1, 2), (1, 3)].into_iter());
 assert!(err.is_err());
 assert_eq!(err.unwrap_err().key, 1);
 
-// or any iterator via the FailableCollectExt trait
+// or any iterator via the TryCollectEx trait
 // like normal collect a turbofish or type ascription is often necessary to disambiguate
 let ok = [(1, 2), (2, 3)].into_iter().try_collect_ex::<HashMap<_, _>>();
 assert!(ok.is_ok());
