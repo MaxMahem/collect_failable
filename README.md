@@ -3,6 +3,7 @@
 [![CI](https://github.com/MaxMahem/collect_failable/workflows/CI/badge.svg)](https://github.com/MaxMahem/collect_failable/actions)
 ![GitHub License](https://img.shields.io/github/license/maxmahem/collect_failable)
 [![dependency status](https://deps.rs/repo/github/maxmahem/collect_failable/status.svg)](https://deps.rs/repo/github/maxmahem/collect_failable)
+[![codecov](https://codecov.io/github/MaxMahem/collect_failable/graph/badge.svg?token=6JJF59BIO3)](https://codecov.io/github/MaxMahem/collect_failable)
 
 A trait for collecting values into a container that has an invariant to uphold and whose construction may fail.
 
