@@ -21,13 +21,14 @@ use std::collections::HashMap;
 use collect_failable::{TryFromIterator, TryCollectEx};
 
 // can be called on any type that implements TryFromIterator
-let err = HashMap::try_from_iter([(1, 2), (1, 3)].into_iter());
-assert!(err.is_err());
-assert_eq!(err.unwrap_err().key, 1);
+let err = HashMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should be Err");
+assert_eq!(err.key, 1);
 
-// or any iterator via the TryCollectEx trait
-// like normal collect a turbofish or type ascription is often necessary to disambiguate
-let ok = [(1, 2), (2, 3)].into_iter().try_collect_ex::<HashMap<_, _>>();
-assert!(ok.is_ok());
-assert_eq!(ok.unwrap(), HashMap::from([(1, 2), (2, 3)]));
+// or collected via the TryCollectEx trait a turbofish may be necessary to disambiguate
+let map = [(1, 2), (2, 3)].into_iter().try_collect_ex::<HashMap<_, _>>().expect("should be Ok");
+assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
+
+// or type ascription. Note the Result type can be inferred, just not the collection type.
+let map: HashMap<_, _> = [(1, 2), (2, 3)].into_iter().try_collect_ex().expect("should be Ok");
+assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 ```

@@ -11,9 +11,8 @@ pub trait TryFromIterator<T> {
     /// use std::collections::HashMap;
     /// use collect_failable::TryFromIterator;
     ///
-    /// let result = HashMap::try_from_iter([(1, 2), (1, 3)].into_iter());
-    /// assert!(result.is_err());
-    /// assert_eq!(result.unwrap_err().key, 1);
+    /// let err = HashMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should be err");
+    /// assert_eq!(err.key, 1);
     /// ```
     fn try_from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Result<Self, Self::Error>
     where
@@ -55,9 +54,8 @@ pub mod hash_map {
         /// use std::collections::HashMap;
         /// use collect_failable::TryFromIterator;
         ///
-        /// let result = HashMap::try_from_iter([(1, 2), (1, 3)]);
-        /// assert!(result.is_err());
-        /// assert_eq!(result.unwrap_err().key, 1);
+        /// let err = HashMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should be err");
+        /// assert_eq!(err.key, 1);
         /// ```
         fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
         where
@@ -109,9 +107,8 @@ pub mod btree_map {
         /// use std::collections::BTreeMap;
         /// use collect_failable::TryFromIterator;
         ///
-        /// let result = BTreeMap::try_from_iter([(1, 2), (1, 3)]);
-        /// assert!(result.is_err());
-        /// assert_eq!(result.unwrap_err().key, 1);
+        /// let err = BTreeMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should be err");
+        /// assert_eq!(err.key, 1);
         /// ```
         fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
         where
@@ -156,9 +153,8 @@ pub mod hashbrown {
         /// use hashbrown::HashMap;
         /// use collect_failable::TryFromIterator;
         ///
-        /// let result = HashMap::try_from_iter([(1, 2), (1, 3)]);
-        /// assert!(result.is_err());
-        /// assert_eq!(result.unwrap_err().key, 1);
+        /// let err = HashMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should be err");
+        /// assert_eq!(err.key, 1);
         /// ```
         fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
         where
