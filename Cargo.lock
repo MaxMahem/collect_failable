@@ -49,8 +49,8 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "fluent_result"
-version = "0.5.0"
-source = "git+https://github.com/MaxMahem/fluent_result.git#694c0d1f1569719aafc8220e045c9ad1c84f8126"
+version = "0.6.1"
+source = "git+https://github.com/MaxMahem/fluent_result.git#f4adda3a777e87a6c6f7d6297d50622e02dcb5ea"
 
 [[package]]
 name = "foldhash"
