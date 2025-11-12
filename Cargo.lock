@@ -90,7 +90,7 @@ dependencies = [
 [[package]]
 name = "size_guess"
 version = "0.1.0"
-source = "git+https://github.com/MaxMahem/size_guess.git#fdff68f477bef256135ee90cbe2dcc44888870f6"
+source = "git+https://github.com/MaxMahem/size_guess.git#0a7af9385a50727fb91f0fc14adcd7aca4d7a600"
 
 [[package]]
 name = "syn"
