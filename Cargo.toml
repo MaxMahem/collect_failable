@@ -1,6 +1,6 @@
 [package]
 name = "collect_failable"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 description = "A trait for collecting values into a container which has an invariant to uphold and whose construction may fail"
 repository = "https://github.com/MaxMahem/collect_failable"
@@ -9,10 +9,10 @@ authors = ["Austin Stanley <maxtmahem@gmail>"]
 license = "MIT OR Apache-2.0"
 
 [features]
-hash_map = ["tap", "fluent_result", "size_guess"]
-btree_map = ["tap", "fluent_result"]
-hash_brown = ["tap", "fluent_result", "hashbrown", "size_guess"]
-indexmap = ["tap", "fluent_result", "dep:indexmap", "size_guess"]
+hash_map = ["dep:tap", "dep:fluent_result", "dep:size_guess"]
+btree_map = ["dep:tap", "dep:fluent_result"]
+hashbrown = ["dep:tap", "dep:fluent_result", "dep:hashbrown", "dep:size_guess"]
+indexmap = ["dep:tap", "dep:fluent_result", "dep:indexmap", "dep:size_guess"]
 
 [dependencies]
 tap = { version = "1.0.1", optional = true }
@@ -24,4 +24,4 @@ derive_more = { version = "2.0.1", features = ["constructor"] }
 indexmap = { version = "2.12.0", optional = true }
 
 [dev-dependencies]
-collect_failable = { path = ".", features = ["hash_map", "btree_map", "hash_brown", "indexmap"] }
+collect_failable = { path = ".", features = ["hash_map", "btree_map", "hashbrown", "indexmap"] }
