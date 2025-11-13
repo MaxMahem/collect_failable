@@ -12,7 +12,8 @@ A trait for collecting values into a container that has an invariant to uphold a
 Implementations for various containers are provided, gated behind similarly named feature flags.
 * [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html) - `hash_map`
 * [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html) - `btree_map`
-* [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html) - `hash_brown`
+* [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html) - `hashbrown`
+* [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/) - `indexmap`
 
 ## Usage
 
