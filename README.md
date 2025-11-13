@@ -1,6 +1,7 @@
 # collect_failable
 
-[![CI](https://github.com/MaxMahem/collect_failable/workflows/CI/badge.svg)](https://github.com/MaxMahem/collect_failable/actions)
+[![Build](https://github.com/MaxMahem/collect_failable/actions/workflows/build.yml/badge.svg)](https://github.com/MaxMahem/collect_failable/actions/workflows/build.yml)
+[![Docs](https://github.com/MaxMahem/collect_failable/actions/workflows/docs.yml/badge.svg)](https://github.com/MaxMahem/collect_failable/actions/workflows/docs.yml)
 ![GitHub License](https://img.shields.io/github/license/maxmahem/collect_failable)
 [![dependency status](https://deps.rs/repo/github/maxmahem/collect_failable/status.svg)](https://deps.rs/repo/github/maxmahem/collect_failable)
 [![codecov](https://codecov.io/github/MaxMahem/collect_failable/graph/badge.svg?token=6JJF59BIO3)](https://codecov.io/github/MaxMahem/collect_failable)
