@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+mod iterators;
 mod try_collect_ex;
 mod try_from_iterator;
 
