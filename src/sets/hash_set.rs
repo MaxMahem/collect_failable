@@ -4,7 +4,7 @@ use std::hash::{BuildHasher, Hash};
 use fluent_result::IntoResult;
 use size_guess::SizeGuess;
 
-use crate::{ValueCollision, TryExtend, TryFromIterator};
+use crate::{TryExtend, TryFromIterator, ValueCollision};
 
 impl<T: Eq + Hash> TryFromIterator<T> for HashSet<T> {
     type Error = ValueCollision<T>;
