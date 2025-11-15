@@ -8,17 +8,21 @@ A trait for collecting values into a container that has an invariant to uphold a
 
 ## Features
 
-Implementations for various containers are provided, gated behind similarly named feature flags.
-* [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html) - `hash_map`
-* [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html) - `btree_map`
-* [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html) - `hashbrown`
-* [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/) - `indexmap`
+Implementations for various containers are provided.
+* [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html)
+* [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html)
+* [HashSet](https://doc.rust-lang.org/std/collections/struct.HashSet.html)
+* [BTreeSet](https://doc.rust-lang.org/std/collections/struct.BTreeSet.html)
+* [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html) - requires feature `hashbrown`
+* [hashbrown::HashSet](https://docs.rs/hashbrown/latest/hashbrown/struct.HashSet.html) - requires feature `hashbrown`
+* [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/) - requires feature `indexmap`
+* [indexmap::IndexSet](https://docs.rs/indexmap/latest/indexmap/) - requires feature `indexmap`
 
 ## Usage
 
 ### TryFromIterator and TryCollectEx
 
-Behavior of provided implementations for `HashMap`, `BTreeMap`, `hashbrown::HashMap`, and `indexmap::IndexMap` is identical.
+Behavior of provided implementations for `HashMap`, `BTreeMap`, `hashbrown::HashMap`, and `indexmap::IndexMap` is identical. Though `hashbrown` may have some performance advantages.
 
 ```rust
 use std::collections::HashMap;
@@ -55,3 +59,7 @@ assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 map.try_extend([(1, 3)]).expect_err("should be Err");
 assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 ```
+
+### Set implementations
+
+Set implementation perform similarly to their HashMap counterparts. For `TryExtend` they also provide a strong error guarantee.

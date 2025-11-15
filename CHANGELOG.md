@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-11-15
+
+### Added
+
+ - Added implementations for `TryFromIterator` and `TryExtend` for `HashSet`, `BTreeSet`, `hashbrown::HashSet`, and `indexmap::IndexSet`.
+
+### Removed
+
+ - Removed `BtreeMap` and `HashMap` features. Those implementations are now present by default.
+
 ## [0.6.0] - 2025-11-15
 
 ### Added
