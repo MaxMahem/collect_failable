@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-11-15
+
+### Added
+
+ - Added the `TryExtend` trait, including implementations for `HashMap`, `BTreeMap`, `hashbrown::HashMap`, and `indexmap::IndexMap`.
+
+### Changed
+
+ - Removed `Hash` and `Eq` requirement from `BTreeMap` `TryFromIterator` implementation.
+
 ## [0.4.0] - 2025-11-12
 
 ### Changed
