@@ -16,13 +16,13 @@ pub trait TryCollectEx {
     ///
     /// ```rust
     /// use std::collections::HashMap;
-    /// use collect_failable::{TryCollectEx, TryFromIterator};
+    /// use collect_failable::{TryCollectEx, TryFromIterator, KeyCollision};
     ///
     /// let result = [(1, 2), (2, 3)].into_iter().try_collect_ex::<HashMap<_, _>>();
-    /// assert!(result.is_ok());
+    /// assert_eq!(result, Ok(HashMap::from([(1, 2), (2, 3)])));
     ///
     /// let result = [(1, 2), (1, 3)].into_iter().try_collect_ex::<HashMap<_, _>>();
-    /// assert!(result.is_err());
+    /// assert_eq!(result, Err(KeyCollision { key: 1 }));
     /// ```
     fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where

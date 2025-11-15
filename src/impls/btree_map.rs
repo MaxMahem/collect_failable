@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use fluent_result::IntoResult;
 use tap::Pipe;
 
-use crate::{KeyCollision, NonUniqueKey, TryExtend, TryFromIterator};
+use crate::{KeyCollision, TryExtend, TryFromIterator};
 
 impl<K: Ord, V> TryFromIterator<(K, V)> for BTreeMap<K, V> {
     type Error = KeyCollision<K>;
@@ -14,20 +14,11 @@ impl<K: Ord, V> TryFromIterator<(K, V)> for BTreeMap<K, V> {
     /// Note: In the case of a collision, technically the key returned by [`KeyCollision`] is the
     /// first key that was seen during iteration, not the second key that collided.
     ///
-    /// # Example
+    /// In the case of a collision, the key held by [`KeyCollision`] is the first key that was seen
+    /// during iteration. This may be relevant for keys that compare the same but still have
+    /// different values.
     ///
-    /// ```rust
-    /// use std::collections::BTreeMap;
-    /// use collect_failable::TryFromIterator;
-    ///
-    /// let err = BTreeMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should be err");
-    /// assert_eq!(err.key, 1);
-    ///
-    /// let map = BTreeMap::try_from_iter([(1, 2), (2, 3)]).expect("should be ok");
-    /// assert_eq!(map.len(), 2);
-    /// assert_eq!(map.get(&1), Some(&2));
-    /// assert_eq!(map.get(&2), Some(&3));
-    /// ```
+    /// See [trait level documentation](trait@TryFromIterator) for an example.
     fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
     where
         I: IntoIterator<Item = (K, V)>,
@@ -44,36 +35,14 @@ impl<K: Ord, V> TryFromIterator<(K, V)> for BTreeMap<K, V> {
 }
 
 impl<K: Ord, V> TryExtend<(K, V)> for BTreeMap<K, V> {
-    type Error = NonUniqueKey;
+    type Error = KeyCollision<K>;
 
     /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
     ///
     /// This implementation provides a strong error guarantee. If the method returns an error, the
     /// map is not modified.
     ///
-    /// Note: Due to the limitations of the Entry API, it is not possible to return the key that
-    /// caused a collision.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use std::collections::BTreeMap;
-    /// use collect_failable::TryExtend;
-    ///
-    /// let mut map = BTreeMap::from([(1, 2)]);
-    /// map.try_extend([(1, 3)]).expect_err("should be err");
-    ///
-    /// // map is unchanged
-    /// assert_eq!(map.len(), 1);
-    /// assert_eq!(map.get(&1), Some(&2));
-    ///
-    /// // functions as normal extend if there are no collisions
-    /// map.try_extend([(2, 3)]).expect("should be err");
-    ///
-    /// assert_eq!(map.len(), 2);
-    /// assert_eq!(map.get(&1), Some(&2));
-    /// assert_eq!(map.get(&2), Some(&3));
-    /// ```
+    /// See [trait level documentation](trait@TryExtend) for an example.
     fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = (K, V)>,
@@ -83,12 +52,13 @@ impl<K: Ord, V> TryExtend<(K, V)> for BTreeMap<K, V> {
         let mut insert_map = BTreeMap::new();
 
         for (key, value) in iter {
-            match self.entry(key) {
-                Entry::Vacant(entry) => match insert_map.insert(entry.into_key(), value) {
-                    None => (),
-                    Some(_) => return Err(NonUniqueKey),
+            match self.contains_key(&key) {
+                false => match insert_map.entry(key) {
+                    #[rustfmt::skip]
+                    Entry::Occupied(entry) => return entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
+                    Entry::Vacant(entry) => _ = entry.insert(value),
                 },
-                Entry::Occupied(_) => return Err(NonUniqueKey),
+                true => return Err(KeyCollision::new(key)),
             }
         }
 

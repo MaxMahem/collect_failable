@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-11-15
+
+### Added
+
+ - Added `Ord`, `PartialOrd`, `Eq`, and `PartialEq` derives for `KeyCollision<K>`.
+
+### Changed
+
+ - Changed the `TryExtend` trait implementations to return a `KeyCollection<K>`.
+ - Added `BuildHasher` generic parameter to `TryExtend` implementations.
+
+### Removed
+
+ - Removed the `NonUniqueKey` error type.
+
 ## [0.5.0] - 2025-11-15
 
 ### Added

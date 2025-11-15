@@ -1,4 +1,4 @@
-use std::hash::Hash;
+use std::hash::{BuildHasher, Hash};
 
 use fluent_result::IntoResult;
 use indexmap::map::Entry;
@@ -6,34 +6,18 @@ use indexmap::IndexMap;
 use size_guess::SizeGuess;
 use tap::Pipe;
 
-use crate::{KeyCollision, NonUniqueKey, TryExtend, TryFromIterator};
+use crate::{KeyCollision, TryExtend, TryFromIterator};
 
 impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for IndexMap<K, V> {
     type Error = KeyCollision<K>;
 
     /// Converts an iterator of key-value pairs into a hash-map, failing if a key would collide.
     ///
-    /// This implementation provides a strong error guarantee. If the method returns an error,
-    /// the map is not modified.
+    /// In the case of a collision, the key held by [`KeyCollision`] is the first key that was seen
+    /// during iteration. This may be relevant for keys that compare the same but still have
+    /// different values.
     ///
-    /// Note: In the case of a collision, technically the key returned by [KeyCollision] is the
-    /// first key that was seen during iteration, not the second key that collided. This may be
-    /// relevant for keys that are [Eq] but still have different values.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use indexmap::IndexMap;
-    /// use collect_failable::TryFromIterator;
-    ///
-    /// let err = IndexMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should be err");
-    /// assert_eq!(err.key, 1);
-    ///
-    /// let map = IndexMap::try_from_iter([(1, 2), (2, 3)]).expect("should be ok");
-    /// assert_eq!(map.len(), 2);
-    /// assert_eq!(map.get(&1), Some(&2));
-    /// assert_eq!(map.get(&2), Some(&3));
-    /// ```
+    /// See [trait level documentation](trait@TryFromIterator) for an example.
     fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
     where
         Self: Sized,
@@ -59,37 +43,15 @@ impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for IndexMap<K, V> {
     }
 }
 
-impl<K: Eq + Hash, V> TryExtend<(K, V)> for IndexMap<K, V> {
-    type Error = NonUniqueKey;
+impl<K: Eq + Hash, V, S: BuildHasher> TryExtend<(K, V)> for IndexMap<K, V, S> {
+    type Error = KeyCollision<K>;
 
     /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
     ///
     /// This implementation provides a strong error guarantee. If the method returns an error, the
     /// map is not modified.
     ///
-    /// Note: Due to the limitations of the Entry API, it is not possible to return the key that
-    /// caused a collision.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use indexmap::IndexMap;
-    /// use collect_failable::TryExtend;
-    ///
-    /// let mut map = IndexMap::from([(1, 2)]);
-    /// map.try_extend([(1, 3)]).expect_err("should be err");
-    ///
-    /// // map is unchanged
-    /// assert_eq!(map.len(), 1);
-    /// assert_eq!(map.get(&1), Some(&2));
-    ///
-    /// // functions as normal extend if there are no collisions
-    /// map.try_extend([(2, 3)]).expect("should be err");
-    ///
-    /// assert_eq!(map.len(), 2);
-    /// assert_eq!(map.get(&1), Some(&2));
-    /// assert_eq!(map.get(&2), Some(&3));
-    /// ```
+    /// See [trait level documentation](trait@TryExtend) for an example.
     fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = (K, V)>,
@@ -100,12 +62,13 @@ impl<K: Eq + Hash, V> TryExtend<(K, V)> for IndexMap<K, V> {
         let mut insert_map = IndexMap::with_capacity(size_guess);
 
         for (key, value) in iter {
-            match self.entry(key) {
-                Entry::Vacant(entry) => match insert_map.insert(entry.into_key(), value) {
-                    None => (),
-                    Some(_) => return Err(NonUniqueKey),
+            match self.contains_key(&key) {
+                false => match insert_map.entry(key) {
+                    #[rustfmt::skip]
+                    Entry::Occupied(entry) => return entry.swap_remove_entry().0.pipe(KeyCollision::new).into_err(),
+                    Entry::Vacant(entry) => _ = entry.insert(value),
                 },
-                Entry::Occupied(_) => return Err(NonUniqueKey),
+                true => return Err(KeyCollision::new(key)),
             }
         }
 

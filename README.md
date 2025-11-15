@@ -18,6 +18,8 @@ Implementations for various containers are provided, gated behind similarly name
 
 ### TryFromIterator and TryCollectEx
 
+Behavior of provided implementations for `HashMap`, `BTreeMap`, `hashbrown::HashMap`, and `indexmap::IndexMap` is identical.
+
 ```rust
 use std::collections::HashMap;
 use collect_failable::{TryFromIterator, TryCollectEx};
@@ -36,6 +38,10 @@ assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 ```
 
 ### TryExtend
+
+Provided implementations for `HashMap`, `BTreeMap`, `hashbrown::HashMap`, and `indexmap::IndexMap` are identical.
+
+All provide a strong error guarantee that the container is not modified if the method returns an error.
 
 ```rust
 use std::collections::HashMap;
