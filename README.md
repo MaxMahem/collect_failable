@@ -1,21 +1,18 @@
-# collect_failable
-
-[![CI](https://github.com/MaxMahem/collect_failable/workflows/CI/badge.svg)](https://github.com/MaxMahem/collect_failable/actions)
-![GitHub License](https://img.shields.io/github/license/maxmahem/collect_failable)
+[![Build](https://github.com/MaxMahem/collect_failable/actions/workflows/build.yml/badge.svg)](https://github.com/MaxMahem/collect_failable/actions/workflows/build.yml)
+[![Docs](https://github.com/MaxMahem/collect_failable/actions/workflows/docs.yml/badge.svg)](https://maxmahem.github.io/collect_failable/collect_failable/index.html)
 [![dependency status](https://deps.rs/repo/github/maxmahem/collect_failable/status.svg)](https://deps.rs/repo/github/maxmahem/collect_failable)
 [![codecov](https://codecov.io/github/MaxMahem/collect_failable/graph/badge.svg?token=6JJF59BIO3)](https://codecov.io/github/MaxMahem/collect_failable)
+![GitHub License](https://img.shields.io/github/license/maxmahem/collect_failable)
 
-A trait for collecting values into a container that has an invariant to uphold and whose construction may fail. Also provides a `TryExtend` trait for failably extending containers. 
-
-The provided implementations for `TryExtend` provide a strong error gurantee. If the method returns an error, the container is not modified.
+A trait for collecting values into a container that has an invariant to uphold and whose construction may fail.
 
 ## Features
 
 Implementations for various containers are provided, gated behind similarly named feature flags.
 * [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html) - `hash_map`
 * [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html) - `btree_map`
-* [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html) - `hash_brown`
-* [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/struct.IndexMap.html) - `indexmap`
+* [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html) - `hashbrown`
+* [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/) - `indexmap`
 
 ## Usage
 
