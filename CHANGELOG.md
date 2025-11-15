@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2025-11-15
+
+### Fixed/Changed
+
+ - Ensured the display trait was implemented for `ValueCollision<T>`
+ - Removed display of the `key`/`value` fields from `KeyCollision<T>` and `ValueCollision<T>` to avoid requiring `Debug` or `Display` on the `K` and `V` types.
+
 ## [0.7.1] - 2025-11-15
 
 ### Fixed

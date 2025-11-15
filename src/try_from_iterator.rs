@@ -28,7 +28,7 @@ pub trait TryFromIterator<T> {
 
 /// An error indicating that a duplicate key was found in the provided data.
 #[derive(Debug, thiserror::Error, derive_more::Constructor, PartialEq, Eq, PartialOrd, Ord)]
-#[error("Key collision: {key}")]
+#[error("Key collision")]
 pub struct KeyCollision<K> {
     /// The key that caused the collision.
     pub key: K,
@@ -36,6 +36,7 @@ pub struct KeyCollision<K> {
 
 /// An error indicating that a duplicate value was found in the provided data.
 #[derive(Debug, thiserror::Error, derive_more::Constructor, PartialEq, Eq, PartialOrd, Ord)]
+#[error("Value collision")]
 pub struct ValueCollision<T> {
     /// The value that caused the collision.
     pub value: T,
