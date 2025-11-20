@@ -70,11 +70,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 let err = map.try_extend(COLLIDE_WITH_SELF).expect_err("should be err");
 
                 assert_eq!(err, SELF_COLLISION, "err should match");
-                assert_eq!(
-                    map.get(&SELF_COLLISION.key),
-                    Some(&SELF_COLLIDE_VALUE),
-                    "value should not be added"
-                );
+                assert_eq!(map.get(&SELF_COLLISION.key), Some(&SELF_COLLIDE_VALUE), "value should not be added");
             }
 
             #[test]
