@@ -8,21 +8,9 @@ A trait for collecting values into a container that has an invariant to uphold a
 
 ## Features
 
-Implementations for various containers are provided.
-* [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html)
-* [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html)
-* [HashSet](https://doc.rust-lang.org/std/collections/struct.HashSet.html)
-* [BTreeSet](https://doc.rust-lang.org/std/collections/struct.BTreeSet.html)
-* [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html) - requires feature `hashbrown`
-* [hashbrown::HashSet](https://docs.rs/hashbrown/latest/hashbrown/struct.HashSet.html) - requires feature `hashbrown`
-* [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/) - requires feature `indexmap`
-* [indexmap::IndexSet](https://docs.rs/indexmap/latest/indexmap/) - requires feature `indexmap`
-
-## Usage
-
 ### TryFromIterator and TryCollectEx
 
-Behavior of provided implementations for `HashMap`, `BTreeMap`, `hashbrown::HashMap`, and `indexmap::IndexMap` is identical. Though `hashbrown` may have some performance advantages.
+Allows collection of an iterator into a container that may fail to be constructed. For example, a `HashMap` may not allow duplicate keys. Or an `ArrayVec` might only be able to hold a certain number of elements.
 
 ```rust
 use std::collections::HashMap;
@@ -43,9 +31,11 @@ assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 
 ### TryExtend
 
-Provided implementations for `HashMap`, `BTreeMap`, `hashbrown::HashMap`, and `indexmap::IndexMap` are identical.
+Allows an existing collection to be extended with values from an iterator that may fail to be constructed. Two methods are provided: `try_extend` and `try_extend_safe`. `try_extend_safe` is required, and should provide a strong error gurantee. If the method returns an error, the collection should not be modified. `try_extend`, if implemented, should provide a weak error guarantee. If the method returns an error, the collection may be modified, but should be in a valid state.
 
-All provide a strong error guarantee that the container is not modified if the method returns an error.
+For example, for `HashMap`, `try_extend_safe` would not mutate the collection if provided with duplicate keys. `try_extend` would mutate the collection, however it should not overwrite the existing value.
+
+`try_extend_safe` generally requires some extra allocations and checks in order to provide its gurantees, so `try_extend` or `try_collect` should be favored if these gurantees are not necessary.
 
 ```rust
 use std::collections::HashMap;
@@ -60,6 +50,42 @@ map.try_extend([(1, 3)]).expect_err("should be Err");
 assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 ```
 
-### Set implementations
+### TryUnzip
 
-Set implementation perform similarly to their HashMap counterparts. For `TryExtend` they also provide a strong error guarantee.
+Allows unzipping an iterator of pairs into two collections that implement `Default` and `TryExtend`.
+
+This is analogous to [`Zip`](https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.zip), except allows for failable construction.
+
+```rust
+use std::collections::HashSet;
+use collect_failable::TryUnzip;
+
+let data = vec![(1, 2), (2, 3)];
+let (a, b): (HashSet<i32>, HashSet<i32>) = data.into_iter().try_unzip().expect("Should be ok");
+
+assert_eq!(a, HashSet::from([1, 2]));
+assert_eq!(b, HashSet::from([2, 3]));
+```
+
+### Tuple implementations
+
+Tuple implementations are provided for tuples of size 2 that implement `TryFromIterator` or `TryCollectEx`. They will respect the error guarantee of the inner types, if any.
+
+### Array implementations
+
+The array implementation allows iterators that exactly fill an array to be collected into it. It requires `unsafe` code, and is gated behind the `unsafe` feature (enabled by default).
+
+## Implementations
+
+Implementations for various containers are provided.
+* [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html)
+* [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html)
+* [HashSet](https://doc.rust-lang.org/std/collections/struct.HashSet.html)
+* [BTreeSet](https://doc.rust-lang.org/std/collections/struct.BTreeSet.html)
+* [Tuple of size 2](https://doc.rust-lang.org/std/primitive.tuple.html)
+* [Array](https://doc.rust-lang.org/std/primitive.array.html) - requires feature `unsafe` (on by default) `TryFromIterator` only
+* [ArrayVec](https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html) - requires feature `arrayvec`
+* [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html) - requires feature `hashbrown`
+* [hashbrown::HashSet](https://docs.rs/hashbrown/latest/hashbrown/struct.HashSet.html) - requires feature `hashbrown`
+* [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/) - requires feature `indexmap`
+* [indexmap::IndexSet](https://docs.rs/indexmap/latest/indexmap/) - requires feature `indexmap`

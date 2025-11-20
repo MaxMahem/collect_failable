@@ -4,7 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.0] - 2025-11-20
+
+### Added
+
+ - Added `TryFromIterator` and `TryExtend` implementations for `ArrayVec`.
+ - Added `TryUnzip` trait for `Iterator`s of tuples, allowing for failable construction of multiple collections at once, similar to `Unzip`.
+ - Added `TryFromIterator` and `TryExtend` implementations for 2 value tuples.
+ - Added `TryFromIterator` implementations for arrays.
+ - Added `unsafe` feature gate (enabled by default).
+ - Added `ExceedsCapacity` error type.
+
+### Changed
+
+ - Documentation improvements for `Array` and `Tuples`.
+ - Refactored error types into `errors` module.
 
 ## [0.7.2] - 2025-11-15
 

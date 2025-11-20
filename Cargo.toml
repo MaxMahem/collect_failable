@@ -1,6 +1,6 @@
 [package]
 name = "collect_failable"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 description = "A trait for collecting values into a container which has an invariant to uphold and whose construction may fail"
 repository = "https://github.com/MaxMahem/collect_failable"
@@ -9,8 +9,11 @@ authors = ["Austin Stanley <maxtmahem@gmail>"]
 license = "MIT OR Apache-2.0"
 
 [features]
+default = ["unsafe"]
+unsafe = []
 hashbrown = [ "dep:hashbrown" ]
 indexmap = [ "dep:indexmap" ]
+arrayvec = [ "dep:arrayvec" ]
 
 [dependencies]
 tap = { version = "1.0.1" }
@@ -18,8 +21,9 @@ fluent_result = { git = "https://github.com/MaxMahem/fluent_result.git" }
 size_guess = { git = "https://github.com/MaxMahem/size_guess.git" }
 thiserror = { version = "2.0.17" }
 hashbrown = { version = "0.16.0", optional = true }
-derive_more = { version = "2.0.1", features = ["constructor"] }
+derive_more = { version = "2.0.1", features = ["constructor", "from"] }
 indexmap = { version = "2.12.0", optional = true }
+arrayvec = { version = "0.7.6", optional = true }
 
 [dev-dependencies]
-collect_failable = { path = ".", features = ["hashbrown", "indexmap"] }
+collect_failable = { path = ".", features = ["hashbrown", "indexmap", "arrayvec"] }

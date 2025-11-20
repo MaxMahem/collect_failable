@@ -1,10 +1,17 @@
 #![doc = include_str!("../README.md")]
-mod maps;
-mod sets;
+
+mod errors;
+mod impls;
 mod try_collect_ex;
 mod try_extend;
 mod try_from_iterator;
+mod try_unzip;
 
+pub use errors::{ItemCountMismatch, KeyCollision, OneOf2, ValueCollision};
 pub use try_collect_ex::TryCollectEx;
 pub use try_extend::TryExtend;
-pub use try_from_iterator::{KeyCollision, TryFromIterator, ValueCollision};
+pub use try_from_iterator::TryFromIterator;
+pub use try_unzip::TryUnzip;
+
+#[cfg(feature = "arrayvec")]
+pub use errors::ExceedsCapacity;
