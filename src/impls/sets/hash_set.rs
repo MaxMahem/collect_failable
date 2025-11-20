@@ -7,6 +7,7 @@ use size_guess::SizeGuess;
 use crate::{TryExtend, TryFromIterator, ValueCollision};
 
 /// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
+#[allow(clippy::implicit_hasher)]
 impl<T: Eq + Hash> TryFromIterator<T> for HashSet<T> {
     type Error = ValueCollision<T>;
 

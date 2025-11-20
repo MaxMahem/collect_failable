@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/github/MaxMahem/collect_failable/graph/badge.svg?token=6JJF59BIO3)](https://codecov.io/github/MaxMahem/collect_failable)
 ![GitHub License](https://img.shields.io/github/license/maxmahem/collect_failable)
 
-# collect_failable
+# `collect_failable`
 
 A set of traits for collecting values into containers that must uphold invariants during construction or extension. These traits let you propagate structured errors instead of panicking or silently discarding data. Examples include preventing duplicate keys in a `HashMap` or respecting capacity limits in types like `ArrayVec`.
 
@@ -19,7 +19,7 @@ This crate provides several complementary traits for failable collection:
 
 Additionally, several implemenations are provided for common and popular containers. See the [implementations](#implementations) section for more details.
 
-### TryFromIterator and TryCollectEx
+### `TryFromIterator` and `TryCollectEx`
 
 Construct a container from an iterator, with errors for invalid input. This behaves like `FromIterator` but returns `Result<Self, E>` instead of panicking or ignoring failures.
 
@@ -40,7 +40,7 @@ let map: HashMap<_, _> = [(1, 2), (2, 3)].into_iter().try_collect_ex().expect("s
 assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 ```
 
-### TryExtend
+### `TryExtend`
 
 Extend an existing container with items that may violate its invariants. This trait exposes two styles of error behavior:
 
@@ -62,9 +62,9 @@ map.try_extend([(1, 3)]).expect_err("should be Err");
 assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 ```
 
-### TryUnzip
+### `TryUnzip`
 
-Fallible equivalent of [`Iterator::unzip`](https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.unzip). Given an iterator of `(A, B)` items, produce two collections that implement Default + TryExtend, stopping on the first failure.
+Fallible equivalent of [`Iterator::unzip`](https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.unzip). Given an iterator of `(A, B)` items, produce two collections that implement `Default + TryExtend`, stopping on the first failure.
 
 Allows unzipping an iterator of pairs into two collections that implement `Default` and `TryExtend`.
 

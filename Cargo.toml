@@ -7,6 +7,7 @@ repository = "https://github.com/MaxMahem/collect_failable"
 keywords = ["iterator", "collect", "container"]
 authors = ["Austin Stanley <maxtmahem@gmail>"]
 license = "MIT OR Apache-2.0"
+categories = ["data-structures", "rust-patterns", "error-handling"]
 
 [features]
 default = ["unsafe"]

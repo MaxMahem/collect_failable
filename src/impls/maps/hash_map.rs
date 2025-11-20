@@ -6,9 +6,10 @@ use fluent_result::IntoResult;
 use size_guess::SizeGuess;
 use tap::Pipe;
 
-use crate::{try_extend::TryExtend, KeyCollision, TryFromIterator};
+use crate::{KeyCollision, TryExtend, TryFromIterator};
 
 /// Converts an iterator of key-value pairs into a [`HashMap`], failing if a key would collide.
+#[allow(clippy::implicit_hasher)]
 impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
     type Error = KeyCollision<K>;
 

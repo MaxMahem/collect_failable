@@ -2,15 +2,20 @@ use crate::TryFromIterator;
 
 /// Extends [Iterator] with a failable collect method.
 pub trait TryCollectEx {
+    /// The item type of the iterator.
     type Item;
 
     /// Collects the iterator into a container, returning an error if construcing the container fails.
     ///
-    /// This is a wrapper for [TryFromIterator::try_from_iter].
+    /// This is a wrapper for [`TryFromIterator::try_from_iter`].
     ///
     /// This is useful if you want to collect an iterator into a container that may fail to be constructed.
     ///
     /// Ideally this would be called `try_collect` but there is a method with that name in nightly.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the container fails to be constructed.
     ///
     /// # Example
     ///

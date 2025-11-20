@@ -6,6 +6,10 @@ pub trait TryUnzip {
     ///
     /// This is a failable version of [`Iterator::unzip`].
     ///
+    /// # Errors
+    ///
+    /// Returns an error if any of the underlying collections fail to extend.
+    ///
     /// # Examples
     ///
     /// ```

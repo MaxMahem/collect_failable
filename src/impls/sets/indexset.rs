@@ -6,7 +6,7 @@ use size_guess::SizeGuess;
 
 use crate::{TryExtend, TryFromIterator, ValueCollision};
 
-/// Converts an iterator of values into a [`IndexSet`], failing if a value would collide.
+/// Converts an iterator of values into a [`IndexSet`], failing if a key would collide.
 impl<T: Eq + Hash> TryFromIterator<T> for IndexSet<T> {
     type Error = ValueCollision<T>;
 

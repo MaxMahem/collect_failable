@@ -11,6 +11,10 @@ pub trait TryExtend<T> {
     ///
     /// For a non-safe version, see [`TryExtend::try_extend`].
     ///
+    /// # Errors
+    ///
+    /// Returns an error if extending the collection fails. The collection should not be modified.
+    ///
     /// # Examples
     ///
     /// Provided implementations of `TryExtend` for map types, `HashMap`, `BTreeMap`,
@@ -51,11 +55,15 @@ pub trait TryExtend<T> {
 
     /// Tries to extend the collection with the contents of the iterator.
     ///
-    /// Unlike [`TryExtend::try_extend_safe`], this method does not provide a strong error guarantee.
-    /// If the method returns an error, the collection may be modified. However, it should still be
-    /// in a valid state, and the specific extension that caused the error should not take effect.
+    /// Implementors are only required to provide a weak error guarantee. If the method returns an
+    /// error, the collection may be modified. However, it should still be in a valid state, and
+    /// the specific extension that caused the error should not take effect.
     ///
     /// For a safe version, see [`TryExtend::try_extend_safe`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if extending the collection fails. The collection may be modified in this case.
     ///
     /// # Examples
     ///

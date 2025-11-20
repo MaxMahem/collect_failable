@@ -11,11 +11,11 @@ pub trait TryFromIterator<T>: Sized {
 
     /// Converts an iterator into a container that may fail to be constructed.
     ///
-    /// # Example
+    /// # Errors
     ///
-    /// Provided implementations for [`HashMap`], [`BTreeMap`], [`hashbrown::HashMap`], and
-    /// [`indexmap::IndexMap`] all work similarly, and provide the first instance of a
-    /// colliding key within the [`KeyCollision`] error.
+    /// Returns an error if the container fails to be constructed.
+    ///
+    /// # Example
     ///
     /// ```rust
     /// use std::collections::HashMap;

@@ -37,7 +37,7 @@ where
     }
 }
 
-/// Extends an '(TryFromA, TryFromB)' collection with the contents of an iterator of `(A, B)`.
+/// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
 impl<A, B, TryFromA, TryFromB> TryExtend<(A, B)> for (TryFromA, TryFromB)
 where
     TryFromA: TryExtend<A>,
@@ -45,7 +45,7 @@ where
 {
     type Error = OneOf2<TryFromA::Error, TryFromB::Error>;
 
-    /// Extends an '(TryFromA, TryFromB)' collection with the contents of an iterator of `(A, B)`.
+    /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
     ///
     /// This method should uphold any strong error guarantees of the underlying collections.
     ///
@@ -70,7 +70,7 @@ where
         self.1.try_extend_safe(items.1).map_err(OneOf2::B)
     }
 
-    /// Extends an '(TryFromA, TryFromB)' collection with the contents of an iterator of `(A, B)`.
+    /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
     ///
     /// This method does not provide a strong error guarantee. But should uphold the weak error
     /// guarantee of the underlying collections.
