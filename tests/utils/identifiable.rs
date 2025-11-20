@@ -1,10 +1,13 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
+/// Helper type to test if values are overwritten.
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Identifiable {
+    /// Value of the item, used for eq.
     pub value: i32,
+    /// Id of the item. *Not* used for eq.
     pub id: i32,
 }
 
