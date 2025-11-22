@@ -1,5 +1,3 @@
-use include_doc::function_body;
-
 #[cfg(doc)]
 use std::collections::HashMap;
 
@@ -32,7 +30,7 @@ pub trait TryFromIterator<T>: Sized {
     /// Provided [`HashMap`] implementations error if a key would collide.
     ///
     /// ```rust
-    #[doc = function_body!("tests/try_from_iterator.rs", try_from_iter_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/try_from_iterator.rs", try_from_iter_collision_example, [])]
     /// ```    
     fn try_from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Result<Self, Self::Error>;
 }

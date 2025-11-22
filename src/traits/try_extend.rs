@@ -1,5 +1,3 @@
-use include_doc::function_body;
-
 #[cfg(doc)]
 use crate::TryFromIterator;
 #[cfg(doc)]
@@ -39,7 +37,7 @@ pub trait TryExtend<T> {
     /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    #[doc = function_body!("tests/try_extend.rs", try_extend_safe_map_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/try_extend.rs", try_extend_safe_map_collision_example, [])]
     /// ```
     fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
     where
@@ -61,7 +59,7 @@ pub trait TryExtend<T> {
     /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    #[doc = function_body!("tests/try_extend.rs", try_extend_basic_guarantee_example, [])]
+    #[doc = include_doc::function_body!("tests/try_extend.rs", try_extend_basic_guarantee_example, [])]
     /// ```
     fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
     where

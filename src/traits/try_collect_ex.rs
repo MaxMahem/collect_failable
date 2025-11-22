@@ -1,5 +1,3 @@
-use include_doc::function_body;
-
 #[cfg(doc)]
 use std::collections::HashMap;
 
@@ -32,7 +30,7 @@ pub trait TryCollectEx: Iterator {
     /// Collecting into a [`HashMap`] that fails if a key would collide.
     ///
     /// ```rust
-    #[doc = function_body!("tests/try_collect_ex.rs", try_collect_ex_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/try_collect_ex.rs", try_collect_ex_collision_example, [])]
     /// ```
     fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where
