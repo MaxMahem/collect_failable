@@ -5,7 +5,7 @@
 #![allow(clippy::match_bool)]
 #![allow(clippy::single_match_else)]
 // Allow multiple crate versions from transitive dependencies (include-doc)
-//#![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::multiple_crate_versions)]
 
 mod errors;
 mod impls;
