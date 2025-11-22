@@ -35,7 +35,17 @@ pub struct ItemCountMismatch {
 ///
 /// This is used when an operation can fail with one of two possible errors, for example when
 /// unzipping an iterator into two collections, where either collection might fail to extend.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, thiserror::Error)]
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    thiserror::Error,
+    derive_more::TryUnwrap,
+    derive_more::IsVariant,
+    derive_more::Unwrap,
+)]
 pub enum OneOf2<ErrA, ErrB> {
     /// The operation failed with the first error.
     #[error(transparent)]

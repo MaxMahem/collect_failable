@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 use fluent_result::{IntoResult, ThenErr};
 
-use crate::{ExceedsCapacity, TryExtend, TryFromIterator};
+use crate::{ExceedsCapacity, FoldMut, TryExtend, TryFromIterator};
 
 /// Tries to create an `ArrayVec` from an iterator.
 ///
@@ -31,9 +31,8 @@ impl<T, const N: usize> TryFromIterator<T> for ArrayVec<T, N> {
 
         (size_guess > N).then_err(ExceedsCapacity::new(N, size_guess))?;
 
-        iter.try_fold(ArrayVec::new(), |mut array, item| {
-            array.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1))?;
-            Ok(array)
+        iter.try_fold_mut(ArrayVec::new(), |array, item| {
+            array.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1))
         })
     }
 }
@@ -85,7 +84,7 @@ impl<T, const N: usize> TryExtend<T> for ArrayVec<T, N> {
     /// Appends an iterator to the [`ArrayVec`], failing if the iterator produces more items than the [`ArrayVec`]'s
     /// remaining capacity.
     ///
-    /// This method provides a weak error guarantee. If the method returns an error, the [`ArrayVec`] is valid, but may
+    /// This method provides a basic error guarantee. If the method returns an error, the [`ArrayVec`] is valid, but may
     /// be modified.
     ///
     /// # Examples

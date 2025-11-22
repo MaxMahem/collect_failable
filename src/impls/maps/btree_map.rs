@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use fluent_result::IntoResult;
 use tap::Pipe;
 
-use crate::{KeyCollision, TryExtend, TryFromIterator};
+use crate::{FoldMut, KeyCollision, TryExtend, TryFromIterator};
 
 /// Converts an iterator of key-value pairs into a [`BTreeMap`], failing if a key would collide.
 impl<K: Ord, V> TryFromIterator<(K, V)> for BTreeMap<K, V> {
@@ -24,10 +24,9 @@ impl<K: Ord, V> TryFromIterator<(K, V)> for BTreeMap<K, V> {
     where
         I: IntoIterator<Item = (K, V)>,
     {
-        into_iter.into_iter().try_fold(BTreeMap::new(), |mut map, (key, value)| match map.entry(key) {
+        into_iter.into_iter().try_fold_mut(BTreeMap::new(), |map, (key, value)| match map.entry(key) {
             Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
-            #[rustfmt::skip]
-            Entry::Vacant(entry) => { entry.insert(value); Ok(map) }
+            Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
         })
     }
 }
@@ -47,12 +46,11 @@ impl<K: Ord, V> TryExtend<(K, V)> for BTreeMap<K, V> {
         I: IntoIterator<Item = (K, V)>,
     {
         iter.into_iter()
-            .try_fold(BTreeMap::new(), |mut map, (key, value)| match self.contains_key(&key) {
+            .try_fold_mut(BTreeMap::new(), |map, (key, value)| match self.contains_key(&key) {
                 true => KeyCollision::new(key).into_err(),
                 false => match map.entry(key) {
                     Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
-                    #[rustfmt::skip]
-                    Entry::Vacant(entry) => { entry.insert(value); Ok(map) }
+                    Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
                 },
             })
             .map(|map| self.extend(map))
@@ -60,7 +58,7 @@ impl<K: Ord, V> TryExtend<(K, V)> for BTreeMap<K, V> {
 
     /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
     ///
-    /// This implementation provides a weak error guarantee. If the method returns an error, the
+    /// This implementation provides a basic error guarantee. If the method returns an error, the
     /// map may be modified. However, it will still be in a valid state, and the specific
     /// collision that caused the error will not take effect.
     ///

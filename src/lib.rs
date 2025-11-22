@@ -10,7 +10,7 @@ mod impls;
 mod traits;
 
 pub use errors::{ItemCountMismatch, KeyCollision, OneOf2, ValueCollision};
-pub use traits::{TryCollectEx, TryExtend, TryFromIterator, TryUnzip};
+pub use traits::{FoldMut, TryCollectEx, TryExtend, TryFromIterator, TryUnzip};
 
 #[cfg(feature = "arrayvec")]
 pub use errors::ExceedsCapacity;

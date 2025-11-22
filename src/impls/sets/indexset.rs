@@ -4,7 +4,7 @@ use fluent_result::IntoResult;
 use indexmap::IndexSet;
 use size_guess::SizeGuess;
 
-use crate::{TryExtend, TryFromIterator, ValueCollision};
+use crate::{FoldMut, TryExtend, TryFromIterator, ValueCollision};
 
 /// Converts an iterator of values into a [`IndexSet`], failing if a key would collide.
 impl<T: Eq + Hash> TryFromIterator<T> for IndexSet<T> {
@@ -25,10 +25,9 @@ impl<T: Eq + Hash> TryFromIterator<T> for IndexSet<T> {
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_guess();
 
-        iter.try_fold(IndexSet::with_capacity(size_guess), |mut set, t| match set.contains(&t) {
+        iter.try_fold_mut(IndexSet::with_capacity(size_guess), |set, t| match set.contains(&t) {
             true => Err(ValueCollision::new(t)),
-            #[rustfmt::skip]
-            false => { set.insert(t); Ok(set) }
+            false => Ok(_ = set.insert(t)),
         })
     }
 }
@@ -50,12 +49,11 @@ impl<T: Eq + Hash, S: BuildHasher> TryExtend<T> for IndexSet<T, S> {
         let mut iter = iter.into_iter();
         let size_guess = iter.size_guess();
 
-        iter.try_fold(IndexSet::with_capacity(size_guess), |mut set, value| match self.contains(&value) {
+        iter.try_fold_mut(IndexSet::with_capacity(size_guess), |set, value| match self.contains(&value) {
             true => ValueCollision::new(value).into_err(),
             false => match set.contains(&value) {
                 true => ValueCollision::new(value).into_err(),
-                #[rustfmt::skip]
-                false => { _ = set.insert(value); Ok(set) }
+                false => Ok(_ = set.insert(value)),
             },
         })
         .map(|set| self.extend(set))
@@ -63,7 +61,7 @@ impl<T: Eq + Hash, S: BuildHasher> TryExtend<T> for IndexSet<T, S> {
 
     /// Appends an iterator of values to the set, failing if a value would collide.
     ///
-    /// This implementation provides a weak error guarantee. If the method returns an error, the
+    /// This implementation provides a basic error guarantee. If the method returns an error, the
     /// set may be modified. However, it will still be in a valid state, and the specific
     /// collision that caused the error will not take effect.
     ///

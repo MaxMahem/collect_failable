@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 use size_guess::SizeGuess;
 use tap::Pipe;
 
-use crate::{KeyCollision, TryExtend, TryFromIterator};
+use crate::{FoldMut, KeyCollision, TryExtend, TryFromIterator};
 
 /// Converts an iterator of key-value pairs into a [`IndexMap`], failing if a key would collide.
 impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for IndexMap<K, V> {
@@ -27,10 +27,9 @@ impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for IndexMap<K, V> {
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_guess();
 
-        iter.try_fold(IndexMap::with_capacity(size_guess), |mut map, (k, v)| match map.entry(k) {
+        iter.try_fold_mut(IndexMap::with_capacity(size_guess), |map, (k, v)| match map.entry(k) {
             Entry::Occupied(entry) => entry.shift_remove_entry().0.pipe(KeyCollision::new).into_err(),
-            #[rustfmt::skip]
-            Entry::Vacant(entry) => { entry.insert(v); Ok(map) }
+            Entry::Vacant(entry) => Ok(_ = entry.insert(v)),
         })
     }
 }
@@ -52,12 +51,11 @@ impl<K: Eq + Hash, V, S: BuildHasher> TryExtend<(K, V)> for IndexMap<K, V, S> {
         let mut iter = iter.into_iter();
         let size_guess = iter.size_guess();
 
-        iter.try_fold(IndexMap::with_capacity(size_guess), |mut map, (key, value)| match self.contains_key(&key) {
+        iter.try_fold_mut(IndexMap::with_capacity(size_guess), |map, (key, value)| match self.contains_key(&key) {
             true => KeyCollision::new(key).into_err(),
             false => match map.entry(key) {
                 Entry::Occupied(entry) => entry.swap_remove_entry().0.pipe(KeyCollision::new).into_err(),
-                #[rustfmt::skip]
-                Entry::Vacant(entry) => { entry.insert(value); Ok(map) }
+                Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
             },
         })
         .map(|insert_map| self.extend(insert_map))

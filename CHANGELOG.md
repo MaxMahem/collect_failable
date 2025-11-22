@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-11-22
+
+### Added
+
+ - Added `FoldMut` trait, accumulating values via mutation rather than move.
+ - Added `IsVariant`, `TryUnwrap`, and `Unwrap` derives for `OneOf2`.
+
+### Changed
+
+ - Changed `TryCollectEx` trait to be a super trait of `Iterator`.
+
 ## [0.8.0] - 2025-11-20
 
 ### Added

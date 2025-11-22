@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use fluent_result::IntoResult;
 
-use crate::{TryExtend, TryFromIterator, ValueCollision};
+use crate::{FoldMut, TryExtend, TryFromIterator, ValueCollision};
 
 /// Converts an iterator of values into a [`BTreeSet`], failing if a value would collide.
 impl<T: Ord> TryFromIterator<T> for BTreeSet<T> {
@@ -20,10 +20,9 @@ impl<T: Ord> TryFromIterator<T> for BTreeSet<T> {
         Self: Sized,
         I: IntoIterator<Item = T>,
     {
-        into_iter.into_iter().try_fold(BTreeSet::new(), |mut set, value| match set.contains(&value) {
+        into_iter.into_iter().try_fold_mut(BTreeSet::new(), |set, value| match set.contains(&value) {
             true => ValueCollision::new(value).into_err(),
-            #[rustfmt::skip]
-            false => { set.insert(value); Ok(set) }
+            false => Ok(_ = set.insert(value)),
         })
     }
 }
@@ -43,12 +42,11 @@ impl<T: Ord> TryExtend<T> for BTreeSet<T> {
         I: IntoIterator<Item = T>,
     {
         iter.into_iter()
-            .try_fold(BTreeSet::new(), |mut set, value| match self.contains(&value) {
+            .try_fold_mut(BTreeSet::new(), |set, value| match self.contains(&value) {
                 true => Err(ValueCollision::new(value)),
                 false => match set.contains(&value) {
                     true => ValueCollision::new(value).into_err(),
-                    #[rustfmt::skip]
-                    false => {_ = set.insert(value); Ok(set)}
+                    false => Ok(_ = set.insert(value)),
                 },
             })
             .map(|set| self.extend(set))
@@ -56,7 +54,7 @@ impl<T: Ord> TryExtend<T> for BTreeSet<T> {
 
     /// Appends an iterator of values to the set, failing if a value would collide.
     ///
-    /// This implementation provides a weak error guarantee. If the method returns an error, the
+    /// This implementation provides a basic error guarantee. If the method returns an error, the
     /// set may be modified. However, it will still be in a valid state, and the specific
     /// collision that caused the error will not take effect.
     ///

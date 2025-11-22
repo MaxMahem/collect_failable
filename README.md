@@ -13,9 +13,10 @@ A set of traits for collecting values into containers that must uphold invariant
 This crate provides several complementary traits for failable collection:
 
 - `TryFromIterator` – build a new container from an iterator, returning an error when invariants can't be satisfied.
-- `TryCollectEx` – ergonomic `collect()`-style extension for iterator consumers, forwarding a call to `TryFromIterator`.
-- `TryExtend` – fallible extend operations with strong and weak error guarantees variants.
+- `TryCollectEx` – ergonomic `collect`-style extension for iterator consumers, forwarding a call to `TryFromIterator`.
+- `TryExtend` – fallible extend operations with strong and basic error guarantees variants.
 - `TryUnzip` – `unzip` an iterator of pairs into two fallible containers.
+- `FoldMut` – `fold`-style extension building a collection via mutation rather than move.
 
 Additionally, several implemenations are provided for common and popular containers. See the [implementations](#implementations) section for more details.
 
@@ -45,9 +46,9 @@ assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 Extend an existing container with items that may violate its invariants. This trait exposes two styles of error behavior:
 
 - `try_extend_safe` – strong guarantee: on error the container must remain unchanged.
-- `try_extend` – weak guarantee: the container may have partially ingested items, but must remain valid.
+- `try_extend` – basic guarantee: the container may have partially ingested items, but must remain valid.
 
-Use `try_extend_safe` when you must avoid mutation on failure; otherwise prefer the faster `try_extend`.
+Use `try_extend_safe` if you must avoid mutation on failure; otherwise prefer the faster `try_extend`.
 
 ```rust
 use std::collections::HashMap;
@@ -71,14 +72,37 @@ Allows unzipping an iterator of pairs into two collections that implement `Defau
 This is analogous to [`Zip`](https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.zip), except allows for failable construction.
 
 ```rust
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use collect_failable::TryUnzip;
 
-let data = vec![(1, 2), (2, 3)];
-let (a, b): (HashSet<i32>, HashSet<i32>) = data.into_iter().try_unzip().expect("Should be ok");
+// Unzip into two different container types
+let data = vec![(1, 'a'), (2, 'b'), (3, 'c')];
+let (nums, chars): (BTreeSet<i32>, HashSet<char>) = data.into_iter().try_unzip().expect("should be ok");
 
-assert_eq!(a, HashSet::from([1, 2]));
-assert_eq!(b, HashSet::from([2, 3]));
+assert_eq!(nums, BTreeSet::from([1, 2, 3]));
+assert_eq!(chars, HashSet::from(['a', 'b', 'c']));
+```
+
+### `FoldMut`
+
+An iterator extension trait for building a collection via mutation rather than move. 
+
+ - `fold_mut` – Fold an iterator into a mutable accumulator. 
+ - `try_fold_mut` – Failable version of `fold_mut`. 
+
+```rust
+use collect_failable::FoldMut;
+use std::collections::HashMap;
+
+let pairs = vec![("a", 1), ("b", 2), ("a", 3)];
+
+let result = pairs.into_iter().fold_mut(HashMap::new(), |map, (key, val)| {
+    map.entry(key).or_insert(0);
+    *map.get_mut(key).unwrap() += val;
+});
+
+assert_eq!(result.get("a"), Some(&4));
+assert_eq!(result.get("b"), Some(&2));
 ```
 
 ### Tuple Implementations

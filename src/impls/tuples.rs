@@ -72,7 +72,7 @@ where
 
     /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
     ///
-    /// This method does not provide a strong error guarantee. But should uphold the weak error
+    /// This method does not provide a strong error guarantee. But should uphold the basic error
     /// guarantee of the underlying collections.
     ///
     /// # Examples

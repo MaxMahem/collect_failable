@@ -1,83 +1,67 @@
-/// Trait for failably extending a collection from an iterator.
+use include_doc::function_body;
+
+#[cfg(doc)]
+use crate::TryFromIterator;
+#[cfg(doc)]
+use std::collections::HashMap;
+
+/// Trait for extending an existing collection from an iterator with fallible operations.
+///
+/// This trait is similar to [`Extend`], but allows implementor to uphold a containers invariant
+/// during construction. This invaraint can be upheld in two ways:
+///
+/// - **Basic error guarantee**. On an error, the collection may be modified, but will be in a
+///   valid state. [`TryExtend::try_extend`] provides this guarantee.
+/// - **Strong error guarantee**. On an error, the collection is not modified.
+///   [`TryExtend::try_extend_safe`] provides this guarantee.
+///
+/// Implementations for several common types are provided. They all provide both implementation
+/// options. All provided types also implement the [`TryFromIterator`] trait. Consider using that
+/// trait if constructing a new container.
 pub trait TryExtend<T> {
-    /// Error type returned by [`TryExtend::try_extend`].
+    /// Error type returned by the fallible extension methods.
     type Error;
 
-    /// Tries to extend the collection with the contents of the iterator.
+    /// Tries to extends the collection providing a **strong error guarantee**.
     ///
-    /// Implementors are required to provide a strong error guarantee. On a failure, the original
-    /// collection should not be modified. This may require allocations and/or a less optimal
-    /// algorithm.
+    /// On failure, the collection must remain unchanged. Implementors may need to buffer
+    /// elements or use a more defensive algorithm to satisfy this guarantee. If an implementation
+    /// cannot provide this gurantee, this method should return an error.
     ///
-    /// For a non-safe version, see [`TryExtend::try_extend`].
+    /// For a faster basic-guarantee alternative, see [`TryExtend::try_extend`].
     ///
     /// # Errors
     ///
-    /// Returns an error if extending the collection fails. The collection should not be modified.
+    /// Returns [`TryExtend::Error`] if a failure occurs while extending the collection.
     ///
     /// # Examples
     ///
-    /// Provided implementations of `TryExtend` for map types, `HashMap`, `BTreeMap`,
-    /// `hashbrown::HashMap`, and `indexmap::IndexMap`, all work similiarly and provide strong
-    /// error guarantees. If the method returns an error, the map is not modified.
+    /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    /// use collect_failable::{TryExtend, KeyCollision};
-    /// use std::collections::HashMap;
-    ///
-    /// let mut map = HashMap::from([(1, 2)]);
-    /// let result = map.try_extend([(1, 3)]);
-    ///
-    /// assert_eq!(result, Err(KeyCollision { key: 1 }));
-    ///
-    /// // map is unchanged
-    /// assert_eq!(map, HashMap::from([(1, 2)]));
-    ///
-    /// // collisions within the iterator itself are also detected
-    /// let result = map.try_extend_safe([(2, 4), (2, 5)]);
-    ///
-    /// // result is an error with the colliding key
-    /// assert_eq!(result, Err(KeyCollision { key: 2 }));
-    ///
-    /// // map is unchanged
-    /// assert_eq!(map, HashMap::from([(1, 2)]));
-    ///
-    /// // works like `extend` if there are no collisions
-    /// let mut map = HashMap::from([(1, 2)]);
-    /// let result = map.try_extend_safe([(2, 3)]);
-    ///
-    /// assert!(result.is_ok());
-    /// assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
+    #[doc = function_body!("tests/try_extend.rs", try_extend_safe_map_collision_example, [])]
     /// ```
     fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = T>;
 
-    /// Tries to extend the collection with the contents of the iterator.
+    /// Tries to extends the collection providing a **basic error guarantee**.
     ///
-    /// Implementors are only required to provide a weak error guarantee. If the method returns an
-    /// error, the collection may be modified. However, it should still be in a valid state, and
-    /// the specific extension that caused the error should not take effect.
+    /// On failure, the collection may be partially modified, but it must remain valid.
+    /// The specific extension that triggers the error must not be inserted.
     ///
-    /// For a safe version, see [`TryExtend::try_extend_safe`].
+    /// For strong guarantee needs, use [`TryExtend::try_extend_safe`].
     ///
     /// # Errors
     ///
-    /// Returns an error if extending the collection fails. The collection may be modified in this case.
+    /// Returns [`TryExtend::Error`] if a failure occurs while extending the collection.
     ///
     /// # Examples
     ///
+    /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
+    ///
     /// ```rust
-    /// use collect_failable::{TryExtend, KeyCollision};
-    /// use std::collections::HashMap;
-    ///
-    /// let mut map = HashMap::from([(1, 2)]);
-    /// let err = map.try_extend([(2, 3), (1, 3)]).expect_err("should be err");
-    ///
-    /// assert_eq!(err, KeyCollision { key: 1 });
-    ///
-    /// // map may be modified, but colliding value should not be changed
-    /// assert_eq!(map[&1], 2);
+    #[doc = function_body!("tests/try_extend.rs", try_extend_basic_guarantee_example, [])]
     /// ```
     fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
     where

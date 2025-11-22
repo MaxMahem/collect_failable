@@ -6,7 +6,7 @@ use hashbrown::HashSet;
 use size_guess::SizeGuess;
 use tap::Pipe;
 
-use crate::{TryExtend, TryFromIterator, ValueCollision};
+use crate::{FoldMut, TryExtend, TryFromIterator, ValueCollision};
 
 /// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
 impl<T: Eq + Hash> TryFromIterator<T> for HashSet<T> {
@@ -27,10 +27,9 @@ impl<T: Eq + Hash> TryFromIterator<T> for HashSet<T> {
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_guess();
 
-        iter.try_fold(HashSet::with_capacity(size_guess), |mut set, value| match set.entry(value) {
+        iter.try_fold_mut(HashSet::with_capacity(size_guess), |set, value| match set.entry(value) {
             Entry::Occupied(entry) => entry.remove().pipe(ValueCollision::new).into_err(),
-            #[rustfmt::skip]
-            Entry::Vacant(entry) => { entry.insert(); Ok(set) }
+            Entry::Vacant(entry) => Ok(_ = entry.insert()),
         })
     }
 }
@@ -52,12 +51,11 @@ impl<T: Eq + Hash, S: BuildHasher> TryExtend<T> for HashSet<T, S> {
         let mut iter = iter.into_iter();
         let size_guess = iter.size_guess();
 
-        iter.try_fold(HashSet::with_capacity(size_guess), |mut set, value| match self.contains(&value) {
+        iter.try_fold_mut(HashSet::with_capacity(size_guess), |set, value| match self.contains(&value) {
             true => ValueCollision::new(value).into_err(),
             false => match set.contains(&value) {
                 true => ValueCollision::new(value).into_err(),
-                #[rustfmt::skip]
-                false => { _ = set.insert(value); Ok(set) }
+                false => Ok(_ = set.insert(value)),
             },
         })
         .map(|set| self.extend(set))
@@ -65,7 +63,7 @@ impl<T: Eq + Hash, S: BuildHasher> TryExtend<T> for HashSet<T, S> {
 
     /// Appends an iterator of values to the set, failing if a value would collide.
     ///
-    /// This implementation provides a weak error guarantee. If the method returns an error, the
+    /// This implementation provides a basic error guarantee. If the method returns an error, the
     /// set may be modified. However, it will still be in a valid state, and the specific
     /// collision that caused the error will not take effect.
     ///

@@ -1,31 +1,38 @@
-#[cfg(doc)]
-use std::collections::{BTreeMap, HashMap};
+use include_doc::function_body;
 
 #[cfg(doc)]
-use crate::KeyCollision;
+use std::collections::HashMap;
 
-/// Allows converting an iterator into a container that may fail to be constructed.
+#[cfg(doc)]
+use crate::TryCollectEx;
+
+/// Tries to convert a [`IntoIterator`] into a container that may fail to be constructed.
+///
+/// This trait is similar to [`FromIterator`], but can uphold a containers invariant and
+/// returns an [`Err`] if it would be violated. And like with [`Iterator::collect`],
+/// containers implementing this trait can be collected into via
+/// [`TryCollectEx::try_collect_ex`].
+///
+/// Implementations for several common types are provided.
 pub trait TryFromIterator<T>: Sized {
     /// The error that may occur when converting the iterator into the container.
     type Error;
 
-    /// Converts an iterator into a container that may fail to be constructed.
+    /// Tries to converts an iterator into a container that may fail to be constructed.
     ///
     /// # Errors
     ///
-    /// Returns an error if the container fails to be constructed.
+    /// Returns a [`TryFromIterator::Error`] error if the container fails to be constructed.
+    ///
+    /// Provided implementations all short-ciruit and error early if a constraint is violated,
+    /// but implementors are not required to do so.
     ///
     /// # Example
     ///
+    /// Provided [`HashMap`] implementations error if a key would collide.
+    ///
     /// ```rust
-    /// use std::collections::HashMap;
-    /// use collect_failable::{TryFromIterator, KeyCollision};
-    ///
-    /// let result = HashMap::try_from_iter([(1, 2), (1, 3)]);
-    /// assert_eq!(result, Err(KeyCollision { key: 1 }));
-    ///
-    /// let result = HashMap::try_from_iter([(1, 2), (2, 3)]);
-    /// assert_eq!(result, Ok(HashMap::from([(1, 2), (2, 3)])));
-    /// ```
+    #[doc = function_body!("tests/try_from_iterator.rs", try_from_iter_collision_example, [])]
+    /// ```    
     fn try_from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Result<Self, Self::Error>;
 }

@@ -6,7 +6,7 @@ use hashbrown::HashMap;
 use size_guess::SizeGuess;
 use tap::Pipe;
 
-use crate::{KeyCollision, TryExtend, TryFromIterator};
+use crate::{FoldMut, KeyCollision, TryExtend, TryFromIterator};
 
 /// Converts an iterator of key-value pairs into a [`HashMap`], failing if a key would collide.
 impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
@@ -26,10 +26,9 @@ impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_guess();
 
-        iter.try_fold(HashMap::with_capacity(size_guess), |mut map, (k, v)| match map.entry(k) {
+        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (k, v)| match map.entry(k) {
             Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
-            #[rustfmt::skip]
-            Entry::Vacant(entry) => { entry.insert(v); Ok(map) }
+            Entry::Vacant(entry) => Ok(_ = entry.insert(v)),
         })
     }
 }
@@ -51,10 +50,9 @@ impl<K: Eq + Hash, V, S: BuildHasher> TryExtend<(K, V)> for HashMap<K, V, S> {
         let mut iter = iter.into_iter();
         let size_guess = iter.size_guess();
 
-        iter.try_fold(HashMap::with_capacity(size_guess), |mut map, (key, value)| match self.entry_ref(&key) {
+        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (key, value)| match self.entry_ref(&key) {
             EntryRef::Vacant(_) => match map.entry(key) {
-                #[rustfmt::skip]
-                Entry::Vacant(entry) => { _ = entry.insert(value); Ok(map) }
+                Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
                 Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
             },
             EntryRef::Occupied(_) => KeyCollision::new(key).into_err(),
@@ -64,7 +62,7 @@ impl<K: Eq + Hash, V, S: BuildHasher> TryExtend<(K, V)> for HashMap<K, V, S> {
 
     /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
     ///
-    /// This implementation provides a weak error guarantee. If the method returns an error, the
+    /// This implementation provides a basic error guarantee. If the method returns an error, the
     /// map may be modified. However, it will still be in a valid state, and the specific
     /// collision that caused the error will not take effect.
     ///
