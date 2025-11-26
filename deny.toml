@@ -1,0 +1,59 @@
+[graph]
+targets = []
+exclude = [
+    "include-doc", # Doc only crate
+]
+all-features = true
+no-default-features = false
+
+[output]
+feature-depth = 1
+
+[advisories]
+ignore = [
+    # these don't take effect but are present in include-doc
+    { id = "RUSTSEC-2025-0075", reason = "unic-char-range: transitive dependency via ra-ap-rustc_lexer, no safe alternative available" },
+    { id = "RUSTSEC-2025-0080", reason = "unic-common: transitive dependency via ra-ap-rustc_lexer, no safe alternative available" },
+    { id = "RUSTSEC-2025-0081", reason = "unic-char-property: transitive dependency via ra-ap-rustc_lexer, no safe alternative available" },
+    { id = "RUSTSEC-2025-0090", reason = "unic-emoji-char: transitive dependency via ra-ap-rustc_lexer, no safe alternative available" },
+    { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: transitive dependency via ra-ap-rustc_lexer, no safe alternative available" },
+]
+
+[licenses]
+allow = [
+    "Apache-2.0",
+    # "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.8
+exceptions = []
+
+[licenses.private]
+ignore = false
+registries = []
+
+[bans]
+wildcards = "allow"
+highlight = "all"
+workspace-default-features = "allow"
+external-default-features = "allow"
+allow = []
+deny = []
+
+skip = []
+skip-tree = []
+
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
+
+[sources.allow-org]
+github = [
+    "MaxMahem"
+]
+gitlab = []
+bitbucket = []

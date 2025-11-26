@@ -1,5 +1,5 @@
 use arrayvec::ArrayVec;
-use fluent_result::{IntoResult, ThenErr};
+use fluent_result::ThenErr;
 
 use crate::{ExceedsCapacity, FoldMut, TryExtend, TryFromIterator};
 
@@ -68,17 +68,16 @@ impl<T, const N: usize> TryExtend<T> for ArrayVec<T, N> {
     where
         I: IntoIterator<Item = T>,
     {
-        let iter = iter.into_iter();
+        let mut iter = iter.into_iter();
+
         let size_guess = iter.size_hint().0;
         (size_guess > self.remaining_capacity()).then_err(ExceedsCapacity::new(N, self.len() + size_guess))?;
 
-        let temp = ArrayVec::<_, N>::try_from_iter(iter)?;
-        match (self.remaining_capacity(), temp.len()) {
-            (remain, add) if remain < add => return ExceedsCapacity::new(N, self.len() + add).into_err(),
-            (_, _) => self.extend(temp),
-        }
+        let len = self.len();
 
-        Ok(())
+        iter.try_for_each(|item| self.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1))).inspect_err(|_| {
+            self.truncate(len);
+        })
     }
 
     /// Appends an iterator to the [`ArrayVec`], failing if the iterator produces more items than the [`ArrayVec`]'s
