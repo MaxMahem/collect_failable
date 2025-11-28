@@ -18,7 +18,7 @@ This crate provides several complementary traits for failable collection:
 - `TryUnzip` – `unzip` an iterator of pairs into two fallible containers.
 - `FoldMut` – `fold`-style extension building a collection via mutation rather than move.
 
-Additionally, several implemenations are provided for common and popular containers. See the [implementations](#implementations) section for more details.
+Additionally, several implementations are provided for common and popular containers. See the [implementations](#implementations) section for more details.
 
 ### `TryFromIterator` and `TryCollectEx`
 
@@ -45,10 +45,10 @@ assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 
 Extend an existing container with items that may violate its invariants. This trait exposes two styles of error behavior:
 
-- `try_extend_safe` – strong guarantee: on error the container must remain unchanged.
-- `try_extend` – basic guarantee: the container may have partially ingested items, but must remain valid.
+- `try_extend_safe` – **strong guarantee** on an error, the container must remain unchanged.
+- `try_extend` – **basic guarantee** the container may have partially ingested items, but must remain valid.
 
-Use `try_extend_safe` if you must avoid mutation on failure; otherwise prefer the faster `try_extend`.
+Use `try_extend_safe` if you must avoid mutation on failure; otherwise, prefer the faster `try_extend`.
 
 ```rust
 use std::collections::HashMap;
@@ -126,4 +126,4 @@ Arrays implement `TryFromIterator` for iterators that yield exactly the right nu
 
 ### Result Implementation
 
-`TryFromIterator` is implemented for `Result<C, E>`, where `C` implements `TryFromIterator<T>`, similar to the [`FromIterator`](https://doc.rust-lang.org/std/result/enum.Result.html#impl-FromIterator%3CResult%3CA,+E%3E%3E-for-Result%3CV,+E%3E) implementation for `Result`. This allows short-circuting collection of failable values into a container whose construction is also failable.
+`TryFromIterator` is implemented for `Result<C, E>`, where `C` implements `TryFromIterator<T>`, similar to the [`FromIterator`](https://doc.rust-lang.org/std/result/enum.Result.html#impl-FromIterator%3CResult%3CA,+E%3E%3E-for-Result%3CV,+E%3E) implementation for `Result`. This allows short-circuiting collection of failable values into a container whose construction is also failable.
