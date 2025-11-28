@@ -19,7 +19,7 @@ pub trait TryUnzip {
     /// Different types of containers can be unzipped into.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try_unzip.rs", try_unzip_different_containers_example, [])]
+    #[doc = include_doc::function_body!("tests/try-unzip.rs", try_unzip_different_containers_example, [])]
     /// ```
     ///
     /// ## Multiple Errors
@@ -28,7 +28,7 @@ pub trait TryUnzip {
     /// returned first.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try_unzip.rs", try_unzip_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/try-unzip.rs", try_unzip_collision_example, [])]
     /// ```
     fn try_unzip<A, B, FromA, FromB>(self) -> Result<(FromA, FromB), OneOf2<FromA::Error, FromB::Error>>
     where

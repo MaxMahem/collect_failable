@@ -105,14 +105,6 @@ assert_eq!(result.get("a"), Some(&4));
 assert_eq!(result.get("b"), Some(&2));
 ```
 
-### Tuple Implementations
-
-Tuples of size 2 implement both `TryFromIterator` and `TryExtend` when their inner types do. Errors respect the guarantee of each component, mirroring the behavior of the `std` tuple implementations—but with fallibility.
-
-### Array Implementation
-
-Arrays implement `TryFromIterator` for iterators that yield exactly the right number of elements. This uses `unsafe` internally and is gated behind the `unsafe` feature (enabled by default).
-
 ## Implementations
 
 Implementations for various containers are provided.
@@ -123,3 +115,15 @@ Implementations for various containers are provided.
 * [ArrayVec](https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html) (feature `arrayvec`)
 * [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html), [hashbrown::HashSet](https://docs.rs/hashbrown/latest/hashbrown/struct.HashSet.html) (feature `hashbrown`)
 * [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/), [indexmap::IndexSet](https://docs.rs/indexmap/latest/indexmap/) (feature `indexmap`)
+
+### Tuple Implementations
+
+Tuples of size 2 implement both `TryFromIterator` and `TryExtend` when their inner types do. Errors respect the guarantee of each component, mirroring the behavior of the `std` tuple implementations—but with fallibility.
+
+### Array Implementation
+
+Arrays implement `TryFromIterator` for iterators that yield exactly the right number of elements. This uses `unsafe` internally and is gated behind the `unsafe` feature (enabled by default).
+
+### Result Implementation
+
+`TryFromIterator` is implemented for `Result<C, E>`, where `C` implements `TryFromIterator<T>`, similar to the [`FromIterator`](https://doc.rust-lang.org/std/result/enum.Result.html#impl-FromIterator%3CResult%3CA,+E%3E%3E-for-Result%3CV,+E%3E) implementation for `Result`. This allows short-circuting collection of failable values into a container whose construction is also failable.

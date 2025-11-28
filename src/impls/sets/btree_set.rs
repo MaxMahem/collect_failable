@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use fluent_result::IntoResult;
+use fluent_result::into::IntoResult;
 
 use crate::{FoldMut, TryExtend, TryFromIterator, ValueCollision};
 

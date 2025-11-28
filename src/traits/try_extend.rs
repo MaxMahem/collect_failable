@@ -13,9 +13,10 @@ use std::collections::HashMap;
 /// - **Strong error guarantee**. On an error, the collection is not modified.
 ///   [`TryExtend::try_extend_safe`] provides this guarantee.
 ///
-/// Implementations for several common types are provided. They all provide both implementation
-/// options. All provided types also implement the [`TryFromIterator`] trait. Consider using that
-/// trait if constructing a new container.
+/// Implementations may rely on [`Iterator::size_hint`] providing reliable bounds for the number of
+/// elements in the iterator in order to optimize their implementations. An iterator that violates
+/// the bounds returned by [`Iterator::size_hint`] may cause panics, produce incorrect results, or
+/// produce a result that violates container constraints, but must not result in undefined behavior.
 pub trait TryExtend<T> {
     /// Error type returned by the fallible extension methods.
     type Error;
@@ -24,7 +25,7 @@ pub trait TryExtend<T> {
     ///
     /// On failure, the collection must remain unchanged. Implementors may need to buffer
     /// elements or use a more defensive algorithm to satisfy this guarantee. If an implementation
-    /// cannot provide this gurantee, this method should return an error.
+    /// cannot provide this gurantee, this method should always return an error.
     ///
     /// For a faster basic-guarantee alternative, see [`TryExtend::try_extend`].
     ///
@@ -37,7 +38,7 @@ pub trait TryExtend<T> {
     /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try_extend.rs", try_extend_safe_map_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/try-extend.rs", try_extend_safe_map_collision_example, [])]
     /// ```
     fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
     where
@@ -59,7 +60,7 @@ pub trait TryExtend<T> {
     /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try_extend.rs", try_extend_basic_guarantee_example, [])]
+    #[doc = include_doc::function_body!("tests/try-extend.rs", try_extend_basic_guarantee_example, [])]
     /// ```
     fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
     where

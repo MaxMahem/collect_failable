@@ -1,6 +1,6 @@
 use std::hash::{BuildHasher, Hash};
 
-use fluent_result::IntoResult;
+use fluent_result::into::IntoResult;
 use hashbrown::hash_map::{Entry, EntryRef};
 use hashbrown::HashMap;
 use size_guess::SizeGuess;

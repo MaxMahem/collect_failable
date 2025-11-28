@@ -2,7 +2,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash};
 
-use fluent_result::IntoResult;
+use fluent_result::into::IntoResult;
 use size_guess::SizeGuess;
 use tap::Pipe;
 

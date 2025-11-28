@@ -1,7 +1,7 @@
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 
-use fluent_result::IntoResult;
+use fluent_result::into::IntoResult;
 use tap::Pipe;
 
 use crate::{FoldMut, KeyCollision, TryExtend, TryFromIterator};

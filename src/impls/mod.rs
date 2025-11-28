@@ -1,9 +1,10 @@
 #[cfg(feature = "unsafe")]
-mod array;
+mod r#unsafe;
 
 #[cfg(feature = "arrayvec")]
 mod arrayvec;
 
 mod maps;
+mod result;
 mod sets;
 mod tuples;

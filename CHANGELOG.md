@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2025-11-28
+
+### Added
+
+ - Added `TryFromIterator` implementations for `Result<C, E>`.
+
+### Changed
+
+ - Improvement to `ArrayVec::try_extend_safe` algorithm.
+
 ## [0.9.0] - 2025-11-22
 
 ### Added
