@@ -1,6 +1,6 @@
 #[test]
 fn try_from_iter_array_example() {
-    use collect_failable::{TryCollectEx, ItemCountMismatch};
+    use collect_failable::{ItemCountMismatch, TryCollectEx};
 
     // while `TryFromIterator` can be used directly, typically `TryCollectEx` is preferred
     let data = 1..=3;

@@ -31,7 +31,6 @@ fn try_from_iter_too_short_data() {
     assert_eq!(err, TOO_SHORT_ERR, "should match err");
 }
 
-
 #[test]
 fn try_from_iter_too_long_data_rollback() {
     let iter = HideSize(TOO_LONG_ARRAY.into_iter());

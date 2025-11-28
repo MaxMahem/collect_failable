@@ -67,7 +67,7 @@ where
 /// `fluent_result` crate) to flatten the error type for more ergonomic handling. Alternatively, if both error types
 /// are convertable to the return type of the scope using [`From`], you can simply use two instances of the `??`
 /// operator.
-/// 
+///
 /// ```rust
 #[doc = include_doc::function_body!("tests/doc/result.rs", double_question_mark_example, [])]
 /// ```
