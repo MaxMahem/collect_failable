@@ -107,11 +107,11 @@ mod tests {
     use super::*;
 
     const TEST_DATA: [Result<i32, i32>; 4] = [Ok(1), Err(3), Ok(3), Ok(4)];
-    
+
     #[test]
     fn extract_err_zero_size_after_err() {
         let mut extractor = ExtractErr::from(TEST_DATA.into_iter());
-        
+
         extractor.next();
         extractor.next();
         extractor.next();
@@ -122,10 +122,9 @@ mod tests {
     #[test]
     fn extract_err_forward_hint() {
         let mut extractor = ExtractErr::from(TEST_DATA.into_iter());
-        
+
         extractor.next();
 
         assert_eq!(extractor.size_hint(), (0, Some(3)));
     }
 }
-    

@@ -25,9 +25,9 @@ macro_rules! test_try_extend_collision {
         #[test]
         fn $name() {
             let mut valid = HashSetTuple::from_iter(VALID_DATA);
-            
+
             let err = valid.try_extend($data).expect_err("should be err");
-            
+
             assert_eq!(err, $expected_error, "should match err");
         }
     };
@@ -39,7 +39,7 @@ macro_rules! test_try_extend_success {
         fn $name() {
             let mut empty = HashSetTuple::default();
             empty.$method(VALID_DATA).expect("should be ok");
-            
+
             assert_eq!(empty, HashSetTuple::from_iter(VALID_DATA), "should match data");
         }
     };
@@ -50,7 +50,7 @@ macro_rules! test_try_extend_success {
 fn try_from_iter_valid_data() {
     let found = HashSetTuple::try_from_iter(VALID_DATA).expect("should be ok");
     let expected: HashSetTuple<_> = VALID_DATA.into_iter().collect();
-    
+
     assert_eq!(found, expected, "should match data");
 }
 

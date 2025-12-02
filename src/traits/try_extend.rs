@@ -6,11 +6,11 @@ use std::collections::HashMap;
 /// Trait for extending an existing collection from an iterator with fallible operations.
 ///
 /// This trait is similar to [`Extend`], but allows implementor to uphold a container's invariant
-/// during construction with a **basic error guarantee**. On an error, the collection may be 
-/// modified, but will be in a valid state. The specific extension that triggers the error must 
+/// during construction with a **basic error guarantee**. On an error, the collection may be
+/// modified, but will be in a valid state. The specific extension that triggers the error must
 /// not be inserted.
 ///
-/// For a stronger error guarantee where the collection is unchanged on error, see 
+/// For a stronger error guarantee where the collection is unchanged on error, see
 /// [`TryExtendSafe`].
 ///
 /// Implementations may rely on [`Iterator::size_hint`] providing reliable bounds for the number of

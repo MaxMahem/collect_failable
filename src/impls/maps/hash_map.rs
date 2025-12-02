@@ -69,7 +69,7 @@ impl<K: Eq + Hash, V, S: BuildHasher> TryExtendSafe<(K, V)> for HashMap<K, V, S>
     /// map is not modified.
     ///
     /// See [trait level documentation](trait@TryExtendSafe) for an example.
-    fn try_extend_safe<I>(&mut self, iter: I) ->Result<(), Self::Error>
+    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = (K, V)>,
     {
