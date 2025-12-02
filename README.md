@@ -41,14 +41,14 @@ let map: HashMap<_, _> = [(1, 2), (2, 3)].into_iter().try_collect_ex().expect("s
 assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 ```
 
-### `TryExtend`
+### `TryExtend` and `TryExtendSafe`
 
-Extend an existing container with items that may violate its invariants. This trait exposes two styles of error behavior:
+Extend an existing container with items that may violate its invariants. Two different trait exposes two styles of error behavior:
 
-- `try_extend_safe` – **strong guarantee** on an error, the container must remain unchanged.
-- `try_extend` – **basic guarantee** the container may have partially ingested items, but must remain valid.
+- `TryExtendSafe` – **strong guarantee** on an error, the container must remain unchanged.
+- `TryExtend` – **basic guarantee** the container may have partially ingested items, but must remain valid.
 
-Use `try_extend_safe` if you must avoid mutation on failure; otherwise, prefer the faster `try_extend`.
+Use `TryExtendSafe` if you must avoid mutation on failure; otherwise, prefer the faster `TryExtend`.
 
 ```rust
 use std::collections::HashMap;

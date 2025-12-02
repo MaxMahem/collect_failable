@@ -52,6 +52,12 @@ pub trait TryExtend<T> {
 /// Not all types can implement this trait. For example, tuples of collections cannot
 /// provide this guarantee because if the second collection fails to extend, the first
 /// may have already been modified.
+///
+/// Like with [`TryExtend`], implementors may rely on [`Iterator::size_hint`] providing reliable
+/// bounds for the number of elements in the iterator in order to optimize their implementations.
+/// An iterator that violates the bounds returned by [`Iterator::size_hint`] may cause panics,
+/// produce incorrect results, or produce a result that violates container constraints, but must
+/// not result in undefined behavior.
 pub trait TryExtendSafe<T>: TryExtend<T> {
     /// Tries to extends the collection providing a **strong error guarantee**.
     ///
