@@ -52,14 +52,14 @@ Use `TryExtendSafe` if you must avoid mutation on failure; otherwise, prefer the
 
 ```rust
 use std::collections::HashMap;
-use collect_failable::TryExtend;
+use collect_failable::TryExtendSafe;
 
 let mut map = HashMap::new();
-map.try_extend([(1, 2), (2, 3)]).expect("should be Ok");
+map.try_extend_safe([(1, 2), (2, 3)]).expect("should be Ok");
 assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 
 // on a failure, the container is not modified
-map.try_extend([(1, 3)]).expect_err("should be Err");
+map.try_extend_safe([(1, 3)]).expect_err("should be Err");
 assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 ```
 
