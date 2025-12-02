@@ -11,18 +11,6 @@ fn try_from_iter_tuple_example() {
 }
 
 #[test]
-fn try_extend_safe_tuple_example() {
-    use collect_failable::TryExtend;
-    use std::collections::HashSet;
-
-    let mut data = (HashSet::new(), HashSet::new());
-    data.try_extend_safe([(1, 2), (2, 3)]).unwrap();
-
-    assert_eq!(data.0, HashSet::from([1, 2]));
-    assert_eq!(data.1, HashSet::from([2, 3]));
-}
-
-#[test]
 fn try_extend_tuple_example() {
     use collect_failable::TryExtend;
     use std::collections::HashSet;

@@ -6,7 +6,8 @@ use fluent_result::into::IntoResult;
 use size_guess::SizeGuess;
 use tap::Pipe;
 
-use crate::{FoldMut, KeyCollision, TryExtend, TryFromIterator};
+use crate::utils::FoldMut;
+use crate::{KeyCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
 /// Converts an iterator of key-value pairs into a [`HashMap`], failing if a key would collide.
 #[allow(clippy::implicit_hasher)]
@@ -41,29 +42,6 @@ impl<K: Eq + Hash, V, S: BuildHasher> TryExtend<(K, V)> for HashMap<K, V, S> {
 
     /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
     ///
-    /// This implementation provides a strong error guarantee. If the method returns an error, the
-    /// map is not modified.
-    ///
-    /// See [trait level documentation](trait@TryExtend) for an example.
-    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = (K, V)>,
-    {
-        let mut iter = iter.into_iter();
-        let size_guess = iter.size_guess();
-
-        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (key, value)| match self.contains_key(&key) {
-            true => KeyCollision::new(key).into_err(),
-            false => match map.entry(key) {
-                Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
-                Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
-            },
-        })
-        .map(|insert_map| self.extend(insert_map))
-    }
-
-    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
-    ///
     /// This implementation provides a basic error guarantee. If the method returns an error, the
     /// map may be modified. However, it will still be in a valid state, and the specific
     /// collision that caused the error will not take effect.
@@ -80,5 +58,31 @@ impl<K: Eq + Hash, V, S: BuildHasher> TryExtend<(K, V)> for HashMap<K, V, S> {
             true => KeyCollision::new(key).into_err(),
             false => Ok(_ = self.insert(key, value)),
         })
+    }
+}
+
+/// Appends an iterator of key-value pairs to the map with a strong error guarantee.
+impl<K: Eq + Hash, V, S: BuildHasher> TryExtendSafe<(K, V)> for HashMap<K, V, S> {
+    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+    ///
+    /// This implementation provides a strong error guarantee. If the method returns an error, the
+    /// map is not modified.
+    ///
+    /// See [trait level documentation](trait@TryExtendSafe) for an example.
+    fn try_extend_safe<I>(&mut self, iter: I) ->Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = (K, V)>,
+    {
+        let mut iter = iter.into_iter();
+        let size_guess = iter.size_guess();
+
+        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (key, value)| match self.contains_key(&key) {
+            true => KeyCollision::new(key).into_err(),
+            false => match map.entry(key) {
+                Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
+                Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
+            },
+        })
+        .map(|insert_map| self.extend(insert_map))
     }
 }

@@ -1,0 +1,1558 @@
+﻿C:\Users\maxma\source\repos\Rust\collect_failable\src\errors\exceeds_capacity.rs:
+    1|       |#[cfg(doc)]
+    2|       |use arrayvec::ArrayVec;
+    3|       |
+    4|       |use arrayvec::CapacityError;
+    5|       |
+    6|       |/// An error produced when the iterator produces more items than the [`ArrayVec`]'s capacity.
+    7|       |#[derive(Debug, PartialEq, Eq, thiserror::Error, derive_more::Constructor)]
+    8|       |#[error("Too many items to fit the array, Capacity: {capacity}, necessary: {necessary}")]
+    9|       |pub struct ExceedsCapacity {
+   10|       |    /// The capacity of the [`ArrayVec`].
+   11|       |    pub capacity: usize,
+   12|       |    /// The number of items in the iterator.
+   13|       |    pub necessary: usize,
+   14|       |}
+   15|       |
+   16|       |impl From<ExceedsCapacity> for CapacityError<()> {
+   17|      1|    fn from(_: ExceedsCapacity) -> Self {
+   18|      1|        CapacityError::new(())
+   19|      1|    }
+   20|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\arrayvec.rs:
+    1|       |use arrayvec::ArrayVec;
+    2|       |use fluent_result::bool::Then;
+    3|       |
+    4|       |use crate::utils::FoldMut;
+    5|       |use crate::{ExceedsCapacity, TryExtend, TryFromIterator};
+    6|       |
+    7|       |/// Tries to create an [`ArrayVec`] from an iterator.
+    8|       |///
+    9|       |/// This implementation will return an error if the iterator produces more items than the [`ArrayVec`]'s capacity.
+   10|       |///
+   11|       |/// # Examples
+   12|       |///
+   13|       |/// ```rust
+   14|       |#[doc = include_doc::function_body!("tests/doc/arrayvec.rs", try_from_iter_arrayvec_example, [])]
+   15|       |/// ```
+   16|       |impl<T, const N: usize> TryFromIterator<T> for ArrayVec<T, N> {
+   17|       |    type Error = ExceedsCapacity;
+   18|       |
+   19|     13|    fn try_from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Result<Self, Self::Error> {
+   20|     13|        let mut iter = into_iter.into_iter();
+   21|     13|        let size_guess = iter.size_hint().0;
+   22|       |
+   23|     13|        (size_guess > N).then_err(ExceedsCapacity::new(N, size_guess))?;
+                                                                                    ^2
+   24|       |
+   25|     24|        iter.try_fold_mut(ArrayVec::new(), |array, item| {
+                      ^11  ^11          ^11
+   26|     24|            array.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1))
+                                                           ^1                      ^1
+   27|     24|        })
+   28|     13|    }
+   29|       |}
+   30|       |
+   31|       |/// Extends an [`ArrayVec`] with an iterator, failing if the iterator produces more items than the [`ArrayVec`]'s
+   32|       |/// remaining capacity.
+   33|       |impl<T, const N: usize> TryExtend<T> for ArrayVec<T, N> {
+   34|       |    type Error = ExceedsCapacity;
+   35|       |
+   36|       |    /// Appends an iterator to the [`ArrayVec`], failing if the iterator produces more items than the [`ArrayVec`]'s
+   37|       |    /// remaining capacity.
+   38|       |    ///
+   39|       |    /// This method provides a strong error guarantee. If the method returns an error, the [`ArrayVec`] is not modified.
+   40|       |    ///
+   41|       |    /// # Examples
+   42|       |    ///
+   43|       |    /// ```rust
+   44|       |    #[doc = include_doc::function_body!("tests/doc/arrayvec.rs", try_extend_safe_arrayvec_example, [])]
+   45|       |    /// ```
+   46|      5|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   47|      5|    where
+   48|      5|        I: IntoIterator<Item = T>,
+   49|       |    {
+   50|      5|        let mut iter = iter.into_iter();
+   51|       |
+   52|      5|        let size_guess = iter.size_hint().0;
+   53|      5|        (size_guess > self.remaining_capacity()).then_err(ExceedsCapacity::new(N, self.len() + size_guess))?;
+                                                                                                                         ^2
+   54|       |
+   55|      3|        let len = self.len();
+   56|       |
+   57|      6|        iter.try_for_each(|item| self.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1))).inspect_err(|_| {
+                      ^3   ^3                                                  ^1                      ^1       ^3              ^1
+   58|      1|            self.truncate(len);
+   59|      1|        })
+   60|      5|    }
+   61|       |
+   62|       |    /// Appends an iterator to the [`ArrayVec`], failing if the iterator produces more items than the [`ArrayVec`]'s
+   63|       |    /// remaining capacity.
+   64|       |    ///
+   65|       |    /// This method provides a basic error guarantee. If the method returns an error, the [`ArrayVec`] is valid, but may
+   66|       |    /// be modified.
+   67|       |    ///
+   68|       |    /// # Examples
+   69|       |    ///
+   70|       |    /// ```rust
+   71|       |    #[doc = include_doc::function_body!("tests/doc/arrayvec.rs", try_extend_arrayvec_example, [])]
+   72|       |    /// ```
+   73|      5|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   74|      5|    where
+   75|      5|        I: IntoIterator<Item = T>,
+   76|       |    {
+   77|      5|        let mut iter = iter.into_iter();
+   78|      5|        let size_guess = iter.size_hint().0;
+   79|      5|        (size_guess > self.remaining_capacity()).then_err(ExceedsCapacity::new(N, self.len() + size_guess))?;
+                                                                                                                         ^2
+   80|       |
+   81|      6|        iter.try_for_each(|item| self.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1)))
+                      ^3   ^3                                                  ^1                      ^1
+   82|      5|    }
+   83|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\maps\btree_map.rs:
+    1|       |use std::collections::btree_map::Entry;
+    2|       |use std::collections::BTreeMap;
+    3|       |
+    4|       |use fluent_result::into::IntoResult;
+    5|       |use tap::Pipe;
+    6|       |
+    7|       |use crate::utils::FoldMut;
+    8|       |use crate::{KeyCollision, TryExtend, TryFromIterator};
+    9|       |
+   10|       |/// Converts an iterator of key-value pairs into a [`BTreeMap`], failing if a key would collide.
+   11|       |impl<K: Ord, V> TryFromIterator<(K, V)> for BTreeMap<K, V> {
+   12|       |    type Error = KeyCollision<K>;
+   13|       |
+   14|       |    /// Converts an iterator of key-value pairs into a [`BTreeMap`], failing if a key would collide.
+   15|       |    ///
+   16|       |    /// Note: In the case of a collision, technically the key returned by [`KeyCollision`] is the
+   17|       |    /// first key that was seen during iteration, not the second key that collided.
+   18|       |    ///
+   19|       |    /// In the case of a collision, the key held by [`KeyCollision`] is the first key that was seen
+   20|       |    /// during iteration. This may be relevant for keys that compare the same but still have
+   21|       |    /// different values.
+   22|       |    ///
+   23|       |    /// See [trait level documentation](trait@TryFromIterator) for an example.
+   24|      2|    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+   25|      2|    where
+   26|      2|        I: IntoIterator<Item = (K, V)>,
+   27|       |    {
+   28|      5|        into_iter.into_iter().try_fold_mut(BTreeMap::new(), |map, (key, value)| match map.entry(key) {
+                      ^2                    ^2           ^2
+   29|      1|            Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
+   30|      4|            Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
+   31|      5|        })
+   32|      2|    }
+   33|       |}
+   34|       |
+   35|       |/// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   36|       |impl<K: Ord, V> TryExtend<(K, V)> for BTreeMap<K, V> {
+   37|       |    type Error = KeyCollision<K>;
+   38|       |
+   39|       |    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   40|       |    ///
+   41|       |    /// This implementation provides a strong error guarantee. If the method returns an error, the
+   42|       |    /// map is not modified.
+   43|       |    ///
+   44|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   45|      3|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   46|      3|    where
+   47|      3|        I: IntoIterator<Item = (K, V)>,
+   48|       |    {
+   49|      3|        iter.into_iter()
+   50|      7|            .try_fold_mut(BTreeMap::new(), |map, (key, value)| match self.contains_key(&key) {
+                           ^3           ^3
+   51|      1|                true => KeyCollision::new(key).into_err(),
+   52|      6|                false => match map.entry(key) {
+   53|      1|                    Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
+   54|      5|                    Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
+   55|       |                },
+   56|      7|            })
+   57|      3|            .map(|map| self.extend(map))
+                                     ^1   ^1     ^1
+   58|      3|    }
+   59|       |
+   60|       |    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   61|       |    ///
+   62|       |    /// This implementation provides a basic error guarantee. If the method returns an error, the
+   63|       |    /// map may be modified. However, it will still be in a valid state, and the specific
+   64|       |    /// collision that caused the error will not take effect.
+   65|       |    ///
+   66|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   67|      3|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   68|      3|    where
+   69|      3|        I: IntoIterator<Item = (K, V)>,
+   70|       |    {
+   71|      8|        iter.into_iter().try_for_each(|(key, value)| match self.contains_key(&key) {
+                      ^3               ^3
+   72|      2|            true => KeyCollision::new(key).into_err(),
+   73|      6|            false => Ok(_ = self.insert(key, value)),
+   74|      8|        })
+   75|      3|    }
+   76|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\maps\hash_map.rs:
+    1|       |use std::collections::hash_map::Entry;
+    2|       |use std::collections::HashMap;
+    3|       |use std::hash::{BuildHasher, Hash};
+    4|       |
+    5|       |use fluent_result::into::IntoResult;
+    6|       |use size_guess::SizeGuess;
+    7|       |use tap::Pipe;
+    8|       |
+    9|       |use crate::utils::FoldMut;
+   10|       |use crate::{KeyCollision, TryExtend, TryFromIterator};
+   11|       |
+   12|       |/// Converts an iterator of key-value pairs into a [`HashMap`], failing if a key would collide.
+   13|       |#[allow(clippy::implicit_hasher)]
+   14|       |impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
+   15|       |    type Error = KeyCollision<K>;
+   16|       |
+   17|       |    /// Converts an iterator of key-value pairs into a [`HashMap`], failing if a key would collide.
+   18|       |    ///
+   19|       |    /// In the case of a collision, the key held by [`KeyCollision`] is the first key that was seen
+   20|       |    /// during iteration. This may be relevant for keys that compare the same but still have
+   21|       |    /// different values.
+   22|       |    ///
+   23|       |    /// See [trait level documentation](trait@TryFromIterator) for an example.
+   24|      7|    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+   25|      7|    where
+   26|      7|        Self: Sized,
+   27|      7|        I: IntoIterator<Item = (K, V)>,
+   28|       |    {
+   29|      7|        let mut iter = into_iter.into_iter();
+   30|      7|        let size_guess = iter.size_guess();
+   31|       |
+   32|     15|        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (k, v)| match map.entry(k) {
+                      ^7   ^7           ^7                     ^7
+   33|      4|            Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
+   34|     11|            Entry::Vacant(entry) => Ok(_ = entry.insert(v)),
+   35|     15|        })
+   36|      7|    }
+   37|       |}
+   38|       |
+   39|       |/// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   40|       |impl<K: Eq + Hash, V, S: BuildHasher> TryExtend<(K, V)> for HashMap<K, V, S> {
+   41|       |    type Error = KeyCollision<K>;
+   42|       |
+   43|       |    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   44|       |    ///
+   45|       |    /// This implementation provides a strong error guarantee. If the method returns an error, the
+   46|       |    /// map is not modified.
+   47|       |    ///
+   48|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   49|      6|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   50|      6|    where
+   51|      6|        I: IntoIterator<Item = (K, V)>,
+   52|       |    {
+   53|      6|        let mut iter = iter.into_iter();
+   54|      6|        let size_guess = iter.size_guess();
+   55|       |
+   56|     11|        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (key, value)| match self.contains_key(&key) {
+                      ^6   ^6           ^6                     ^6
+   57|      2|            true => KeyCollision::new(key).into_err(),
+   58|      9|            false => match map.entry(key) {
+   59|      2|                Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
+   60|      7|                Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
+   61|       |            },
+   62|     11|        })
+   63|      6|        .map(|insert_map| self.extend(insert_map))
+                                        ^2   ^2     ^2
+   64|      6|    }
+   65|       |
+   66|       |    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   67|       |    ///
+   68|       |    /// This implementation provides a basic error guarantee. If the method returns an error, the
+   69|       |    /// map may be modified. However, it will still be in a valid state, and the specific
+   70|       |    /// collision that caused the error will not take effect.
+   71|       |    ///
+   72|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   73|      5|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   74|      5|    where
+   75|      5|        I: IntoIterator<Item = (K, V)>,
+   76|       |    {
+   77|      5|        let mut iter = iter.into_iter();
+   78|      5|        self.reserve(iter.size_guess());
+   79|       |
+   80|     11|        iter.try_for_each(|(key, value)| match self.contains_key(&key) {
+                      ^5   ^5
+   81|      3|            true => KeyCollision::new(key).into_err(),
+   82|      8|            false => Ok(_ = self.insert(key, value)),
+   83|     11|        })
+   84|      5|    }
+   85|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\maps\hashbrown.rs:
+    1|       |use std::hash::{BuildHasher, Hash};
+    2|       |
+    3|       |use fluent_result::into::IntoResult;
+    4|       |use hashbrown::hash_map::{Entry, EntryRef};
+    5|       |use hashbrown::HashMap;
+    6|       |use size_guess::SizeGuess;
+    7|       |use tap::Pipe;
+    8|       |
+    9|       |use crate::utils::FoldMut;
+   10|       |use crate::{KeyCollision, TryExtend, TryFromIterator};
+   11|       |
+   12|       |/// Converts an iterator of key-value pairs into a [`HashMap`], failing if a key would collide.
+   13|       |impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
+   14|       |    type Error = KeyCollision<K>;
+   15|       |
+   16|       |    /// Converts an iterator of key-value pairs into a [`HashMap`] failing if a key would collide.
+   17|       |    ///
+   18|       |    /// In the case of a collision, the key held by [`KeyCollision`] is the first key that was seen
+   19|       |    /// during iteration. This may be relevant for keys that compare the same but still have
+   20|       |    /// different values.
+   21|       |    ///
+   22|       |    /// See [trait level documentation](trait@TryFromIterator) for an example.
+   23|      2|    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+   24|      2|    where
+   25|      2|        I: IntoIterator<Item = (K, V)>,
+   26|       |    {
+   27|      2|        let mut iter = into_iter.into_iter();
+   28|      2|        let size_guess = iter.size_guess();
+   29|       |
+   30|      5|        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (k, v)| match map.entry(k) {
+                      ^2   ^2           ^2                     ^2
+   31|      1|            Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
+   32|      4|            Entry::Vacant(entry) => Ok(_ = entry.insert(v)),
+   33|      5|        })
+   34|      2|    }
+   35|       |}
+   36|       |
+   37|       |/// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   38|       |impl<K: Eq + Hash, V, S: BuildHasher> TryExtend<(K, V)> for HashMap<K, V, S> {
+   39|       |    type Error = KeyCollision<K>;
+   40|       |
+   41|       |    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   42|       |    ///
+   43|       |    /// This implementation provides a strong error guarantee. If the method returns an error, the
+   44|       |    /// map is not modified.
+   45|       |    ///
+   46|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   47|      3|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   48|      3|    where
+   49|      3|        I: IntoIterator<Item = (K, V)>,
+   50|       |    {
+   51|      3|        let mut iter = iter.into_iter();
+   52|      3|        let size_guess = iter.size_guess();
+   53|       |
+   54|      7|        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (key, value)| match self.entry_ref(&key) {
+                      ^3   ^3           ^3                     ^3
+   55|      6|            EntryRef::Vacant(_) => match map.entry(key) {
+   56|      5|                Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
+   57|      1|                Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
+   58|       |            },
+   59|      1|            EntryRef::Occupied(_) => KeyCollision::new(key).into_err(),
+   60|      7|        })
+   61|      3|        .map(|map| self.extend(map))
+                                 ^1   ^1     ^1
+   62|      3|    }
+   63|       |
+   64|       |    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   65|       |    ///
+   66|       |    /// This implementation provides a basic error guarantee. If the method returns an error, the
+   67|       |    /// map may be modified. However, it will still be in a valid state, and the specific
+   68|       |    /// collision that caused the error will not take effect.
+   69|       |    ///
+   70|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   71|      3|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   72|      3|    where
+   73|      3|        I: IntoIterator<Item = (K, V)>,
+   74|       |    {
+   75|      3|        let mut iter = iter.into_iter();
+   76|      3|        self.reserve(iter.size_guess());
+   77|       |
+   78|      8|        iter.try_for_each(|(key, value)| match self.contains_key(&key) {
+                      ^3   ^3
+   79|      2|            true => KeyCollision::new(key).into_err(),
+   80|      6|            false => Ok(_ = self.insert(key, value)),
+   81|      8|        })
+   82|      3|    }
+   83|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\maps\indexmap.rs:
+    1|       |use std::hash::{BuildHasher, Hash};
+    2|       |
+    3|       |use fluent_result::into::IntoResult;
+    4|       |use indexmap::map::Entry;
+    5|       |use indexmap::IndexMap;
+    6|       |use size_guess::SizeGuess;
+    7|       |use tap::Pipe;
+    8|       |
+    9|       |use crate::utils::FoldMut;
+   10|       |use crate::{KeyCollision, TryExtend, TryFromIterator};
+   11|       |
+   12|       |/// Converts an iterator of key-value pairs into a [`IndexMap`], failing if a key would collide.
+   13|       |impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for IndexMap<K, V> {
+   14|       |    type Error = KeyCollision<K>;
+   15|       |
+   16|       |    /// Converts an iterator of key-value pairs into a hash-map, failing if a key would collide.
+   17|       |    ///
+   18|       |    /// In the case of a collision, the key held by [`KeyCollision`] is the first key that was seen
+   19|       |    /// during iteration. This may be relevant for keys that compare the same but still have
+   20|       |    /// different values.
+   21|       |    ///
+   22|       |    /// See [trait level documentation](trait@TryFromIterator) for an example.
+   23|      2|    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+   24|      2|    where
+   25|      2|        Self: Sized,
+   26|      2|        I: IntoIterator<Item = (K, V)>,
+   27|       |    {
+   28|      2|        let mut iter = into_iter.into_iter();
+   29|      2|        let size_guess = iter.size_guess();
+   30|       |
+   31|      5|        iter.try_fold_mut(IndexMap::with_capacity(size_guess), |map, (k, v)| match map.entry(k) {
+                      ^2   ^2           ^2                      ^2
+   32|      1|            Entry::Occupied(entry) => entry.shift_remove_entry().0.pipe(KeyCollision::new).into_err(),
+   33|      4|            Entry::Vacant(entry) => Ok(_ = entry.insert(v)),
+   34|      5|        })
+   35|      2|    }
+   36|       |}
+   37|       |
+   38|       |/// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   39|       |impl<K: Eq + Hash, V, S: BuildHasher> TryExtend<(K, V)> for IndexMap<K, V, S> {
+   40|       |    type Error = KeyCollision<K>;
+   41|       |
+   42|       |    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
+   43|       |    ///
+   44|       |    /// This implementation provides a strong error guarantee. If the method returns an error, the
+   45|       |    /// map is not modified.
+   46|       |    ///
+   47|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   48|      3|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   49|      3|    where
+   50|      3|        I: IntoIterator<Item = (K, V)>,
+   51|       |    {
+   52|      3|        let mut iter = iter.into_iter();
+   53|      3|        let size_guess = iter.size_guess();
+   54|       |
+   55|      7|        iter.try_fold_mut(IndexMap::with_capacity(size_guess), |map, (key, value)| match self.contains_key(&key) {
+                      ^3   ^3           ^3                      ^3
+   56|      1|            true => KeyCollision::new(key).into_err(),
+   57|      6|            false => match map.entry(key) {
+   58|      1|                Entry::Occupied(entry) => entry.swap_remove_entry().0.pipe(KeyCollision::new).into_err(),
+   59|      5|                Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
+   60|       |            },
+   61|      7|        })
+   62|      3|        .map(|insert_map| self.extend(insert_map))
+                                        ^1   ^1     ^1
+   63|      3|    }
+   64|       |
+   65|      3|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   66|      3|    where
+   67|      3|        I: IntoIterator<Item = (K, V)>,
+   68|       |    {
+   69|      3|        let mut iter = iter.into_iter();
+   70|      3|        self.reserve(iter.size_guess());
+   71|       |
+   72|      8|        iter.try_for_each(|(key, value)| match self.contains_key(&key) {
+                      ^3   ^3
+   73|      2|            true => KeyCollision::new(key).into_err(),
+   74|      6|            false => Ok(_ = self.insert(key, value)),
+   75|      8|        })
+   76|      3|    }
+   77|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\result.rs:
+    1|       |use fluent_result::bool::Then;
+    2|       |
+    3|       |use crate::TryFromIterator;
+    4|       |
+    5|       |/// Iterator adaptor that extracts [`Ok`] values from a [`Result`] [`Iterator`],
+    6|       |/// storing the first encountered [`Err`] for later retrieval.
+    7|       |#[derive(Debug)]
+    8|       |struct ExtractErr<I, E> {
+    9|       |    iter: I,
+   10|       |    error: Option<E>,
+   11|       |}
+   12|       |
+   13|       |impl<I, E> From<I> for ExtractErr<I, E> {
+   14|      9|    fn from(iter: I) -> Self {
+   15|      9|        Self { iter, error: None }
+   16|      9|    }
+   17|       |}
+   18|       |
+   19|       |/// Implements Iterator for `ExtractErr`, yielding Ok values and capturing the first Err.
+   20|       |///
+   21|       |/// Once an Err is encountered, the iterator terminates and stores the error.
+   22|       |impl<I, T, E> Iterator for ExtractErr<I, E>
+   23|       |where
+   24|       |    I: Iterator<Item = Result<T, E>>,
+   25|       |{
+   26|       |    type Item = T;
+   27|       |
+   28|     24|    fn next(&mut self) -> Option<Self::Item> {
+   29|     24|        self.error.is_some().then_none()?;
+                                                      ^0
+   30|       |
+   31|     24|        match self.iter.next() {
+   32|     18|            Some(Ok(v)) => Some(v),
+   33|       |            #[rustfmt::skip]
+   34|      3|            Some(Err(e)) => { self.error = Some(e); None }
+   35|      3|            None => None,
+   36|       |        }
+   37|     24|    }
+   38|       |
+   39|      9|    fn size_hint(&self) -> (usize, Option<usize>) {
+   40|      9|        match self.error.is_some() {
+   41|      0|            true => (0, Some(0)),
+   42|      9|            false => (0, self.iter.size_hint().1),
+   43|       |        }
+   44|      9|    }
+   45|       |}
+   46|       |
+   47|       |/// Converts an iterator of [`Result<T, E>`] into a [`Result<C, E>`], where `C` implements [`TryFromIterator<T>`].
+   48|       |///
+   49|       |/// That is, given a iterator that yields [`Result<T, E>`], this implementation will collect all [`Ok`] values
+   50|       |/// into a container `C` that implements [`TryFromIterator<T>`], short-circuiting on the first [`Err`] encountered.
+   51|       |/// If an [`Err`] is found, it is returned immediately. If all values are [`Ok`], but the inner collection fails to
+   52|       |/// construct, that error is propagated.
+   53|       |///
+   54|       |/// # Type Parameters
+   55|       |///
+   56|       |/// - `T`: The type of the values in the iterator.
+   57|       |/// - `E`: The error type returned by the fallible extension methods.
+   58|       |/// - `C`: The type of the container to be constructed.
+   59|       |///
+   60|       |/// # Examples
+   61|       |///
+   62|       |/// ```rust
+   63|       |#[doc = include_doc::function_body!("tests/doc/result.rs", try_from_iter_result_example, [])]
+   64|       |/// ```
+   65|       |/// Handling the nested `Result<Result<C, E>, C::Error>` may be cumbersome. Consider using
+   66|       |/// `fluent_result::nested::FlattenErr::flatten_err` or `fluent_result::nested::BoxErr::box_err` (from the
+   67|       |/// `fluent_result` crate) to flatten the error type for more ergonomic handling. Alternatively, if both error types
+   68|       |/// are convertable to the return type of the scope using [`From`], you can simply use two instances of the `??`
+   69|       |/// operator.
+   70|       |///
+   71|       |/// ```rust
+   72|       |#[doc = include_doc::function_body!("tests/doc/result.rs", double_question_mark_example, [])]
+   73|       |/// ```
+   74|       |impl<T, E, C> TryFromIterator<Result<T, E>> for Result<C, C::Error>
+   75|       |where
+   76|       |    C: TryFromIterator<T>,
+   77|       |{
+   78|       |    type Error = E;
+   79|       |
+   80|       |    /// Converts an iterator of `Result<A, E>` into a `Result<V, E>`.
+   81|       |    ///
+   82|       |    /// # Examples
+   83|       |    ///
+   84|       |    /// ```rust
+   85|       |    #[doc = include_doc::function_body!("tests/doc/result.rs", try_from_iter_result_example, [])]
+   86|       |    /// ```
+   87|      9|    fn try_from_iter<I: IntoIterator<Item = Result<T, E>>>(into_iter: I) -> Result<Self, Self::Error> {
+   88|      9|        let mut extractor: ExtractErr<_, _> = into_iter.into_iter().into();
+   89|       |
+   90|      9|        let try_from_result = C::try_from_iter(&mut extractor);
+   91|       |
+   92|      9|        match (extractor.error, try_from_result) {
+   93|      3|            (Some(e), _) => Err(e),
+   94|      3|            (None, Err(e)) => Ok(Err(e)),
+   95|      3|            (None, Ok(v)) => Ok(Ok(v)),
+   96|       |        }
+   97|      9|    }
+   98|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\sets\btree_set.rs:
+    1|       |use std::collections::BTreeSet;
+    2|       |
+    3|       |use fluent_result::into::IntoResult;
+    4|       |
+    5|       |use crate::utils::FoldMut;
+    6|       |use crate::{TryExtend, TryFromIterator, ValueCollision};
+    7|       |
+    8|       |/// Converts an iterator of values into a [`BTreeSet`], failing if a value would collide.
+    9|       |impl<T: Ord> TryFromIterator<T> for BTreeSet<T> {
+   10|       |    type Error = ValueCollision<T>;
+   11|       |
+   12|       |    /// Converts an iterator of values into a [`BTreeSet`], failing if a key would collide.
+   13|       |    ///
+   14|       |    /// In the case of a collision, the value held by [`ValueCollision`] is the second value that was
+   15|       |    /// seen during iteration. This may be relevant for keys that compare the same but still have
+   16|       |    /// different values.
+   17|       |    ///
+   18|       |    /// See [trait level documentation](trait@TryFromIterator) for an example.
+   19|      2|    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+   20|      2|    where
+   21|      2|        Self: Sized,
+   22|      2|        I: IntoIterator<Item = T>,
+   23|       |    {
+   24|      5|        into_iter.into_iter().try_fold_mut(BTreeSet::new(), |set, value| match set.contains(&value) {
+                      ^2                    ^2           ^2
+   25|      1|            true => ValueCollision::new(value).into_err(),
+   26|      4|            false => Ok(_ = set.insert(value)),
+   27|      5|        })
+   28|      2|    }
+   29|       |}
+   30|       |
+   31|       |/// Appends an iterator of values to the [`BTreeSet`], failing if a value would collide.
+   32|       |impl<T: Ord> TryExtend<T> for BTreeSet<T> {
+   33|       |    type Error = ValueCollision<T>;
+   34|       |
+   35|       |    /// Appends an iterator of values pairs to the [`BTreeSet`], failing if a value would collide.
+   36|       |    ///
+   37|       |    /// This implementation provides a strong error guarantee. If the method returns an error, the
+   38|       |    /// set is not modified.
+   39|       |    ///
+   40|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   41|      3|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   42|      3|    where
+   43|      3|        I: IntoIterator<Item = T>,
+   44|       |    {
+   45|      3|        iter.into_iter()
+   46|      8|            .try_fold_mut(BTreeSet::new(), |set, value| match self.contains(&value) {
+                           ^3           ^3
+   47|      1|                true => Err(ValueCollision::new(value)),
+   48|      7|                false => match set.contains(&value) {
+   49|      1|                    true => ValueCollision::new(value).into_err(),
+   50|      6|                    false => Ok(_ = set.insert(value)),
+   51|       |                },
+   52|      8|            })
+   53|      3|            .map(|set| self.extend(set))
+                                     ^1   ^1     ^1
+   54|      3|    }
+   55|       |
+   56|       |    /// Appends an iterator of values to the set, failing if a value would collide.
+   57|       |    ///
+   58|       |    /// This implementation provides a basic error guarantee. If the method returns an error, the
+   59|       |    /// set may be modified. However, it will still be in a valid state, and the specific
+   60|       |    /// collision that caused the error will not take effect.
+   61|       |    ///
+   62|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   63|      8|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   64|      8|    where
+   65|      8|        I: IntoIterator<Item = T>,
+   66|       |    {
+   67|     13|        iter.into_iter().try_for_each(|value| match self.contains(&value) {
+                      ^8               ^8
+   68|      3|            true => ValueCollision::new(value).into_err(),
+   69|     10|            false => Ok(_ = self.insert(value)),
+   70|     13|        })
+   71|      8|    }
+   72|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\sets\hash_set.rs:
+    1|       |use std::collections::HashSet;
+    2|       |use std::hash::{BuildHasher, Hash};
+    3|       |
+    4|       |use fluent_result::into::IntoResult;
+    5|       |use size_guess::SizeGuess;
+    6|       |
+    7|       |use crate::utils::FoldMut;
+    8|       |use crate::{TryExtend, TryFromIterator, ValueCollision};
+    9|       |
+   10|       |/// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
+   11|       |#[allow(clippy::implicit_hasher)]
+   12|       |impl<T: Eq + Hash> TryFromIterator<T> for HashSet<T> {
+   13|       |    type Error = ValueCollision<T>;
+   14|       |
+   15|       |    /// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
+   16|       |    ///
+   17|       |    /// In the case of a collision, the value held by [`ValueCollision`] is the second value that was
+   18|       |    /// seen during iteration. This may be relevant for keys that compare the same but still have
+   19|       |    /// different values.
+   20|       |    ///
+   21|       |    /// See [trait level documentation](trait@TryFromIterator) for an example.
+   22|     13|    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+   23|     13|    where
+   24|     13|        Self: Sized,
+   25|     13|        I: IntoIterator<Item = T>,
+   26|       |    {
+   27|     13|        let mut iter = into_iter.into_iter();
+   28|     13|        let size_guess = iter.size_guess();
+   29|       |
+   30|     29|        iter.try_fold_mut(HashSet::with_capacity(size_guess), |set, value| match set.contains(&value) {
+                      ^13  ^13          ^13                    ^13
+   31|      4|            true => Err(ValueCollision::new(value)),
+   32|     25|            false => Ok(_ = set.insert(value)),
+   33|     29|        })
+   34|     13|    }
+   35|       |}
+   36|       |
+   37|       |/// Appends an iterator of values to the [`HashSet`], failing if a value would collide.
+   38|       |impl<T: Eq + Hash, S: BuildHasher> TryExtend<T> for HashSet<T, S> {
+   39|       |    type Error = ValueCollision<T>;
+   40|       |
+   41|       |    /// Appends an iterator of values pairs to the [`HashSet`], failing if a value would collide.
+   42|       |    ///
+   43|       |    /// This implementation provides a strong error guarantee. If the method returns an error, the
+   44|       |    /// set is not modified.
+   45|       |    ///
+   46|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   47|      6|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   48|      6|    where
+   49|      6|        I: IntoIterator<Item = T>,
+   50|       |    {
+   51|      6|        let mut iter = iter.into_iter();
+   52|      6|        let size_guess = iter.size_guess();
+   53|       |
+   54|     13|        iter.try_fold_mut(HashSet::with_capacity(size_guess), |set, value| match self.contains(&value) {
+                      ^6   ^6           ^6                     ^6
+   55|      2|            true => ValueCollision::new(value).into_err(),
+   56|     11|            false => match set.contains(&value) {
+   57|      1|                true => ValueCollision::new(value).into_err(),
+   58|     10|                false => Ok(_ = set.insert(value)),
+   59|       |            },
+   60|     13|        })
+   61|      6|        .map(|set| self.extend(set))
+                                 ^3   ^3     ^3
+   62|      6|    }
+   63|       |
+   64|       |    /// Appends an iterator of values to the set, failing if a value would collide.
+   65|       |    ///
+   66|       |    /// This implementation provides a basic error guarantee. If the method returns an error, the
+   67|       |    /// set may be modified. However, it will still be in a valid state, and the specific
+   68|       |    /// collision that caused the error will not take effect.
+   69|       |    ///
+   70|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   71|     33|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   72|     33|    where
+   73|     33|        I: IntoIterator<Item = T>,
+   74|       |    {
+   75|     33|        let iter = iter.into_iter();
+   76|     33|        self.reserve(iter.size_guess());
+   77|       |
+   78|     38|        iter.into_iter().try_for_each(|value| match self.contains(&value) {
+                      ^33              ^33
+   79|      7|            true => ValueCollision::new(value).into_err(),
+   80|     31|            false => Ok(_ = self.insert(value)),
+   81|     38|        })
+   82|     33|    }
+   83|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\sets\hashbrown_set.rs:
+    1|       |use std::hash::{BuildHasher, Hash};
+    2|       |
+    3|       |use fluent_result::into::IntoResult;
+    4|       |use hashbrown::hash_set::Entry;
+    5|       |use hashbrown::HashSet;
+    6|       |use size_guess::SizeGuess;
+    7|       |use tap::Pipe;
+    8|       |
+    9|       |use crate::utils::FoldMut;
+   10|       |use crate::{TryExtend, TryFromIterator, ValueCollision};
+   11|       |
+   12|       |/// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
+   13|       |impl<T: Eq + Hash> TryFromIterator<T> for HashSet<T> {
+   14|       |    type Error = ValueCollision<T>;
+   15|       |
+   16|       |    /// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
+   17|       |    ///
+   18|       |    /// In the case of a collision, the value held by [`ValueCollision`] is the second value that was
+   19|       |    /// seen during iteration. This may be relevant for keys that compare the same but still have
+   20|       |    /// different values.
+   21|       |    ///
+   22|       |    /// See [trait level documentation](trait@TryFromIterator) for an example.
+   23|      2|    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+   24|      2|    where
+   25|      2|        Self: Sized,
+   26|      2|        I: IntoIterator<Item = T>,
+   27|       |    {
+   28|      2|        let mut iter = into_iter.into_iter();
+   29|      2|        let size_guess = iter.size_guess();
+   30|       |
+   31|      5|        iter.try_fold_mut(HashSet::with_capacity(size_guess), |set, value| match set.entry(value) {
+                      ^2   ^2           ^2                     ^2
+   32|      1|            Entry::Occupied(entry) => entry.remove().pipe(ValueCollision::new).into_err(),
+   33|      4|            Entry::Vacant(entry) => Ok(_ = entry.insert()),
+   34|      5|        })
+   35|      2|    }
+   36|       |}
+   37|       |
+   38|       |/// Appends an iterator of values to the [`HashSet`], failing if a value would collide.
+   39|       |impl<T: Eq + Hash, S: BuildHasher> TryExtend<T> for HashSet<T, S> {
+   40|       |    type Error = ValueCollision<T>;
+   41|       |
+   42|       |    /// Appends an iterator of values pairs to the [`HashSet`], failing if a value would collide.
+   43|       |    ///
+   44|       |    /// This implementation provides a strong error guarantee. If the method returns an error, the
+   45|       |    /// set is not modified.
+   46|       |    ///
+   47|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   48|      3|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   49|      3|    where
+   50|      3|        I: IntoIterator<Item = T>,
+   51|       |    {
+   52|      3|        let mut iter = iter.into_iter();
+   53|      3|        let size_guess = iter.size_guess();
+   54|       |
+   55|      8|        iter.try_fold_mut(HashSet::with_capacity(size_guess), |set, value| match self.contains(&value) {
+                      ^3   ^3           ^3                     ^3
+   56|      1|            true => ValueCollision::new(value).into_err(),
+   57|      7|            false => match set.contains(&value) {
+   58|      1|                true => ValueCollision::new(value).into_err(),
+   59|      6|                false => Ok(_ = set.insert(value)),
+   60|       |            },
+   61|      8|        })
+   62|      3|        .map(|set| self.extend(set))
+                                 ^1   ^1     ^1
+   63|      3|    }
+   64|       |
+   65|       |    /// Appends an iterator of values to the set, failing if a value would collide.
+   66|       |    ///
+   67|       |    /// This implementation provides a basic error guarantee. If the method returns an error, the
+   68|       |    /// set may be modified. However, it will still be in a valid state, and the specific
+   69|       |    /// collision that caused the error will not take effect.
+   70|       |    ///
+   71|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   72|      5|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   73|      5|    where
+   74|      5|        I: IntoIterator<Item = T>,
+   75|       |    {
+   76|      5|        let iter = iter.into_iter();
+   77|      5|        self.reserve(iter.size_guess());
+   78|       |
+   79|     10|        iter.into_iter().try_for_each(|value| match self.contains(&value) {
+                      ^5               ^5
+   80|      3|            true => ValueCollision::new(value).into_err(),
+   81|      7|            false => Ok(_ = self.insert(value)),
+   82|     10|        })
+   83|      5|    }
+   84|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\sets\indexset.rs:
+    1|       |use std::hash::{BuildHasher, Hash};
+    2|       |
+    3|       |use fluent_result::into::IntoResult;
+    4|       |use indexmap::IndexSet;
+    5|       |use size_guess::SizeGuess;
+    6|       |
+    7|       |use crate::utils::FoldMut;
+    8|       |use crate::{TryExtend, TryFromIterator, ValueCollision};
+    9|       |
+   10|       |/// Converts an iterator of values into a [`IndexSet`], failing if a key would collide.
+   11|       |impl<T: Eq + Hash> TryFromIterator<T> for IndexSet<T> {
+   12|       |    type Error = ValueCollision<T>;
+   13|       |
+   14|       |    /// Converts an iterator of values into a [`IndexSet`], failing if a key would collide.
+   15|       |    ///
+   16|       |    /// In the case of a collision, the value held by [`ValueCollision`] is the second value that was
+   17|       |    /// seen during iteration. This may be relevant for keys that compare the same but still have
+   18|       |    /// different values.
+   19|       |    ///
+   20|       |    /// See [trait level documentation](trait@TryFromIterator) for an example.
+   21|      2|    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+   22|      2|    where
+   23|      2|        Self: Sized,
+   24|      2|        I: IntoIterator<Item = T>,
+   25|       |    {
+   26|      2|        let mut iter = into_iter.into_iter();
+   27|      2|        let size_guess = iter.size_guess();
+   28|       |
+   29|      5|        iter.try_fold_mut(IndexSet::with_capacity(size_guess), |set, t| match set.contains(&t) {
+                      ^2   ^2           ^2                      ^2
+   30|      1|            true => Err(ValueCollision::new(t)),
+   31|      4|            false => Ok(_ = set.insert(t)),
+   32|      5|        })
+   33|      2|    }
+   34|       |}
+   35|       |
+   36|       |/// Appends an iterator of values to the [`IndexSet`], failing if a value would collide.
+   37|       |impl<T: Eq + Hash, S: BuildHasher> TryExtend<T> for IndexSet<T, S> {
+   38|       |    type Error = ValueCollision<T>;
+   39|       |
+   40|       |    /// Appends an iterator of values pairs to the [`IndexSet`], failing if a value would collide.
+   41|       |    ///
+   42|       |    /// This implementation provides a strong error guarantee. If the method returns an error, the
+   43|       |    /// set is not modified.
+   44|       |    ///
+   45|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   46|      3|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   47|      3|    where
+   48|      3|        I: IntoIterator<Item = T>,
+   49|       |    {
+   50|      3|        let mut iter = iter.into_iter();
+   51|      3|        let size_guess = iter.size_guess();
+   52|       |
+   53|      8|        iter.try_fold_mut(IndexSet::with_capacity(size_guess), |set, value| match self.contains(&value) {
+                      ^3   ^3           ^3                      ^3
+   54|      1|            true => ValueCollision::new(value).into_err(),
+   55|      7|            false => match set.contains(&value) {
+   56|      1|                true => ValueCollision::new(value).into_err(),
+   57|      6|                false => Ok(_ = set.insert(value)),
+   58|       |            },
+   59|      8|        })
+   60|      3|        .map(|set| self.extend(set))
+                                 ^1   ^1     ^1
+   61|      3|    }
+   62|       |
+   63|       |    /// Appends an iterator of values to the set, failing if a value would collide.
+   64|       |    ///
+   65|       |    /// This implementation provides a basic error guarantee. If the method returns an error, the
+   66|       |    /// set may be modified. However, it will still be in a valid state, and the specific
+   67|       |    /// collision that caused the error will not take effect.
+   68|       |    ///
+   69|       |    /// See [trait level documentation](trait@TryExtend) for an example.
+   70|      5|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   71|      5|    where
+   72|      5|        I: IntoIterator<Item = T>,
+   73|       |    {
+   74|      5|        let iter = iter.into_iter();
+   75|      5|        self.reserve(iter.size_guess());
+   76|       |
+   77|     10|        iter.into_iter().try_for_each(|value| match self.contains(&value) {
+                      ^5               ^5
+   78|      3|            true => ValueCollision::new(value).into_err(),
+   79|      7|            false => Ok(_ = self.insert(value)),
+   80|     10|        })
+   81|      5|    }
+   82|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\tuples.rs:
+    1|       |use crate::{OneOf2, TryExtend, TryFromIterator};
+    2|       |
+    3|       |/// Converts an iterator of `(A, B)` into a `(TryFromA, TryFromB)`, upholding the
+    4|       |/// [`TryFromIterator`] contract of both types.
+    5|       |impl<A, B, TryFromA, TryFromB> TryFromIterator<(A, B)> for (TryFromA, TryFromB)
+    6|       |where
+    7|       |    TryFromA: TryFromIterator<A>,
+    8|       |    TryFromB: TryFromIterator<B>,
+    9|       |{
+   10|       |    type Error = OneOf2<TryFromA::Error, TryFromB::Error>;
+   11|       |
+   12|       |    /// Converts an iterator of `(A, B)` into a `(TryFromA, TryFromB)`.
+   13|       |    ///
+   14|       |    /// This implementation is suboptimal. If possible, prefer [`TryExtend::try_extend`] instead.
+   15|       |    ///
+   16|       |    /// # Examples
+   17|       |    ///
+   18|       |    /// ```
+   19|       |    #[doc = include_doc::function_body!("tests/doc/tuples.rs", try_from_iter_tuple_example, [])]
+   20|       |    /// ```
+   21|      3|    fn try_from_iter<I>(iter: I) -> Result<Self, Self::Error>
+   22|      3|    where
+   23|      3|        I: IntoIterator<Item = (A, B)>,
+   24|       |    {
+   25|      3|        let items: (Vec<A>, Vec<B>) = iter.into_iter().unzip();
+   26|       |        Ok((
+   27|      3|            TryFromA::try_from_iter(items.0).map_err(OneOf2::A)?, //
+                                                                             ^1
+   28|      2|            TryFromB::try_from_iter(items.1).map_err(OneOf2::B)?,
+                                                                             ^0
+   29|       |        ))
+   30|      3|    }
+   31|       |}
+   32|       |
+   33|       |/// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
+   34|       |impl<A, B, TryFromA, TryFromB> TryExtend<(A, B)> for (TryFromA, TryFromB)
+   35|       |where
+   36|       |    TryFromA: TryExtend<A>,
+   37|       |    TryFromB: TryExtend<B>,
+   38|       |{
+   39|       |    type Error = OneOf2<TryFromA::Error, TryFromB::Error>;
+   40|       |
+   41|       |    /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
+   42|       |    ///
+   43|       |    /// This method should uphold any strong error guarantees of the underlying collections.
+   44|       |    ///
+   45|       |    /// # Examples
+   46|       |    ///
+   47|       |    /// ```rust
+   48|       |    #[doc = include_doc::function_body!("tests/doc/tuples.rs", try_extend_safe_tuple_example, [])]
+   49|       |    /// ```
+   50|      2|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   51|      2|    where
+   52|      2|        I: IntoIterator<Item = (A, B)>,
+   53|       |    {
+   54|      2|        let items: (Vec<A>, Vec<B>) = iter.into_iter().unzip();
+   55|      2|        self.0.try_extend_safe(items.0).map_err(OneOf2::A)?;
+                                                                        ^1
+   56|      1|        self.1.try_extend_safe(items.1).map_err(OneOf2::B)
+   57|      2|    }
+   58|       |
+   59|       |    /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
+   60|       |    ///
+   61|       |    /// This method does not provide a strong error guarantee. But should uphold the basic error
+   62|       |    /// guarantee of the underlying collections.
+   63|       |    ///
+   64|       |    /// # Examples
+   65|       |    ///
+   66|       |    /// ```rust
+   67|       |    #[doc = include_doc::function_body!("tests/doc/tuples.rs", try_extend_tuple_example, [])]
+   68|       |    /// ```
+   69|      3|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   70|      3|    where
+   71|      3|        I: IntoIterator<Item = (A, B)>,
+   72|       |    {
+   73|      8|        for (a, b) in iter {
+                           ^6 ^6
+   74|      6|            self.0.try_extend(std::iter::once(a)).map_err(OneOf2::A)?;
+                                                                                  ^1
+   75|      5|            self.1.try_extend(std::iter::once(b)).map_err(OneOf2::B)?;
+                                                                                  ^0
+   76|       |        }
+   77|       |
+   78|      2|        Ok(())
+   79|      3|    }
+   80|       |}
+   81|       |
+   82|       |// todo! implementations for more tuple types
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\unsafe\array.rs:
+    1|       |use std::mem::MaybeUninit;
+    2|       |
+    3|       |use crate::{ItemCountMismatch, TryExtend, TryFromIterator};
+    4|       |
+    5|       |/// Create an array of size `N` from an iterator, failing if the iterator produces fewer or more items than `N`.
+    6|       |impl<const N: usize, T> TryFromIterator<T> for [T; N] {
+    7|       |    type Error = ItemCountMismatch;
+    8|       |
+    9|       |    /// Create an array from an iterator, failing if the iterator produces fewer or more items than `N`.
+   10|       |    ///
+   11|       |    /// # Examples
+   12|       |    ///
+   13|       |    /// ```rust
+   14|       |    #[doc = include_doc::function_body!("tests/doc/array.rs", try_from_iter_array_example, [])]
+   15|       |    /// ```
+   16|     17|    fn try_from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Result<Self, Self::Error> {
+   17|     17|        let mut array = [const { MaybeUninit::uninit() }; N];
+   18|     17|        try_from_iterator_erased(into_iter.into_iter(), &mut array)?;
+                                                                                 ^9
+   19|       |        // SAFETY: all elements are initialized
+   20|      8|        Ok(unsafe { std::mem::transmute_copy(&array) }) // TODO: Use array_assume_init once stable
+   21|     17|    }
+   22|       |}
+   23|       |
+   24|       |/// Internal implementation of [`TryFromIterator`] for arrays of any size. Implemented via this
+   25|       |/// helper to avoid monomorphization for every different array size.
+   26|       |///
+   27|       |/// # Safety
+   28|       |///
+   29|       |/// Assumes that all elements in the slice are unitialized
+   30|     17|fn try_from_iterator_erased<T, I: Iterator<Item = T>>(
+   31|     17|    mut iter: I,
+   32|     17|    array: &mut [MaybeUninit<T>],
+   33|     17|) -> Result<(), ItemCountMismatch> {
+   34|     17|    match (array.len(), iter.size_hint()) {
+   35|     17|        (len, (min, _)) if min > len => Err(ItemCountMismatch::new(len, min)),
+                       ^2    ^2                  ^2   ^2  ^2
+   36|     10|        (len, (_, Some(max))) if max < len => Err(ItemCountMismatch::new(len, max)),
+                       ^3            ^3                ^3   ^3  ^3
+   37|       |        _ => {
+   38|     12|            let mut guard = super::InitGuard::new(array);
+   39|     12|            guard.try_extend(&mut iter)?;
+                                                     ^2
+   40|     10|            guard.try_disarm()
+   41|       |        }
+   42|       |    }
+   43|     17|}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\impls\unsafe\init_guard.rs:
+    1|       |use std::mem::MaybeUninit;
+    2|       |
+    3|       |use fluent_result::bool::Then;
+    4|       |
+    5|       |use crate::{ItemCountMismatch, TryExtend};
+    6|       |
+    7|       |/// A guard that ensures that all elements in a slice are initialized
+    8|       |pub struct InitGuard<'a, T> {
+    9|       |    slice: &'a mut [MaybeUninit<T>],
+   10|       |    initialized: usize,
+   11|       |}
+   12|       |
+   13|       |impl<'a, T> InitGuard<'a, T> {
+   14|       |    /// Creates a new guard for the given slice
+   15|       |    ///
+   16|       |    /// Assumes that all elements in `slice` are unitialized. Passing in initialized elements is
+   17|       |    /// safe, but may result in a memory leak, as their destructors may not be called.
+   18|     14|    pub fn new(slice: &'a mut [MaybeUninit<T>]) -> Self {
+   19|     14|        Self { slice, initialized: 0 }
+   20|     14|    }
+   21|       |
+   22|       |    /// tries to disarm the guard, returning an error if the slice is not fully initialized.
+   23|     10|    pub fn try_disarm(self) -> Result<(), ItemCountMismatch> {
+   24|     10|        match (self.initialized, self.slice.len()) {
+   25|     10|            (initialized, len) if initialized < len => Err(ItemCountMismatch::new(len, initialized)),
+                           ^3           ^3                           ^3  ^3
+   26|       |            _ => {
+   27|      7|                std::mem::forget(self);
+   28|      7|                Ok(())
+   29|       |            }
+   30|       |        }
+   31|     10|    }
+   32|       |}
+   33|       |
+   34|       |impl<T> TryExtend<T> for InitGuard<'_, T> {
+   35|       |    type Error = ItemCountMismatch;
+   36|       |
+   37|      2|    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   38|      2|    where
+   39|      2|        I: IntoIterator<Item = T>,
+   40|       |    {
+   41|      2|        let initial = self.initialized;
+   42|       |
+   43|      2|        let mut iter = iter.into_iter().fuse();
+   44|     20|        std::iter::zip(&mut self.slice[self.initialized..], iter.by_ref()).for_each(|(slot, value)| {
+                      ^2             ^2                                   ^2   ^2        ^2
+   45|     20|            slot.write(value);
+   46|     20|            self.initialized += 1;
+   47|     20|        });
+   48|       |
+   49|      2|        iter.next().map_or(Ok(()), |_| {
+                                                     ^1
+   50|      1|            self.initialized = initial;
+   51|      1|            Err(ItemCountMismatch::new(self.slice.len(), self.slice.len() + 1))
+   52|      1|        })
+   53|      2|    }
+   54|       |
+   55|     12|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   56|     12|    where
+   57|     12|        I: IntoIterator<Item = T>,
+   58|       |    {
+   59|     12|        let mut iter = iter.into_iter().fuse();
+   60|     27|        std::iter::zip(&mut self.slice[self.initialized..], iter.by_ref()).for_each(|(slot, value)| {
+                      ^12            ^12                                  ^12  ^12       ^12
+   61|     27|            slot.write(value);
+   62|     27|            self.initialized += 1;
+   63|     27|        });
+   64|     12|        iter.next().is_some().then_err(ItemCountMismatch::new(self.slice.len(), self.initialized + 1))
+   65|     12|    }
+   66|       |}
+   67|       |
+   68|       |impl<T> Drop for InitGuard<'_, T> {
+   69|      7|    fn drop(&mut self) {
+   70|       |        // SAFETY: elements up to `initialized` are initialized
+   71|     12|        self.slice[..self.initialized].iter_mut().for_each(|elem| unsafe { elem.assume_init_drop() });
+                      ^7                             ^7         ^7
+   72|      7|    }
+   73|       |}
+   74|       |
+   75|       |#[cfg(test)]
+   76|       |mod tests {
+   77|       |    use super::*;
+   78|       |
+   79|       |    #[test]
+   80|      1|    fn init_guard_extend_safe_success() {
+   81|      1|        let mut slice = [MaybeUninit::uninit(); 10];
+   82|      1|        let mut guard = InitGuard::new(&mut slice);
+   83|      1|        guard.try_extend_safe(0..10).expect("Should be ok");
+   84|      1|        guard.try_disarm().expect("should be okay");
+   85|      1|    }
+   86|       |
+   87|       |    #[test]
+   88|      1|    fn init_guard_extend_safe_fail() {
+   89|      1|        let mut slice = [MaybeUninit::uninit(); 10];
+   90|      1|        let mut guard = InitGuard::new(&mut slice);
+   91|       |
+   92|      1|        let err = guard.try_extend_safe(0..11).expect_err("should fail");
+   93|       |
+   94|      1|        assert_eq!(err, ItemCountMismatch::new(10, 11));
+   95|       |
+   96|      1|        let err = guard.try_disarm().expect_err("should fail");
+   97|      1|        assert_eq!(err, ItemCountMismatch::new(10, 0));
+   98|      1|    }
+   99|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\traits\try_collect_ex.rs:
+    1|       |#[cfg(doc)]
+    2|       |use std::collections::HashMap;
+    3|       |
+    4|       |use crate::TryFromIterator;
+    5|       |
+    6|       |/// Extends [Iterator] with a failable collect method.
+    7|       |///
+    8|       |/// This trait lets you have an iterator return any collection that can be created via
+    9|       |/// [`TryFromIterator`], similar to [`Iterator::collect`] and [`FromIterator::from_iter`],
+   10|       |/// but with the ability to return a implementation specific error if the creation of the contaienr
+   11|       |/// fails some invariant.
+   12|       |pub trait TryCollectEx: Iterator {
+   13|       |    /// Tries to collects the iterator into a container, returning an error if construcing the
+   14|       |    /// container fails.
+   15|       |    ///
+   16|       |    /// Exact behavior of this method depends on the container implementation, but generally it
+   17|       |    /// should be expected to short-circuit on the first error.
+   18|       |    ///
+   19|       |    /// On success, this method should behave similarly to [`Iterator::collect`], except returning
+   20|       |    /// a [`Result`].
+   21|       |    ///
+   22|       |    /// Note: Ideally this would be called `try_collect` but there is a method with that name in nightly.
+   23|       |    ///
+   24|       |    /// # Errors
+   25|       |    ///
+   26|       |    /// Returns a [`TryFromIterator::Error`] if the container fails to be constructed.
+   27|       |    ///
+   28|       |    /// # Example
+   29|       |    ///
+   30|       |    /// Collecting into a [`HashMap`] that fails if a key would collide.
+   31|       |    ///
+   32|       |    /// ```rust
+   33|       |    #[doc = include_doc::function_body!("tests/try-collect-ex.rs", try_collect_ex_collision_example, [])]
+   34|       |    /// ```
+   35|       |    fn try_collect_ex<C>(self) -> Result<C, C::Error>
+   36|       |    where
+   37|       |        C: TryFromIterator<Self::Item>,
+   38|       |        Self: Sized;
+   39|       |}
+   40|       |
+   41|       |/// Implementation of [`TryCollectEx`] for all [`Iterator`].
+   42|       |impl<I, T> TryCollectEx for I
+   43|       |where
+   44|       |    I: Iterator<Item = T>,
+   45|       |{
+   46|     12|    fn try_collect_ex<C>(self) -> Result<C, C::Error>
+   47|     12|    where
+   48|     12|        C: TryFromIterator<Self::Item>,
+   49|       |    {
+   50|     12|        C::try_from_iter(self)
+   51|     12|    }
+   52|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\traits\try_extend.rs:
+    1|       |#[cfg(doc)]
+    2|       |use crate::TryFromIterator;
+    3|       |#[cfg(doc)]
+    4|       |use std::collections::HashMap;
+    5|       |
+    6|       |/// Trait for extending an existing collection from an iterator with fallible operations.
+    7|       |///
+    8|       |/// This trait is similar to [`Extend`], but allows implementor to uphold a containers invariant
+    9|       |/// during construction. This invaraint can be upheld in two ways:
+   10|       |///
+   11|       |/// - **Basic error guarantee**. On an error, the collection may be modified, but will be in a
+   12|       |///   valid state. [`TryExtend::try_extend`] provides this guarantee.
+   13|       |/// - **Strong error guarantee**. On an error, the collection is not modified.
+   14|       |///   [`TryExtend::try_extend_safe`] provides this guarantee.
+   15|       |///
+   16|       |/// Implementations may rely on [`Iterator::size_hint`] providing reliable bounds for the number of
+   17|       |/// elements in the iterator in order to optimize their implementations. An iterator that violates
+   18|       |/// the bounds returned by [`Iterator::size_hint`] may cause panics, produce incorrect results, or
+   19|       |/// produce a result that violates container constraints, but must not result in undefined behavior.
+   20|       |pub trait TryExtend<T> {
+   21|       |    /// Error type returned by the fallible extension methods.
+   22|       |    type Error;
+   23|       |
+   24|       |    /// Tries to extends the collection providing a **strong error guarantee**.
+   25|       |    ///
+   26|       |    /// On failure, the collection must remain unchanged. Implementors may need to buffer
+   27|       |    /// elements or use a more defensive algorithm to satisfy this guarantee. If an implementation
+   28|       |    /// cannot provide this gurantee, this method should always return an error.
+   29|       |    ///
+   30|       |    /// For a faster basic-guarantee alternative, see [`TryExtend::try_extend`].
+   31|       |    ///
+   32|       |    /// # Errors
+   33|       |    ///
+   34|       |    /// Returns [`TryExtend::Error`] if a failure occurs while extending the collection.
+   35|       |    ///
+   36|       |    /// # Examples
+   37|       |    ///
+   38|       |    /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
+   39|       |    ///
+   40|       |    /// ```rust
+   41|       |    #[doc = include_doc::function_body!("tests/try-extend.rs", try_extend_safe_map_collision_example, [])]
+   42|       |    /// ```
+   43|       |    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   44|       |    where
+   45|       |        I: IntoIterator<Item = T>;
+   46|       |
+   47|       |    /// Tries to extends the collection providing a **basic error guarantee**.
+   48|       |    ///
+   49|       |    /// On failure, the collection may be partially modified, but it must remain valid.
+   50|       |    /// The specific extension that triggers the error must not be inserted.
+   51|       |    ///
+   52|       |    /// For strong guarantee needs, use [`TryExtend::try_extend_safe`].
+   53|       |    ///
+   54|       |    /// # Errors
+   55|       |    ///
+   56|       |    /// Returns [`TryExtend::Error`] if a failure occurs while extending the collection.
+   57|       |    ///
+   58|       |    /// # Examples
+   59|       |    ///
+   60|       |    /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
+   61|       |    ///
+   62|       |    /// ```rust
+   63|       |    #[doc = include_doc::function_body!("tests/try-extend.rs", try_extend_basic_guarantee_example, [])]
+   64|       |    /// ```
+   65|      1|    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+   66|      1|    where
+   67|      1|        I: IntoIterator<Item = T>,
+   68|       |    {
+   69|      1|        self.try_extend_safe(iter)
+   70|      1|    }
+   71|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\traits\try_unzip.rs:
+    1|       |use crate::{OneOf2, TryExtend};
+    2|       |
+    3|       |/// Extends [`Iterator`] with a failable unzip method.
+    4|       |///
+    5|       |/// This is similar to [`Iterator::unzip`], but allows for failable construction. The created
+    6|       |/// containers may be of different types, but both must implement [`Default`] and [`TryExtend`].
+    7|       |pub trait TryUnzip {
+    8|       |    /// Tries to unzip the iterator into two collections.
+    9|       |    ///
+   10|       |    /// Both containers are extended, element by element, in parallel.
+   11|       |    ///
+   12|       |    /// # Errors
+   13|       |    ///
+   14|       |    /// Returns a [`TryExtend::Error`] wrapped in a [`OneOf2`] if either of the underlying
+   15|       |    /// collections fail to extend.
+   16|       |    ///
+   17|       |    /// # Examples
+   18|       |    ///
+   19|       |    /// Different types of containers can be unzipped into.
+   20|       |    ///
+   21|       |    /// ```rust
+   22|       |    #[doc = include_doc::function_body!("tests/try-unzip.rs", try_unzip_different_containers_example, [])]
+   23|       |    /// ```
+   24|       |    ///
+   25|       |    /// ## Multiple Errors
+   26|       |    ///
+   27|       |    /// In the case of multiple possible failures, the error from extending `FromA` is checked and
+   28|       |    /// returned first.
+   29|       |    ///
+   30|       |    /// ```rust
+   31|       |    #[doc = include_doc::function_body!("tests/try-unzip.rs", try_unzip_collision_example, [])]
+   32|       |    /// ```
+   33|       |    fn try_unzip<A, B, FromA, FromB>(self) -> Result<(FromA, FromB), OneOf2<FromA::Error, FromB::Error>>
+   34|       |    where
+   35|       |        FromA: Default + TryExtend<A>,
+   36|       |        FromB: Default + TryExtend<B>,
+   37|       |        Self: Iterator<Item = (A, B)>;
+   38|       |}
+   39|       |
+   40|       |/// Implemententation for any [`Iterator`].
+   41|       |impl<I> TryUnzip for I
+   42|       |where
+   43|       |    I: Iterator,
+   44|       |{
+   45|      5|    fn try_unzip<A, B, FromA, FromB>(mut self) -> Result<(FromA, FromB), OneOf2<FromA::Error, FromB::Error>>
+   46|      5|    where
+   47|      5|        FromA: Default + TryExtend<A>,
+   48|      5|        FromB: Default + TryExtend<B>,
+   49|      5|        Self: Iterator<Item = (A, B)>,
+   50|       |    {
+   51|     11|        self.try_fold((FromA::default(), FromB::default()), |mut tuple, (a, b)| {
+                      ^5   ^5       ^5
+   52|     11|            tuple.0.try_extend(std::iter::once(a)).map_err(OneOf2::A)?;
+                                                                                   ^2
+   53|      9|            tuple.1.try_extend(std::iter::once(b)).map_err(OneOf2::B)?;
+                                                                                   ^1
+   54|      8|            Ok(tuple)
+   55|     11|        })
+   56|      5|    }
+   57|       |}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\utils\fixed_size_hint.rs:
+    1|       |pub type SizeHint = (usize, Option<usize>);
+    2|       |
+    3|       |/// An iterator adaptor that overrides the size hint of the underlying iterator.
+    4|       |///
+    5|       |/// This is useful for easily hiding the size hint of an iterator in tests.
+    6|       |#[allow(dead_code)]
+    7|       |#[derive(Debug)]
+    8|       |pub struct FixedSizeHint<I: Iterator> {
+    9|       |    /// The underlying iterator.
+   10|       |    pub iterator: I,
+   11|       |    /// The size hint to return.
+   12|       |    pub size_hint: SizeHint,
+   13|       |}
+   14|       |
+   15|       |/// A universally applicable size hint that conveys no information.
+   16|       |pub const UNIVERSAL_SIZE_HINT: SizeHint = (0, None);
+   17|       |
+   18|       |impl<I: Iterator> FixedSizeHint<I> {
+   19|       |    /// Creates a new iterator with the size hint hidden.
+   20|      4|    pub fn hide_size(iterator: impl IntoIterator<IntoIter = I>) -> Self {
+   21|      4|        Self::fixed_size(iterator, UNIVERSAL_SIZE_HINT)
+   22|      4|    }
+   23|       |
+   24|       |    /// Creates a new iterator with the given fixed size hint.
+   25|      6|    pub fn fixed_size(iterator: impl IntoIterator<IntoIter = I>, size_hint: SizeHint) -> Self {
+   26|      6|        Self { iterator: iterator.into_iter(), size_hint }
+   27|      6|    }
+   28|       |}
+   29|       |
+   30|       |impl<I: Iterator> Iterator for FixedSizeHint<I> {
+   31|       |    type Item = I::Item;
+   32|       |
+   33|     20|    fn next(&mut self) -> Option<Self::Item> {
+   34|     20|        self.iterator.next()
+   35|     20|    }
+   36|       |
+   37|      6|    fn size_hint(&self) -> (usize, Option<usize>) {
+   38|      6|        self.size_hint
+   39|      6|    }
+   40|       |}
+   41|       |
+   42|       |/// Extension trait for [`Iterator`] to fluently override or hide size hints.
+   43|       |pub trait FixedSizeHintEx: Iterator + Sized {
+   44|       |    /// Creates a new iterator with the size hint hidden.
+   45|      2|    fn hide_size(self) -> FixedSizeHint<Self> {
+   46|      2|        self.fixed_size(UNIVERSAL_SIZE_HINT)
+   47|      2|    }
+   48|       |
+   49|       |    /// Creates a new iterator with the given fixed size hint.
+   50|      2|    fn fixed_size(self, size_hint: SizeHint) -> FixedSizeHint<Self> {
+   51|      2|        FixedSizeHint::fixed_size(self, size_hint)
+   52|      2|    }
+   53|       |}
+   54|       |
+   55|       |impl<T: Iterator> FixedSizeHintEx for T {}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\utils\fold_mut.rs:
+    1|       |#[cfg(doc)]
+    2|       |use std::collections::HashMap;
+    3|       |
+    4|       |#[cfg(doc)]
+    5|       |use crate::TryFromIterator;
+    6|       |
+    7|       |/// Extension trait for iterators that provides fold operations with mutable accumulator references.
+    8|       |///
+    9|       |/// This trait is similar to [`Iterator::fold`], but differs in that the closure receives a `&mut A`
+   10|       |/// reference to the accumulator instead of consuming and returning it. This pattern may be more
+   11|       |/// ergonomic for accumulators that do not need to transfer ownership in order to accumulate. In
+   12|       |/// particular it may be useful for for implementing [`TryFromIterator`].
+   13|       |pub trait FoldMut<T>: Iterator<Item = T> {
+   14|       |    /// Folds iterator items into an accumulator using a mutable reference.
+   15|       |    ///
+   16|       |    /// Unlike [`Iterator::fold`], this method passes a mutable reference to the
+   17|       |    /// accumulator instead of consuming and returning it each iteration.
+   18|       |    ///
+   19|       |    /// # Parameters
+   20|       |    ///
+   21|       |    /// - `init`: The initial value of the accumulator
+   22|       |    /// - `fold`: A closure that mutates the accumulator and may return an error
+   23|       |    ///
+   24|       |    /// # Returns
+   25|       |    ///
+   26|       |    /// The final accumulated value after processing all items.
+   27|       |    ///
+   28|       |    /// # Examples
+   29|       |    ///
+   30|       |    /// ```rust
+   31|       |    #[doc = include_doc::function_body!("tests/fold-mut.rs", fold_mut_success_aggregate_hashmap_example, [])]
+   32|       |    /// ```
+   33|      1|    fn fold_mut<A, F>(&mut self, mut init: A, mut fold: F) -> A
+   34|      1|    where
+   35|      1|        F: FnMut(&mut A, T),
+   36|       |    {
+   37|      3|        self.for_each(|item| fold(&mut init, item));
+                      ^1   ^1
+   38|      1|        init
+   39|      1|    }
+   40|       |
+   41|       |    /// Folds iterator items into an accumulator with fallible operations.
+   42|       |    ///
+   43|       |    /// Similar to [`fold_mut`](FoldMut::fold_mut), but the closure can return a [`Result`] to
+   44|       |    /// signal early termination. If any closure invocation returns [`Err`], iteration stops
+   45|       |    /// immediately and the error is propagated.
+   46|       |    ///
+   47|       |    /// # Parameters
+   48|       |    ///
+   49|       |    /// - `init`: The initial value of the accumulator
+   50|       |    /// - `fold`: A closure that mutates the accumulator and may return an error
+   51|       |    ///
+   52|       |    /// # Errors
+   53|       |    ///
+   54|       |    /// Returns the first error encountered when the closure returns [`Err`] for any item.
+   55|       |    ///
+   56|       |    /// # Returns
+   57|       |    ///
+   58|       |    /// - [`Ok(A)`](Ok): The final accumulated value if all items were processed successfully
+   59|       |    /// - [`Err(E)`](Err): The first error encountered during iteration
+   60|       |    ///
+   61|       |    /// # Examples    
+   62|       |    ///
+   63|       |    /// Building a [`HashMap`] terminating on colliding keys.
+   64|       |    ///
+   65|       |    /// ```rust
+   66|       |    #[doc = include_doc::function_body!("tests/fold-mut.rs", try_fold_mut_failure_example, [])]
+   67|       |    /// ```
+   68|     75|    fn try_fold_mut<A, E, F>(&mut self, mut init: A, mut fold: F) -> Result<A, E>
+   69|     75|    where
+   70|     75|        Self: Sized,
+   71|     75|        F: FnMut(&mut A, T) -> Result<(), E>,
+   72|       |    {
+   73|    173|        self.try_for_each(|item| fold(&mut init, item))?;
+                      ^75  ^75                                       ^35
+   74|     40|        Ok(init)
+   75|     75|    }
+   76|       |}
+   77|       |
+   78|       |impl<I, T> FoldMut<T> for I where I: Iterator<Item = T> {}
+
+C:\Users\maxma\source\repos\Rust\collect_failable\src\utils\identifiable.rs:
+    1|       |use std::cmp::Ordering;
+    2|       |use std::hash::{Hash, Hasher};
+    3|       |
+    4|       |/// Helper type to test if values are overwritten.
+    5|       |#[allow(dead_code)]
+    6|       |#[derive(Debug, Clone)]
+    7|       |pub struct Identifiable {
+    8|       |    /// Value of the item, used for eq.
+    9|       |    pub value: i32,
+   10|       |    /// Id of the item. *Not* used for eq.
+   11|       |    pub id: i32,
+   12|       |}
+   13|       |
+   14|       |impl PartialEq for Identifiable {
+   15|      9|    fn eq(&self, other: &Self) -> bool {
+   16|      9|        self.value == other.value
+   17|      9|    }
+   18|       |}
+   19|       |
+   20|       |impl Eq for Identifiable {}
+   21|       |
+   22|       |impl PartialOrd for Identifiable {
+   23|      2|    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+   24|      2|        Some(self.cmp(other))
+   25|      2|    }
+   26|       |}
+   27|       |
+   28|       |impl Ord for Identifiable {
+   29|      3|    fn cmp(&self, other: &Self) -> Ordering {
+   30|      3|        self.value.cmp(&other.value)
+   31|      3|    }
+   32|       |}
+   33|       |
+   34|       |impl Hash for Identifiable {
+   35|      7|    fn hash<H: Hasher>(&self, state: &mut H) {
+   36|      7|        self.value.hash(state);
+   37|      7|    }
+   38|       |}
+   39|       |
+   40|       |#[cfg(test)]
+   41|       |mod tests {
+   42|       |    use super::*;
+   43|       |
+   44|       |    #[test]
+   45|      1|    fn identifiable_eq() {
+   46|      1|        let a = Identifiable { value: 1, id: 1 };
+   47|      1|        let b = Identifiable { value: 1, id: 2 };
+   48|      1|        assert_eq!(a, b);
+   49|      1|    }
+   50|       |
+   51|       |    #[test]
+   52|      1|    fn identifiable_cmp() {
+   53|      1|        let a = Identifiable { value: 1, id: 1 };
+   54|      1|        let b = Identifiable { value: 2, id: 2 };
+   55|      1|        assert!(a < b);
+   56|      1|    }
+   57|       |
+   58|       |    #[test]
+   59|      1|    fn identifiable_hash() {
+   60|      1|        let a = Identifiable { value: 1, id: 1 };
+   61|      1|        let b = Identifiable { value: 1, id: 2 };
+   62|       |
+   63|      1|        let mut h1 = std::collections::hash_map::DefaultHasher::new();
+   64|      1|        let mut h2 = std::collections::hash_map::DefaultHasher::new();
+   65|      1|        a.hash(&mut h1);
+   66|      1|        b.hash(&mut h2);
+   67|       |
+   68|      1|        assert_eq!(a, b);
+   69|      1|    }
+   70|       |
+   71|       |    #[test]
+   72|      1|    fn identifiable_partial_cmp() {
+   73|      1|        let a = Identifiable { value: 1, id: 1 };
+   74|      1|        let b = Identifiable { value: 1, id: 1 };
+   75|       |
+   76|      1|        assert_eq!(PartialOrd::partial_cmp(&a, &b), Some(Ordering::Equal));
+   77|      1|    }
+   78|       |}
+

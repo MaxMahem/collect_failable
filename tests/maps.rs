@@ -2,9 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use hashbrown::HashMap as HashBrownMap;
 
-use collect_failable::KeyCollision;
-use collect_failable::TryExtend;
-use collect_failable::TryFromIterator;
+use collect_failable::{KeyCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
 const UNIQUE_KEYS: [(i32, i32); 2] = [(1, 2), (2, 3)];
 const COLLIDE_WITH_SELF: [(i32, i32); 3] = [(3, 3), (4, 4), (3, 5)];

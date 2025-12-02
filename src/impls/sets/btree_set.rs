@@ -2,7 +2,8 @@ use std::collections::BTreeSet;
 
 use fluent_result::into::IntoResult;
 
-use crate::{FoldMut, TryExtend, TryFromIterator, ValueCollision};
+use crate::utils::FoldMut;
+use crate::{TryExtend, TryExtendSafe, TryFromIterator, ValueCollision};
 
 /// Converts an iterator of values into a [`BTreeSet`], failing if a value would collide.
 impl<T: Ord> TryFromIterator<T> for BTreeSet<T> {
@@ -31,27 +32,6 @@ impl<T: Ord> TryFromIterator<T> for BTreeSet<T> {
 impl<T: Ord> TryExtend<T> for BTreeSet<T> {
     type Error = ValueCollision<T>;
 
-    /// Appends an iterator of values pairs to the [`BTreeSet`], failing if a value would collide.
-    ///
-    /// This implementation provides a strong error guarantee. If the method returns an error, the
-    /// set is not modified.
-    ///
-    /// See [trait level documentation](trait@TryExtend) for an example.
-    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = T>,
-    {
-        iter.into_iter()
-            .try_fold_mut(BTreeSet::new(), |set, value| match self.contains(&value) {
-                true => Err(ValueCollision::new(value)),
-                false => match set.contains(&value) {
-                    true => ValueCollision::new(value).into_err(),
-                    false => Ok(_ = set.insert(value)),
-                },
-            })
-            .map(|set| self.extend(set))
-    }
-
     /// Appends an iterator of values to the set, failing if a value would collide.
     ///
     /// This implementation provides a basic error guarantee. If the method returns an error, the
@@ -67,5 +47,29 @@ impl<T: Ord> TryExtend<T> for BTreeSet<T> {
             true => ValueCollision::new(value).into_err(),
             false => Ok(_ = self.insert(value)),
         })
+    }
+}
+
+/// Appends an iterator of values to the [`BTreeSet`] with a strong error guarantee.
+impl<T: Ord> TryExtendSafe<T> for BTreeSet<T> {
+    /// Appends an iterator of values pairs to the [`BTreeSet`], failing if a value would collide.
+    ///
+    /// This implementation provides a strong error guarantee. If the method returns an error, the
+    /// set is not modified.
+    ///
+    /// See [trait level documentation](trait@TryExtendSafe) for an example.
+    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = T>,
+    {
+        iter.into_iter()
+            .try_fold_mut(BTreeSet::new(), |set, value| match self.contains(&value) {
+                true => Err(ValueCollision::new(value)),
+                false => match set.contains(&value) {
+                    true => ValueCollision::new(value).into_err(),
+                    false => Ok(_ = set.insert(value)),
+                },
+            })
+            .map(|set| self.extend(set))
     }
 }

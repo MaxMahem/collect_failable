@@ -11,6 +11,7 @@ categories = ["data-structures", "rust-patterns", "error-handling"]
 
 [features]
 default = ["unsafe"]
+utils = []
 unsafe = []
 hashbrown = [ "dep:hashbrown" ]
 indexmap = [ "dep:indexmap" ]
@@ -28,4 +29,4 @@ arrayvec = { version = "0.7.6", optional = true }
 include-doc = "0.2.2"
 
 [dev-dependencies]
-collect_failable = { path = ".", features = ["hashbrown", "indexmap", "arrayvec"] }
+collect_failable = { path = ".", features = ["hashbrown", "indexmap", "arrayvec", "utils"] }

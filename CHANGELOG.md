@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+ - Moved the `FoldMut` trait into the `utils` module.
+
+### Breaking Changes
+
+ - Split `TryExtend` trait into `TryExtend` (basic guarantee) and `TryExtendSafe` (strong guarantee).
+ - `TryExtendSafe` is now a supertrait of `TryExtend`.
+ - Tuples now only implement `TryExtend` as they cannot provide strong error guarantees.
+ - `InitGuard` now only implements `TryExtend`.
+
+### Added
+
+ - Exposed the `FixedSizeHint` and `FixedSizeHintEx` traits. Useful for testing.
+ - Exposed the `Identifiable` trait. Useful for testing.
+
 ## [0.10.0] - 2025-11-28
 
 ### Added

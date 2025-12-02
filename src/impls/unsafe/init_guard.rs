@@ -13,9 +13,8 @@ pub struct InitGuard<'a, T> {
 impl<'a, T> InitGuard<'a, T> {
     /// Creates a new guard for the given slice
     ///
-    /// # Safety
-    ///
-    /// Assumes that all elements in the slice are unitialized
+    /// Assumes that all elements in `slice` are unitialized. Passing in initialized elements is
+    /// safe, but may result in a memory leak, as their destructors may not be called.
     pub fn new(slice: &'a mut [MaybeUninit<T>]) -> Self {
         Self { slice, initialized: 0 }
     }
@@ -34,24 +33,6 @@ impl<'a, T> InitGuard<'a, T> {
 
 impl<T> TryExtend<T> for InitGuard<'_, T> {
     type Error = ItemCountMismatch;
-
-    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = T>,
-    {
-        let initial = self.initialized;
-
-        let mut iter = iter.into_iter().fuse();
-        std::iter::zip(&mut self.slice[self.initialized..], iter.by_ref()).for_each(|(slot, value)| {
-            slot.write(value);
-            self.initialized += 1;
-        });
-
-        iter.next().map_or(Ok(()), |_| {
-            self.initialized = initial;
-            Err(ItemCountMismatch::new(self.slice.len(), self.slice.len() + 1))
-        })
-    }
 
     fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
     where

@@ -2,10 +2,8 @@ use std::cell::Cell;
 use std::panic::{self, AssertUnwindSafe};
 use std::rc::Rc;
 
+use collect_failable::utils::FixedSizeHintEx;
 use collect_failable::TryFromIterator;
-
-mod utils;
-use utils::HideSize;
 
 #[derive(Debug, Clone, Default)]
 struct DropTracker {
@@ -58,7 +56,7 @@ fn drop_safety_failure_too_many() {
     {
         let items: Vec<DropTracker> = (0..4).map(|_| drop_tracker.clone()).collect();
         // Use HideSize to ensure we hit the runtime check
-        <[DropTracker; 3]>::try_from_iter(HideSize(items.into_iter()))
+        <[DropTracker; 3]>::try_from_iter(items.into_iter().hide_size())
             .expect_err("Should have failed to collect array");
         // All items consumed (3 for array) should be dropped
         assert_eq!(drop_tracker.count(), 4);
@@ -104,7 +102,7 @@ fn check_panic_safety_too_many() {
             }
             drop_tracker.clone()
         });
-        <[DropTracker; 3]>::try_from_iter(HideSize(items))
+        <[DropTracker; 3]>::try_from_iter(items.into_iter().hide_size())
     }))
     .expect_err("Should have panicked");
 

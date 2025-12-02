@@ -1,7 +1,8 @@
 use arrayvec::ArrayVec;
 use fluent_result::bool::Then;
 
-use crate::{ExceedsCapacity, FoldMut, TryExtend, TryFromIterator};
+use crate::utils::FoldMut;
+use crate::{ExceedsCapacity, TryExtend, TryExtendSafe, TryFromIterator};
 
 /// Tries to create an [`ArrayVec`] from an iterator.
 ///
@@ -35,6 +36,31 @@ impl<T, const N: usize> TryExtend<T> for ArrayVec<T, N> {
     /// Appends an iterator to the [`ArrayVec`], failing if the iterator produces more items than the [`ArrayVec`]'s
     /// remaining capacity.
     ///
+    /// This method provides a basic error guarantee. If the method returns an error, the [`ArrayVec`] is valid, but may
+    /// be modified.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    #[doc = include_doc::function_body!("tests/doc/arrayvec.rs", try_extend_arrayvec_example, [])]
+    /// ```
+    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = T>,
+    {
+        let mut iter = iter.into_iter();
+        let size_guess = iter.size_hint().0;
+        (size_guess > self.remaining_capacity()).then_err(ExceedsCapacity::new(N, self.len() + size_guess))?;
+
+        iter.try_for_each(|item| self.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1)))
+    }
+}
+
+/// Extends an [`ArrayVec`] with strong error guarantee.
+impl<T, const N: usize> TryExtendSafe<T> for ArrayVec<T, N> {
+    /// Appends an iterator to the [`ArrayVec`], failing if the iterator produces more items than the [`ArrayVec`]'s
+    /// remaining capacity.
+    ///
     /// This method provides a strong error guarantee. If the method returns an error, the [`ArrayVec`] is not modified.
     ///
     /// # Examples
@@ -56,27 +82,5 @@ impl<T, const N: usize> TryExtend<T> for ArrayVec<T, N> {
         iter.try_for_each(|item| self.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1))).inspect_err(|_| {
             self.truncate(len);
         })
-    }
-
-    /// Appends an iterator to the [`ArrayVec`], failing if the iterator produces more items than the [`ArrayVec`]'s
-    /// remaining capacity.
-    ///
-    /// This method provides a basic error guarantee. If the method returns an error, the [`ArrayVec`] is valid, but may
-    /// be modified.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/arrayvec.rs", try_extend_arrayvec_example, [])]
-    /// ```
-    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = T>,
-    {
-        let mut iter = iter.into_iter();
-        let size_guess = iter.size_hint().0;
-        (size_guess > self.remaining_capacity()).then_err(ExceedsCapacity::new(N, self.len() + size_guess))?;
-
-        iter.try_for_each(|item| self.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1)))
     }
 }

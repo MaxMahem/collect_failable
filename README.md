@@ -83,27 +83,12 @@ assert_eq!(nums, BTreeSet::from([1, 2, 3]));
 assert_eq!(chars, HashSet::from(['a', 'b', 'c']));
 ```
 
-### `FoldMut`
+### Utils
 
-An iterator extension trait for building a collection via mutation rather than move. 
-
- - `fold_mut` – Fold an iterator into a mutable accumulator. 
- - `try_fold_mut` – Failable version of `fold_mut`. 
-
-```rust
-use collect_failable::FoldMut;
-use std::collections::HashMap;
-
-let pairs = vec![("a", 1), ("b", 2), ("a", 3)];
-
-let result = pairs.into_iter().fold_mut(HashMap::new(), |map, (key, val)| {
-    map.entry(key).or_insert(0);
-    *map.get_mut(key).unwrap() += val;
-});
-
-assert_eq!(result.get("a"), Some(&4));
-assert_eq!(result.get("b"), Some(&2));
-```
+Also included a series of utility functions, including:
+* `fold_mut` and `try_fold_mut` for folding an iterator into a mutable accumulator. Useful for implementing `TryFromIterator`.
+* `FixedSizeHint` and `FixedSizeHintEx` for hiding the size hint of an iterator in tests.
+* `Identifiable` for a value who's identity can differ from its `Eq` identity, useful for telling if an equal value has been overwritten dor testing.
 
 ## Implementations
 

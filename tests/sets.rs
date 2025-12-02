@@ -1,12 +1,9 @@
-mod utils;
-use utils::Identifiable;
-
 use std::collections::{BTreeSet, HashSet};
 
 use hashbrown::HashSet as HashBrownSet;
 
-use collect_failable::TryExtend;
-use collect_failable::TryFromIterator;
+use collect_failable::utils::Identifiable;
+use collect_failable::{TryExtend, TryExtendSafe, TryFromIterator};
 
 macro_rules! try_from_iter_and_extend_iter {
     ($module:ident, $set_type:ty) => {

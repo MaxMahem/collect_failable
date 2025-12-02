@@ -4,7 +4,8 @@ use std::hash::{BuildHasher, Hash};
 use fluent_result::into::IntoResult;
 use size_guess::SizeGuess;
 
-use crate::{FoldMut, TryExtend, TryFromIterator, ValueCollision};
+use crate::utils::FoldMut;
+use crate::{TryExtend, TryExtendSafe, TryFromIterator, ValueCollision};
 
 /// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
 #[allow(clippy::implicit_hasher)]
@@ -37,29 +38,6 @@ impl<T: Eq + Hash> TryFromIterator<T> for HashSet<T> {
 impl<T: Eq + Hash, S: BuildHasher> TryExtend<T> for HashSet<T, S> {
     type Error = ValueCollision<T>;
 
-    /// Appends an iterator of values pairs to the [`HashSet`], failing if a value would collide.
-    ///
-    /// This implementation provides a strong error guarantee. If the method returns an error, the
-    /// set is not modified.
-    ///
-    /// See [trait level documentation](trait@TryExtend) for an example.
-    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = T>,
-    {
-        let mut iter = iter.into_iter();
-        let size_guess = iter.size_guess();
-
-        iter.try_fold_mut(HashSet::with_capacity(size_guess), |set, value| match self.contains(&value) {
-            true => ValueCollision::new(value).into_err(),
-            false => match set.contains(&value) {
-                true => ValueCollision::new(value).into_err(),
-                false => Ok(_ = set.insert(value)),
-            },
-        })
-        .map(|set| self.extend(set))
-    }
-
     /// Appends an iterator of values to the set, failing if a value would collide.
     ///
     /// This implementation provides a basic error guarantee. If the method returns an error, the
@@ -78,5 +56,31 @@ impl<T: Eq + Hash, S: BuildHasher> TryExtend<T> for HashSet<T, S> {
             true => ValueCollision::new(value).into_err(),
             false => Ok(_ = self.insert(value)),
         })
+    }
+}
+
+/// Appends an iterator of values to the [`HashSet`] with a strong error guarantee.
+impl<T: Eq + Hash, S: BuildHasher> TryExtendSafe<T> for HashSet<T, S> {
+    /// Appends an iterator of values pairs to the [`HashSet`], failing if a value would collide.
+    ///
+    /// This implementation provides a strong error guarantee. If the method returns an error, the
+    /// set is not modified.
+    ///
+    /// See [trait level documentation](trait@TryExtendSafe) for an example.
+    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = T>,
+    {
+        let mut iter = iter.into_iter();
+        let size_guess = iter.size_guess();
+
+        iter.try_fold_mut(HashSet::with_capacity(size_guess), |set, value| match self.contains(&value) {
+            true => ValueCollision::new(value).into_err(),
+            false => match set.contains(&value) {
+                true => ValueCollision::new(value).into_err(),
+                false => Ok(_ = set.insert(value)),
+            },
+        })
+        .map(|set| self.extend(set))
     }
 }

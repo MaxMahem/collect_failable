@@ -1,6 +1,6 @@
 #[test]
 fn fold_mut_success_aggregate_hashmap_example() {
-    use collect_failable::FoldMut;
+    use collect_failable::utils::FoldMut;
     use std::collections::HashMap;
 
     let pairs = vec![("a", 1), ("b", 2), ("a", 3)];
@@ -16,7 +16,7 @@ fn fold_mut_success_aggregate_hashmap_example() {
 
 #[test]
 fn try_fold_mut_success() {
-    use collect_failable::FoldMut;
+    use collect_failable::utils::FoldMut;
     use std::collections::BTreeMap;
 
     let pairs = vec![("a", 1), ("b", 2), ("a", 3)];
@@ -36,7 +36,7 @@ fn try_fold_mut_success() {
 
 #[test]
 fn try_fold_mut_failure_example() {
-    use collect_failable::FoldMut;
+    use collect_failable::utils::FoldMut;
     use std::collections::hash_map::Entry;
     use std::collections::HashMap;
 

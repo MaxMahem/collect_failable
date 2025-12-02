@@ -9,6 +9,16 @@ const CALLED: Collection = Collection { called: true };
 impl collect_failable::TryExtend<i32> for Collection {
     type Error = ();
 
+    fn try_extend<I>(&mut self, _iter: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = i32>,
+    {
+        self.called = true;
+        Ok(())
+    }
+}
+
+impl collect_failable::TryExtendSafe<i32> for Collection {
     fn try_extend_safe<I>(&mut self, _iter: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = i32>,
@@ -29,7 +39,7 @@ fn test_try_extend_calls_try_extend_safe_by_default() {
 
 #[test]
 fn try_extend_safe_map_collision_example() {
-    use collect_failable::{KeyCollision, TryExtend};
+    use collect_failable::{KeyCollision, TryExtendSafe};
     use std::collections::HashMap;
 
     let mut map = HashMap::from([(1, 2)]);
@@ -43,7 +53,7 @@ fn try_extend_safe_map_collision_example() {
 
 #[test]
 fn try_extend_safe_internal_iterator_collision() {
-    use collect_failable::{KeyCollision, TryExtend};
+    use collect_failable::{KeyCollision, TryExtendSafe};
     use std::collections::HashMap;
 
     let mut map = HashMap::from([(1, 2)]);
@@ -60,7 +70,7 @@ fn try_extend_safe_internal_iterator_collision() {
 
 #[test]
 fn try_extend_safe_success_example() {
-    use collect_failable::TryExtend;
+    use collect_failable::TryExtendSafe;
     use std::collections::HashMap;
 
     // works like `extend` if there are no collisions

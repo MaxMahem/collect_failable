@@ -14,18 +14,10 @@ impl<const N: usize, T> TryFromIterator<T> for [T; N] {
     #[doc = include_doc::function_body!("tests/doc/array.rs", try_from_iter_array_example, [])]
     /// ```
     fn try_from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Result<Self, Self::Error> {
-        let iter = into_iter.into_iter();
-
-        match iter.size_hint() {
-            (min, _) if min > N => Err(ItemCountMismatch::new(N, min)),
-            (_, Some(max)) if max < N => Err(ItemCountMismatch::new(N, max)),
-            _ => {
-                let mut array = [const { MaybeUninit::uninit() }; N];
-                try_from_iterator_erased(iter, &mut array)?;
-                // SAFETY: all elements are initialized
-                Ok(unsafe { std::mem::transmute_copy(&array) }) // TODO: Use array_assume_init once stable
-            }
-        }
+        let mut array = [const { MaybeUninit::uninit() }; N];
+        try_from_iterator_erased(into_iter.into_iter(), &mut array)?;
+        // SAFETY: all elements are initialized
+        Ok(unsafe { std::mem::transmute_copy(&array) }) // TODO: Use array_assume_init once stable
     }
 }
 
@@ -39,7 +31,13 @@ fn try_from_iterator_erased<T, I: Iterator<Item = T>>(
     mut iter: I,
     array: &mut [MaybeUninit<T>],
 ) -> Result<(), ItemCountMismatch> {
-    let mut guard = super::InitGuard::new(array);
-    guard.try_extend(&mut iter)?;
-    guard.try_disarm()
+    match (array.len(), iter.size_hint()) {
+        (len, (min, _)) if min > len => Err(ItemCountMismatch::new(len, min)),
+        (len, (_, Some(max))) if max < len => Err(ItemCountMismatch::new(len, max)),
+        _ => {
+            let mut guard = super::InitGuard::new(array);
+            guard.try_extend(&mut iter)?;
+            guard.try_disarm()
+        }
+    }
 }

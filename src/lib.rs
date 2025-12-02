@@ -12,7 +12,11 @@ mod impls;
 mod traits;
 
 pub use errors::{ItemCountMismatch, KeyCollision, OneOf2, ValueCollision};
-pub use traits::{FoldMut, TryCollectEx, TryExtend, TryFromIterator, TryUnzip};
+pub use traits::{TryCollectEx, TryExtend, TryExtendSafe, TryFromIterator, TryUnzip};
+
+/// Helper utilities for testing and authoring failable collection implementations.
+#[cfg(feature = "utils")]
+pub mod utils;
 
 #[cfg(feature = "arrayvec")]
 pub use errors::ExceedsCapacity;

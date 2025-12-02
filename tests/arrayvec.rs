@@ -1,8 +1,5 @@
-mod utils;
-use utils::HideSize;
-
 use arrayvec::{ArrayVec, CapacityError};
-use collect_failable::{ExceedsCapacity, TryExtend, TryFromIterator};
+use collect_failable::{utils::FixedSizeHint, ExceedsCapacity, TryExtend, TryExtendSafe, TryFromIterator};
 
 type TryFromArray<T> = ArrayVec<T, 2>;
 type ExtendArray<T> = ArrayVec<T, 4>;
@@ -34,7 +31,7 @@ fn try_from_iter_too_long_data_early_return() {
 
 #[test]
 fn try_from_iter_too_long_data_rollback() {
-    let iter = HideSize(TOO_LONG_ARRAY.into_iter());
+    let iter = FixedSizeHint::hide_size(TOO_LONG_ARRAY);
     let err = ArrayVec::<_, 2>::try_from_iter(iter).expect_err("Should be err");
     assert_eq!(err, TRY_FROM_ERR, "Should match err");
 }
@@ -60,7 +57,7 @@ fn try_extend_safe_early_return() {
 fn try_extend_safe_rollback() {
     let mut array: ExtendArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
 
-    let iter = HideSize(TOO_LONG_ARRAY.into_iter());
+    let iter = FixedSizeHint::hide_size(TOO_LONG_ARRAY);
     let err = array.try_extend_safe(iter).expect_err("Should rollback");
 
     assert_eq!(err, EXTEND_ERR);
@@ -87,7 +84,7 @@ fn try_extend_early_return() {
 fn try_extend_push_fail() {
     let mut array: ExtendArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
 
-    let iter = HideSize(TOO_LONG_ARRAY.into_iter());
+    let iter = FixedSizeHint::hide_size(TOO_LONG_ARRAY);
     let err = array.try_extend(iter).expect_err("Should rollback");
 
     assert_eq!(err, EXTEND_ERR);

@@ -2,6 +2,9 @@ use fluent_result::bool::Then;
 
 use crate::TryFromIterator;
 
+/// No more items hint for `ExtractErr`.
+const NO_MORE_ITEMS: (usize, Option<usize>) = (0, Some(0));
+
 /// Iterator adaptor that extracts [`Ok`] values from a [`Result`] [`Iterator`],
 /// storing the first encountered [`Err`] for later retrieval.
 #[derive(Debug)]
@@ -29,16 +32,18 @@ where
         self.error.is_some().then_none()?;
 
         match self.iter.next() {
-            Some(Ok(v)) => Some(v),
-            #[rustfmt::skip]
-            Some(Err(e)) => { self.error = Some(e); None }
             None => None,
+            Some(Ok(v)) => Some(v),
+            Some(Err(e)) => {
+                self.error = Some(e);
+                None
+            }
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self.error.is_some() {
-            true => (0, Some(0)),
+            true => NO_MORE_ITEMS,
             false => (0, self.iter.size_hint().1),
         }
     }
@@ -96,3 +101,31 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_DATA: [Result<i32, i32>; 4] = [Ok(1), Err(3), Ok(3), Ok(4)];
+    
+    #[test]
+    fn extract_err_zero_size_after_err() {
+        let mut extractor = ExtractErr::from(TEST_DATA.into_iter());
+        
+        extractor.next();
+        extractor.next();
+        extractor.next();
+
+        assert_eq!(extractor.size_hint(), (0, Some(0)));
+    }
+
+    #[test]
+    fn extract_err_forward_hint() {
+        let mut extractor = ExtractErr::from(TEST_DATA.into_iter());
+        
+        extractor.next();
+
+        assert_eq!(extractor.size_hint(), (0, Some(3)));
+    }
+}
+    

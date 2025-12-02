@@ -31,6 +31,10 @@ where
 }
 
 /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
+///
+/// Note: Tuples do not implement [`TryExtendSafe`](crate::TryExtendSafe) because they cannot
+/// provide a strong error guarantee. If the second collection fails to extend, the first
+/// may have already been modified.
 impl<A, B, TryFromA, TryFromB> TryExtend<(A, B)> for (TryFromA, TryFromB)
 where
     TryFromA: TryExtend<A>,
@@ -40,26 +44,8 @@ where
 
     /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
     ///
-    /// This method should uphold any strong error guarantees of the underlying collections.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/tuples.rs", try_extend_safe_tuple_example, [])]
-    /// ```
-    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = (A, B)>,
-    {
-        let items: (Vec<A>, Vec<B>) = iter.into_iter().unzip();
-        self.0.try_extend_safe(items.0).map_err(OneOf2::A)?;
-        self.1.try_extend_safe(items.1).map_err(OneOf2::B)
-    }
-
-    /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
-    ///
-    /// This method does not provide a strong error guarantee. But should uphold the basic error
-    /// guarantee of the underlying collections.
+    /// This method provides a basic error guarantee. If the method returns an error, one or both
+    /// collections may have been partially modified.
     ///
     /// # Examples
     ///

@@ -13,7 +13,7 @@ fn try_from_iter_arrayvec_example() {
 #[test]
 fn try_extend_safe_arrayvec_example() {
     use arrayvec::ArrayVec;
-    use collect_failable::{ExceedsCapacity, TryCollectEx, TryExtend};
+    use collect_failable::{ExceedsCapacity, TryCollectEx, TryExtendSafe};
 
     let mut array: ArrayVec<i32, 4> = (1..=2).try_collect_ex().expect("Should be ok");
 
