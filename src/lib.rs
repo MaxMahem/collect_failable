@@ -16,7 +16,7 @@ mod traits;
 pub mod utils;
 
 #[cfg(not(feature = "utils"))]
-mod uitls;
+mod utils;
 
 pub use errors::{ItemCountMismatch, KeyCollision, OneOf2, ValueCollision};
 pub use traits::{TryCollectEx, TryExtend, TryExtendSafe, TryFromIterator, TryUnzip};
