@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+ - Added `ReadOnlyPartialIterErr` and `PartialIterErr` for returning errors from failable collection methods.
+
 ## [0.11.1] - 2025-12-02
 
 ### Fixed
