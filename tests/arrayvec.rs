@@ -8,8 +8,8 @@ const TOO_LONG_ARRAY: [u32; 3] = [1, 2, 3];
 const VALID_ARRAY: [u32; 2] = [1, 2];
 const EXTENDED_ARRAY: [u32; 4] = [1, 2, 1, 2];
 
-const TRY_FROM_ERR: ExceedsCapacity = ExceedsCapacity { capacity: 2, necessary: 3 };
-const EXTEND_ERR: ExceedsCapacity = ExceedsCapacity { capacity: 4, necessary: 5 };
+const TRY_FROM_ERR: ExceedsCapacity = ExceedsCapacity { capacity: 2, required: 3 };
+const EXTEND_ERR: ExceedsCapacity = ExceedsCapacity { capacity: 4, required: 5 };
 
 #[test]
 fn capcity_error_from_exceeds_capacity() {

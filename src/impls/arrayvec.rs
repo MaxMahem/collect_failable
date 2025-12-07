@@ -20,6 +20,15 @@ where
 
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut iter = into_iter.into_iter();
+
+        match iter.size_hint() {
+            (min, _) if min > N => {
+                let err = ExceedsCapacity::new(N, min);
+                return Err(CollectionError::new(iter, ArrayVec::new(), None, err))
+            },
+            (_, Some(max)) if max <= N => return Ok(iter.collect()),
+            _ => (),
+        }
         
         iter.try_fold(ArrayVec::new(), |mut array, item| {
             match array.try_push(item) {

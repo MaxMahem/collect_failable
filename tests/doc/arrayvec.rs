@@ -7,7 +7,7 @@ fn try_from_iter_arrayvec_example() {
     assert_eq!(array.as_slice(), &[1, 2, 3]);
 
     let err = ArrayVec::<i32, 3>::try_from_iter(1..=4).expect_err("should be err");
-    assert_eq!(err.error, ExceedsCapacity { capacity: 3, necessary: 4 });
+    assert_eq!(err.error, ExceedsCapacity { capacity: 3, required: 4 });
 }
 
 #[test]
@@ -21,7 +21,7 @@ fn try_extend_safe_arrayvec_example() {
     assert_eq!(*array, [1, 2, 3]);
 
     let err = array.try_extend_safe([4, 5]).expect_err("Should be err");
-    assert_eq!(err, ExceedsCapacity { capacity: 4, necessary: 5 });
+    assert_eq!(err, ExceedsCapacity { capacity: 4, required: 5 });
     assert_eq!(*array, [1, 2, 3]); // Unchanged
 }
 
@@ -36,5 +36,5 @@ fn try_extend_arrayvec_example() {
     assert_eq!(*array, [1, 2, 3]);
 
     let err = array.try_extend([4, 5]).expect_err("Should be err");
-    assert_eq!(err, ExceedsCapacity { capacity: 4, necessary: 5 });
+    assert_eq!(err, ExceedsCapacity { capacity: 4, required: 5 });
 }
