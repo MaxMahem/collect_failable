@@ -1,26 +1,20 @@
 use std::hash::{BuildHasher, Hash};
 
 use fluent_result::into::IntoResult;
-use hashbrown::hash_set::Entry;
 use hashbrown::HashSet;
 use size_guess::SizeGuess;
-use tap::Pipe;
 
 use crate::utils::FoldMut;
-use crate::{TryExtend, TryExtendSafe, TryFromIterator, ValueCollision};
+use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator, ValueCollision};
 
-/// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
+/// Converts an iterator of values into a [`HashSet`], failing if a value would collide.
 impl<T: Eq + Hash, I> TryFromIterator<T, I> for HashSet<T> 
 where
     I: IntoIterator<Item = T>
 {
-    type Error = ValueCollision<T>;
+    type Error = CollectionCollision<T, I::IntoIter, HashSet<T>>;
 
-    /// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
-    ///
-    /// In the case of a collision, the value held by [`ValueCollision`] is the second value that was
-    /// seen during iteration. This may be relevant for keys that compare the same but still have
-    /// different values.
+    /// Converts an iterator of values into a [`HashSet`], failing if a value would collide.
     ///
     /// See [trait level documentation](trait@TryFromIterator) for an example.
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
@@ -28,12 +22,16 @@ where
         Self: Sized,
     {
         let mut iter = into_iter.into_iter();
-        let size_guess = iter.size_guess();
+        let size_guess = iter.size_hint().0;
 
-        iter.try_fold_mut(HashSet::with_capacity(size_guess), |set, value| match set.entry(value) {
-            Entry::Occupied(entry) => entry.remove().pipe(ValueCollision::new).into_err(),
-            Entry::Vacant(entry) => Ok(_ = entry.insert()),
+        iter.try_fold(HashSet::with_capacity(size_guess), |mut set, value| match set.contains(&value) {
+            true => Err((set, value)),
+            false => {
+                _ = set.insert(value);
+                Ok(set)
+            }
         })
+        .map_err(|(set, value)| CollectionCollision::new(iter, set, value))
     }
 }
 

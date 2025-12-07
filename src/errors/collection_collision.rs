@@ -14,7 +14,8 @@ use tap::Pipe;
 /// that does not allow duplicate keys, this error can return the values collected so far, the 
 /// partially iterated iter, and the colliding item, allowing those values to be handled as desired,
 /// or even the initial iterator to be reconstructed from those components.
-#[derive(derive_more::Deref)]
+#[derive(derive_more::Deref, thiserror::Error)]
+#[error("Collection collision")]
 #[deref(forward)]
 pub struct CollectionCollision<T, I, C>(Box<ReadOnlyCollectionCollision<T, I, C>>)
 where
@@ -73,6 +74,11 @@ where
     type Item = T;
     type IntoIter = Chain<Chain<std::option::IntoIter<T>, C::IntoIter>, I>;
 
+    /// Consumes the error, returning an iterator over the colliding `item`, the `collected` values, 
+    /// and the remaining `iterator`, in that order.
+    /// 
+    /// The exact iteration order depends on the implementation of `IntoIterator` for `C`, and may
+    /// not be the same as the order in which the values were collected.
     fn into_iter(self) -> Self::IntoIter {
         Some(self.0.item).into_iter().chain(self.0.collected).chain(self.0.iterator)
     }
@@ -81,14 +87,13 @@ where
 impl<T, I, C> std::fmt::Debug for CollectionCollision<T, I, C>
 where
     I: Iterator<Item = T>,
-    C: IntoIterator<Item = T> + std::fmt::Debug,
-    T: std::fmt::Debug,
+    C: IntoIterator<Item = T>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CollectionCollision")
-            .field("collected", &self.collected)
-            .field("item", &self.item)
-            .field("iterator", &format_args!("<{}>", std::any::type_name::<I>()))
+            .field("collected", &std::any::type_name::<C>())
+            .field("item", &std::any::type_name::<T>())
+            .field("iterator", &std::any::type_name::<I>())
             .finish()
     }
 }

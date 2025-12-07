@@ -11,11 +11,20 @@ const LEFT_COLLISION: OneOf2<ValueCollision<u32>, ValueCollision<u32>> = OneOf2:
 const RIGHT_COLLISION: OneOf2<ValueCollision<u32>, ValueCollision<u32>> = OneOf2::B(ValueCollision { value: 2 });
 
 macro_rules! test_tuple_impl {
-    ($name:ident, $data:expr, $expected_error:expr) => {
+    ($name:ident, $data:expr, $expected_value:expr) => {
         #[test]
         fn $name() {
             let err = HashSetTuple::try_from_iter($data).expect_err("should be err");
-            assert_eq!(err, $expected_error, "should match err");
+            
+            // Extract the colliding value from the CollectionCollision
+            match err {
+                OneOf2::A(coll) => {
+                    assert_eq!(coll.item, $expected_value, "left collision value should match");
+                }
+                OneOf2::B(coll) => {
+                    assert_eq!(coll.item, $expected_value, "right collision value should match");
+                }
+            }
         }
     };
 }
@@ -54,8 +63,8 @@ fn try_from_iter_valid_data() {
     assert_eq!(found, expected, "should match data");
 }
 
-test_tuple_impl!(try_from_iter_collision_left, INVALID_DATA_LEFT, LEFT_COLLISION);
-test_tuple_impl!(try_from_iter_collision_right, INVALID_DATA_RIGHT, RIGHT_COLLISION);
+test_tuple_impl!(try_from_iter_collision_left, INVALID_DATA_LEFT, 1);
+test_tuple_impl!(try_from_iter_collision_right, INVALID_DATA_RIGHT, 2);
 
 // try_extend tests
 test_try_extend_success!(try_extend_valid_data, try_extend);

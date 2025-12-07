@@ -22,7 +22,8 @@ macro_rules! try_from_iter_and_extend_iter {
             fn try_collect_value_collision() {
                 let err = <$set_type>::try_from_iter(COLLIDE_WITH_SELF).expect_err("should be err");
 
-                assert_eq!(err, SELF_COLLISION, "should match err");
+                let parts = err.into_parts();
+                assert_eq!(parts.item, 3, "colliding value should be 3");
             }
 
             #[test]

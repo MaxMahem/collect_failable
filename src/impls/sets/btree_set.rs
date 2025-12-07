@@ -3,30 +3,31 @@ use std::collections::BTreeSet;
 use fluent_result::into::IntoResult;
 
 use crate::utils::FoldMut;
-use crate::{TryExtend, TryExtendSafe, TryFromIterator, ValueCollision};
+use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator, ValueCollision};
 
 /// Converts an iterator of values into a [`BTreeSet`], failing if a value would collide.
 impl<T: Ord, I> TryFromIterator<T, I> for BTreeSet<T> 
 where
     I: IntoIterator<Item = T>
 {
-    type Error = ValueCollision<T>;
+    type Error = CollectionCollision<T, I::IntoIter, BTreeSet<T>>;
 
-    /// Converts an iterator of values into a [`BTreeSet`], failing if a key would collide.
-    ///
-    /// In the case of a collision, the value held by [`ValueCollision`] is the second value that was
-    /// seen during iteration. This may be relevant for keys that compare the same but still have
-    /// different values.
+    /// Converts an iterator of values into a [`BTreeSet`], failing if a value would collide.
     ///
     /// See [trait level documentation](trait@TryFromIterator) for an example.
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
     where
         Self: Sized,
     {
-        into_iter.into_iter().try_fold_mut(BTreeSet::new(), |set, value| match set.contains(&value) {
-            true => ValueCollision::new(value).into_err(),
-            false => Ok(_ = set.insert(value)),
+        let mut iter = into_iter.into_iter();
+        iter.try_fold(BTreeSet::new(), |mut set, value| match set.contains(&value) {
+            true => Err((set, value)),
+            false => {
+                _ = set.insert(value);
+                Ok(set)
+            }
         })
+        .map_err(|(set, value)| CollectionCollision::new(iter, set, value))
     }
 }
 
