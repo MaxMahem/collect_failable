@@ -2,17 +2,21 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash};
 
+use fluent_result::expect::ExpectNone;
 use fluent_result::into::IntoResult;
 use size_guess::SizeGuess;
 use tap::Pipe;
 
 use crate::utils::FoldMut;
-use crate::{KeyCollision, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::{CollectionCollision, KeyCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
 /// Converts an iterator of key-value pairs into a [`HashMap`], failing if a key would collide.
 #[allow(clippy::implicit_hasher)]
-impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
-    type Error = KeyCollision<K>;
+impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for HashMap<K, V> 
+where
+    I: IntoIterator<Item = (K, V)>
+{
+    type Error = CollectionCollision<(K, V), I::IntoIter, HashMap<K, V>>;
 
     /// Converts an iterator of key-value pairs into a [`HashMap`], failing if a key would collide.
     ///
@@ -21,18 +25,21 @@ impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
     /// different values.
     ///
     /// See [trait level documentation](trait@TryFromIterator) for an example.
-    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
     where
         Self: Sized,
-        I: IntoIterator<Item = (K, V)>,
     {
         let mut iter = into_iter.into_iter();
-        let size_guess = iter.size_guess();
+        let size_guess = iter.size_hint().0;
 
-        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (k, v)| match map.entry(k) {
-            Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
-            Entry::Vacant(entry) => Ok(_ = entry.insert(v)),
+        iter.try_fold(HashMap::with_capacity(size_guess), |mut map, (k, v)| match map.contains_key(&k) {
+            true => Err((map, (k, v))),
+            false => { 
+                map.insert(k, v).expect_none("should not be occupied");
+                Ok(map)
+            }
         })
+        .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
     }
 }
 

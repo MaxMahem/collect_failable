@@ -13,10 +13,13 @@ use crate::{ExceedsCapacity, TryExtend, TryExtendSafe, TryFromIterator};
 /// ```rust
 #[doc = include_doc::function_body!("tests/doc/arrayvec.rs", try_from_iter_arrayvec_example, [])]
 /// ```
-impl<T, const N: usize> TryFromIterator<T> for ArrayVec<T, N> {
+impl<T, I, const N: usize> TryFromIterator<T, I> for ArrayVec<T, N> 
+where
+    I: IntoIterator<Item = T>
+{
     type Error = ExceedsCapacity;
 
-    fn try_from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Result<Self, Self::Error> {
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_hint().0;
 

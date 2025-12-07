@@ -7,17 +7,17 @@ use tap::Pipe;
 /// a nested error.
 #[derive(derive_more::Deref)]
 #[deref(forward)]
-pub struct PartialIterErr<T, I, C, E>(Box<ReadOnlyPartialIterErr<T, I, C, E>>) where 
+pub struct PartialIterError<T, I, C, E>(Box<ReadOnlyPartialIterError<T, I, C, E>>) where 
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>;
 
-impl<T, I, C, E> PartialIterErr<T, I, C, E> where 
+impl<T, I, C, E> PartialIterError<T, I, C, E> where 
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T> 
 {
     /// Creates a new [`PartialIterErr`] from an `iterator`, `collected` values, and a nested `error`.
     pub fn new(iterator: I, collected: C, error: E) -> Self {
-        ReadOnlyPartialIterErr { iterator, collected, error }.pipe(Box::new).pipe(PartialIterErr)
+        ReadOnlyPartialIterError { iterator, collected, error }.pipe(Box::new).pipe(PartialIterError)
     }
 
     /// Consumes the error, returning the nested error.
@@ -29,7 +29,7 @@ impl<T, I, C, E> PartialIterErr<T, I, C, E> where
     /// Consumes the error, returning a [`ReadOnlyPartialIterErr`] containing the `iterator`, 
     /// `collected` values, and nested `error`.
     #[must_use]
-    pub fn into_parts(self) -> ReadOnlyPartialIterErr<T, I, C, E> {
+    pub fn into_parts(self) -> ReadOnlyPartialIterError<T, I, C, E> {
         *self.0
     }
 
@@ -54,7 +54,7 @@ impl<T, I, C, E> PartialIterErr<T, I, C, E> where
     }
 }
 
-impl<T, I, C, E> IntoIterator for PartialIterErr<T, I, C, E> 
+impl<T, I, C, E> IntoIterator for PartialIterError<T, I, C, E> 
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T> 
@@ -67,7 +67,7 @@ where
     }
 }
 
-impl<T, I, C, E: std::fmt::Display> std::fmt::Display for PartialIterErr<T, I, C, E>
+impl<T, I, C, E: std::fmt::Display> std::fmt::Display for PartialIterError<T, I, C, E>
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T> 
@@ -77,7 +77,7 @@ where
     }
 }
 
-impl<T, I, C, E: std::error::Error> std::error::Error for PartialIterErr<T, I, C, E> 
+impl<T, I, C, E: std::error::Error> std::error::Error for PartialIterError<T, I, C, E> 
 where 
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T> + std::fmt::Debug,
@@ -88,7 +88,7 @@ where
     }
 }
 
-impl<T, I, C, E> std::fmt::Debug for PartialIterErr<T, I, C, E>
+impl<T, I, C, E> std::fmt::Debug for PartialIterError<T, I, C, E>
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T> + std::fmt::Debug,
@@ -103,8 +103,8 @@ where
     }
 }
 
-/// A read only version of [`PartialIterErr`].
-pub struct ReadOnlyPartialIterErr<T, I, C, E> 
+/// A read only version of [`PartialIterError`].
+pub struct ReadOnlyPartialIterError<T, I, C, E> 
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>,

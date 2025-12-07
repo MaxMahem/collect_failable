@@ -9,7 +9,10 @@ use std::collections::HashMap;
 /// [`TryCollectEx::try_collect_ex`].
 ///
 /// Implementations for several common types are provided.
-pub trait TryFromIterator<T>: Sized {
+pub trait TryFromIterator<T, I>: Sized 
+where
+    I: IntoIterator<Item = T>
+{
     /// The error that may occur when converting the iterator into the container.
     type Error;
 
@@ -34,7 +37,7 @@ pub trait TryFromIterator<T>: Sized {
     /// ```rust
     #[doc = include_doc::function_body!("tests/try-from-iterator.rs", try_from_iter_collision_example, [])]
     /// ```    
-    fn try_from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Result<Self, Self::Error>;
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>;
 }
 
 /// Extends [Iterator] with a failable collect method.
@@ -68,7 +71,7 @@ pub trait TryCollectEx: Iterator {
     /// ```
     fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where
-        C: TryFromIterator<Self::Item>,
+        C: TryFromIterator<Self::Item, Self>,
         Self: Sized;
 }
 
@@ -79,7 +82,7 @@ where
 {
     fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where
-        C: TryFromIterator<Self::Item>,
+        C: TryFromIterator<Self::Item, Self>,
     {
         C::try_from_iter(self)
     }

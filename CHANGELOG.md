@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
  - Added `ReadOnlyPartialIterErr` and `PartialIterErr` for returning errors from failable collection methods.
+ - Added `CollectionCollision` for returning errors when a collision occurs during a collection operation.
+
+### Changed
+
+ - **Breaking:** Moved generic iterator parameter `I` from method level to trait level in `TryFromIterator`. The trait signature changed from `TryFromIterator<T>` to `TryFromIterator<T, I>`. Most user code remains compatible due to type inference.
 
 ## [0.11.1] - 2025-12-02
 

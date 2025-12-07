@@ -6,7 +6,10 @@ use crate::utils::FoldMut;
 use crate::{TryExtend, TryExtendSafe, TryFromIterator, ValueCollision};
 
 /// Converts an iterator of values into a [`BTreeSet`], failing if a value would collide.
-impl<T: Ord> TryFromIterator<T> for BTreeSet<T> {
+impl<T: Ord, I> TryFromIterator<T, I> for BTreeSet<T> 
+where
+    I: IntoIterator<Item = T>
+{
     type Error = ValueCollision<T>;
 
     /// Converts an iterator of values into a [`BTreeSet`], failing if a key would collide.
@@ -16,10 +19,9 @@ impl<T: Ord> TryFromIterator<T> for BTreeSet<T> {
     /// different values.
     ///
     /// See [trait level documentation](trait@TryFromIterator) for an example.
-    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
     where
         Self: Sized,
-        I: IntoIterator<Item = T>,
     {
         into_iter.into_iter().try_fold_mut(BTreeSet::new(), |set, value| match set.contains(&value) {
             true => ValueCollision::new(value).into_err(),

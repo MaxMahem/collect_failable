@@ -6,6 +6,7 @@ use collect_failable::{KeyCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
 const UNIQUE_KEYS: [(i32, i32); 2] = [(1, 2), (2, 3)];
 const COLLIDE_WITH_SELF: [(i32, i32); 3] = [(3, 3), (4, 4), (3, 5)];
+const COLLIDE_WITH_REMAINING: [(i32, i32); 5] = [(1, 2), (2, 3), (1, 4), (3, 5), (4, 6)];
 const COLLIDE_WITH_MAP: [(i32, i32); 2] = [(3, 3), (1, 2)];
 
 const SELF_COLLISION: KeyCollision<i32> = KeyCollision { key: 3 };
@@ -20,9 +21,33 @@ macro_rules! test_try_from_iter_and_extend_iter {
 
             #[test]
             fn try_collect_key_collision() {
-                let err = <$map_type>::try_from_iter(COLLIDE_WITH_SELF).expect_err("should be err");
+                let err = <$map_type>::try_from_iter(COLLIDE_WITH_REMAINING).expect_err("should be err");
+                assert_eq!(err.len(), 5, "should have 5 items");
 
-                assert_eq!(err, SELF_COLLISION, "should have err key");
+                let parts = err.into_parts();
+                
+                let expected_collected = <$map_type>::from([(1, 2), (2, 3)]);
+                assert_eq!(parts.collected, expected_collected, "collected should have items before collision");
+
+                assert_eq!(parts.item.0, 1, "colliding key should be 1");
+                assert_eq!(parts.item.1, 4, "colliding value should be 4");
+
+                let remaining: Vec<_> = parts.iterator.collect();
+                assert_eq!(remaining, vec![(3, 5), (4, 6)], "remaining iterator should have 2 items");
+            }
+
+            #[test]
+            fn try_collect_key_collision_into_iter() {
+                let err = <$map_type>::try_from_iter(COLLIDE_WITH_REMAINING).expect_err("should be err");
+
+                let all_items: Vec<_> = err.into_iter().collect();
+                
+                assert_eq!(all_items.len(), 5, "should have all 5 original items");
+                assert!(all_items.contains(&(1, 2)), "should contain (1, 2)");
+                assert!(all_items.contains(&(2, 3)), "should contain (2, 3)");
+                assert!(all_items.contains(&(1, 4)), "should contain colliding (1, 4)");
+                assert!(all_items.contains(&(3, 5)), "should contain remaining (3, 5)");
+                assert!(all_items.contains(&(4, 6)), "should contain remaining (4, 6)");
             }
 
             #[test]

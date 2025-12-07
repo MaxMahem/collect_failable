@@ -1,36 +1,40 @@
 use std::hash::{BuildHasher, Hash};
 
 use fluent_result::into::IntoResult;
-use hashbrown::hash_map::{Entry, EntryRef};
+use hashbrown::hash_map::{Entry, EntryRef, RawEntryMut};
 use hashbrown::HashMap;
 use size_guess::SizeGuess;
 use tap::Pipe;
 
 use crate::utils::FoldMut;
-use crate::{KeyCollision, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::{CollectionCollision, KeyCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
 /// Converts an iterator of key-value pairs into a [`HashMap`], failing if a key would collide.
-impl<K: Eq + Hash, V> TryFromIterator<(K, V)> for HashMap<K, V> {
-    type Error = KeyCollision<K>;
+impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for HashMap<K, V> 
+where
+    I: IntoIterator<Item = (K, V)>
+{
+    type Error = CollectionCollision<(K, V), I::IntoIter, HashMap<K, V>>;
 
     /// Converts an iterator of key-value pairs into a [`HashMap`] failing if a key would collide.
-    ///
-    /// In the case of a collision, the key held by [`KeyCollision`] is the first key that was seen
-    /// during iteration. This may be relevant for keys that compare the same but still have
-    /// different values.
-    ///
+    /// 
     /// See [trait level documentation](trait@TryFromIterator) for an example.
-    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
-    where
-        I: IntoIterator<Item = (K, V)>,
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
     {
         let mut iter = into_iter.into_iter();
-        let size_guess = iter.size_guess();
+        let size_guess = iter.size_hint().0;
 
-        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (k, v)| match map.entry(k) {
-            Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
-            Entry::Vacant(entry) => Ok(_ = entry.insert(v)),
+        iter.try_fold(HashMap::with_capacity(size_guess), |mut map, (key, value)| {
+            let hash = map.hasher().hash_one(&key);
+            match map.raw_entry_mut().from_hash(hash, |k| k == &key) {
+                RawEntryMut::Occupied(_) => Err((map, (key, value))),
+                RawEntryMut::Vacant(entry) => {
+                    entry.insert_hashed_nocheck(hash, key, value);
+                    Ok(map)
+                }
+            }
         })
+        .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
     }
 }
 

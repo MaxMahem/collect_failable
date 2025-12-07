@@ -3,7 +3,10 @@ use std::mem::MaybeUninit;
 use crate::{ItemCountMismatch, TryExtend, TryFromIterator};
 
 /// Create an array of size `N` from an iterator, failing if the iterator produces fewer or more items than `N`.
-impl<const N: usize, T> TryFromIterator<T> for [T; N] {
+impl<const N: usize, T, I> TryFromIterator<T, I> for [T; N] 
+where
+    I: IntoIterator<Item = T>
+{
     type Error = ItemCountMismatch;
 
     /// Create an array from an iterator, failing if the iterator produces fewer or more items than `N`.
@@ -13,7 +16,7 @@ impl<const N: usize, T> TryFromIterator<T> for [T; N] {
     /// ```rust
     #[doc = include_doc::function_body!("tests/doc/array.rs", try_from_iter_array_example, [])]
     /// ```
-    fn try_from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Result<Self, Self::Error> {
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut array = [const { MaybeUninit::uninit() }; N];
         try_from_iterator_erased(into_iter.into_iter(), &mut array)?;
         // SAFETY: all elements are initialized

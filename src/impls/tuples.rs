@@ -2,10 +2,11 @@ use crate::{OneOf2, TryExtend, TryFromIterator};
 
 /// Converts an iterator of `(A, B)` into a `(TryFromA, TryFromB)`, upholding the
 /// [`TryFromIterator`] contract of both types.
-impl<A, B, TryFromA, TryFromB> TryFromIterator<(A, B)> for (TryFromA, TryFromB)
+impl<A, B, TryFromA, TryFromB, I> TryFromIterator<(A, B), I> for (TryFromA, TryFromB)
 where
-    TryFromA: TryFromIterator<A>,
-    TryFromB: TryFromIterator<B>,
+    I: IntoIterator<Item = (A, B)>,
+    TryFromA: TryFromIterator<A, Vec<A>>,
+    TryFromB: TryFromIterator<B, Vec<B>>,
 {
     type Error = OneOf2<TryFromA::Error, TryFromB::Error>;
 
@@ -18,9 +19,7 @@ where
     /// ```
     #[doc = include_doc::function_body!("tests/doc/tuples.rs", try_from_iter_tuple_example, [])]
     /// ```
-    fn try_from_iter<I>(iter: I) -> Result<Self, Self::Error>
-    where
-        I: IntoIterator<Item = (A, B)>,
+    fn try_from_iter(iter: I) -> Result<Self, Self::Error>
     {
         let items: (Vec<A>, Vec<B>) = iter.into_iter().unzip();
         Ok((

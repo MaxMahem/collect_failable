@@ -9,7 +9,10 @@ use crate::{TryExtend, TryExtendSafe, TryFromIterator, ValueCollision};
 
 /// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
 #[allow(clippy::implicit_hasher)]
-impl<T: Eq + Hash> TryFromIterator<T> for HashSet<T> {
+impl<T: Eq + Hash, I> TryFromIterator<T, I> for HashSet<T> 
+where
+    I: IntoIterator<Item = T>
+{
     type Error = ValueCollision<T>;
 
     /// Converts an iterator of values into a [`HashSet`], failing if a key would collide.
@@ -19,10 +22,9 @@ impl<T: Eq + Hash> TryFromIterator<T> for HashSet<T> {
     /// different values.
     ///
     /// See [trait level documentation](trait@TryFromIterator) for an example.
-    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
     where
         Self: Sized,
-        I: IntoIterator<Item = T>,
     {
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_guess();

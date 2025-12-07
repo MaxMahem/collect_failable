@@ -1,15 +1,19 @@
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 
+use fluent_result::expect::ExpectNone;
 use fluent_result::into::IntoResult;
 use tap::Pipe;
 
 use crate::utils::FoldMut;
-use crate::{KeyCollision, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::{CollectionCollision, KeyCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
 /// Converts an iterator of key-value pairs into a [`BTreeMap`], failing if a key would collide.
-impl<K: Ord, V> TryFromIterator<(K, V)> for BTreeMap<K, V> {
-    type Error = KeyCollision<K>;
+impl<K: Ord, V, I> TryFromIterator<(K, V), I> for BTreeMap<K, V> 
+where
+    I: IntoIterator<Item = (K, V)>
+{
+    type Error = CollectionCollision<(K, V), I::IntoIter, BTreeMap<K, V>>;
 
     /// Converts an iterator of key-value pairs into a [`BTreeMap`], failing if a key would collide.
     ///
@@ -21,14 +25,17 @@ impl<K: Ord, V> TryFromIterator<(K, V)> for BTreeMap<K, V> {
     /// different values.
     ///
     /// See [trait level documentation](trait@TryFromIterator) for an example.
-    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
-    where
-        I: IntoIterator<Item = (K, V)>,
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
     {
-        into_iter.into_iter().try_fold_mut(BTreeMap::new(), |map, (key, value)| match map.entry(key) {
-            Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
-            Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
+        let mut iter = into_iter.into_iter();
+        iter.try_fold(BTreeMap::new(), |mut map, (k, v)| match map.contains_key(&k) {
+            true => Err((map, (k, v))),
+            false => { 
+                map.insert(k, v).expect_none("should not be occupied");
+                Ok(map)
+            }
         })
+        .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
     }
 }
 
