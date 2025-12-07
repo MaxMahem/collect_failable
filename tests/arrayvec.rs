@@ -26,14 +26,29 @@ fn try_from_iter_valid_array() {
 #[test]
 fn try_from_iter_too_long_data_early_return() {
     let err = ArrayVec::<_, 2>::try_from_iter(TOO_LONG_ARRAY).expect_err("Should be err");
-    assert_eq!(err, TRY_FROM_ERR, "Should match err");
+    assert_eq!(err.error, TRY_FROM_ERR, "Should match err");
 }
 
 #[test]
 fn try_from_iter_too_long_data_rollback() {
     let iter = FixedSizeHint::hide_size(TOO_LONG_ARRAY);
     let err = ArrayVec::<_, 2>::try_from_iter(iter).expect_err("Should be err");
-    assert_eq!(err, TRY_FROM_ERR, "Should match err");
+    assert_eq!(err.error, TRY_FROM_ERR, "Should match err");
+}
+
+#[test]
+fn try_from_iter_rejected_item_captured() {
+    let err = ArrayVec::<_, 2>::try_from_iter([1, 2, 3]).expect_err("Should be err");
+    
+    // Verify rejected item is captured
+    assert_eq!(err.rejected, Some(3), "Rejected item should be captured");
+    
+    // Verify collected items
+    assert_eq!(*err.collected, [1, 2], "Should have collected first 2 items");
+    
+    // Verify we can reconstruct the full iterator
+    let reconstructed: Vec<_> = err.into_iter().collect();
+    assert_eq!(reconstructed, vec![3, 1, 2], "Should reconstruct as: rejected, collected, remaining");
 }
 
 #[test]

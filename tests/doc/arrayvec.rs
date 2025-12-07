@@ -7,7 +7,7 @@ fn try_from_iter_arrayvec_example() {
     assert_eq!(array.as_slice(), &[1, 2, 3]);
 
     let err = ArrayVec::<i32, 3>::try_from_iter(1..=4).expect_err("should be err");
-    assert_eq!(err, ExceedsCapacity { capacity: 3, necessary: 4 });
+    assert_eq!(err.error, ExceedsCapacity { capacity: 3, necessary: 4 });
 }
 
 #[test]

@@ -1,8 +1,7 @@
 use arrayvec::ArrayVec;
 use fluent_result::bool::Then;
 
-use crate::utils::FoldMut;
-use crate::{ExceedsCapacity, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::{ExceedsCapacity, CollectionError, TryExtend, TryExtendSafe, TryFromIterator};
 
 /// Tries to create an [`ArrayVec`] from an iterator.
 ///
@@ -17,16 +16,19 @@ impl<T, I, const N: usize> TryFromIterator<T, I> for ArrayVec<T, N>
 where
     I: IntoIterator<Item = T>
 {
-    type Error = ExceedsCapacity;
+    type Error = CollectionError<T, I::IntoIter, ArrayVec<T, N>, ExceedsCapacity>;
 
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut iter = into_iter.into_iter();
-        let size_guess = iter.size_hint().0;
-
-        (size_guess > N).then_err(ExceedsCapacity::new(N, size_guess))?;
-
-        iter.try_fold_mut(ArrayVec::new(), |array, item| {
-            array.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1))
+        
+        iter.try_fold(ArrayVec::new(), |mut array, item| {
+            match array.try_push(item) {
+                Ok(()) => Ok(array),
+                Err(capacity_err) => Err((array, capacity_err.element())),
+            }
+        })
+        .map_err(|(array, rejected_item)| {
+            CollectionError::new(iter, array, Some(rejected_item), ExceedsCapacity::new(N, N + 1))
         })
     }
 }

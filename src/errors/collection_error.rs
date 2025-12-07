@@ -1,4 +1,5 @@
-use tap::Pipe;
+use tap::{Conv, Pipe};
+use crate::utils::DebugOption;
 
 /// An error that occurs when an operation on an iterator fails mid way through it's iteration.
 /// 
@@ -7,17 +8,17 @@ use tap::Pipe;
 /// a nested error.
 #[derive(derive_more::Deref)]
 #[deref(forward)]
-pub struct PartialIterError<T, I, C, E>(Box<ReadOnlyPartialIterError<T, I, C, E>>) where 
+pub struct CollectionError<T, I, C, E>(Box<ReadOnlyCollectionError<T, I, C, E>>) where 
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>;
 
-impl<T, I, C, E> PartialIterError<T, I, C, E> where 
+impl<T, I, C, E> CollectionError<T, I, C, E> where 
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T> 
 {
-    /// Creates a new [`PartialIterErr`] from an `iterator`, `collected` values, and a nested `error`.
-    pub fn new(iterator: I, collected: C, error: E) -> Self {
-        ReadOnlyPartialIterError { iterator, collected, error }.pipe(Box::new).pipe(PartialIterError)
+    /// Creates a new [`PartialIterErr`] from an `iterator`, `collected` values, optional `rejected` item, and a nested `error`.
+    pub fn new(iterator: I, collected: C, rejected: Option<T>, error: E) -> Self {
+        ReadOnlyCollectionError { iterator, collected, rejected, error }.pipe(Box::new).pipe(CollectionError)
     }
 
     /// Consumes the error, returning the nested error.
@@ -27,20 +28,20 @@ impl<T, I, C, E> PartialIterError<T, I, C, E> where
     }
 
     /// Consumes the error, returning a [`ReadOnlyPartialIterErr`] containing the `iterator`, 
-    /// `collected` values, and nested `error`.
+    /// `collected` values, the optional `rejected` item, and nested `error`.
     #[must_use]
-    pub fn into_parts(self) -> ReadOnlyPartialIterError<T, I, C, E> {
+    pub fn into_parts(self) -> ReadOnlyCollectionError<T, I, C, E> {
         *self.0
     }
 
-    /// Returns the number of elements in the `iterator` and `collected` values.
+    /// Returns the number of elements in the `iterator`, `collected` values, and `rejected` item.
     #[must_use]
     pub fn len(&self) -> usize
     where
         I: ExactSizeIterator,
         for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
     {
-        (&self.0.collected).into_iter().len() + self.0.iterator.len()
+        (&self.0.collected).into_iter().len() + self.0.iterator.len() + self.0.rejected.is_some().conv::<usize>()
     }
 
     /// Returns `true` if the iterator and collected values are empty.
@@ -54,20 +55,20 @@ impl<T, I, C, E> PartialIterError<T, I, C, E> where
     }
 }
 
-impl<T, I, C, E> IntoIterator for PartialIterError<T, I, C, E> 
+impl<T, I, C, E> IntoIterator for CollectionError<T, I, C, E> 
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T> 
 {
     type Item = T;
-    type IntoIter = std::iter::Chain<C::IntoIter, I>;
+    type IntoIter = std::iter::Chain<std::iter::Chain<std::option::IntoIter<T>, C::IntoIter>, I>;
 
     fn into_iter(self) -> Self::IntoIter {
-        std::iter::chain(self.0.collected, self.0.iterator)
+        self.0.rejected.into_iter().chain(self.0.collected).chain(self.0.iterator)
     }
 }
 
-impl<T, I, C, E: std::fmt::Display> std::fmt::Display for PartialIterError<T, I, C, E>
+impl<T, I, C, E: std::fmt::Display> std::fmt::Display for CollectionError<T, I, C, E>
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T> 
@@ -77,7 +78,7 @@ where
     }
 }
 
-impl<T, I, C, E: std::error::Error> std::error::Error for PartialIterError<T, I, C, E> 
+impl<T, I, C, E: std::error::Error> std::error::Error for CollectionError<T, I, C, E> 
 where 
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T> + std::fmt::Debug,
@@ -88,23 +89,24 @@ where
     }
 }
 
-impl<T, I, C, E> std::fmt::Debug for PartialIterError<T, I, C, E>
+impl<T, I, C, E> std::fmt::Debug for CollectionError<T, I, C, E>
 where
     I: Iterator<Item = T>,
-    C: IntoIterator<Item = T> + std::fmt::Debug,
+    C: IntoIterator<Item = T>,
     E: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PartialIterErr")
-            .field("collected", &self.collected)
+            .field("collected", &std::any::type_name::<C>())
+            .field("rejected", &DebugOption(&self.rejected))
             .field("error", &self.error)
-            .field("iterator", &format_args!("<{}>", std::any::type_name::<I>()))
+            .field("iterator", &std::any::type_name::<I>())
             .finish()
     }
 }
 
-/// A read only version of [`PartialIterError`].
-pub struct ReadOnlyPartialIterError<T, I, C, E> 
+/// A read only version of [`CollectionError`].
+pub struct ReadOnlyCollectionError<T, I, C, E> 
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>,
@@ -113,6 +115,8 @@ where
     pub iterator: I,
     /// The values that were collected
     pub collected: C,
+    /// The item that was rejected (consumed but couldn't be added)
+    pub rejected: Option<T>,
     /// The error that occurred
     pub error: E,
 }
