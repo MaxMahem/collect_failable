@@ -1,14 +1,10 @@
 use crate::utils::OptionTypeDebug;
 use tap::{Conv, Pipe};
 
-/// An error that occurs when an operation on an iterator fails mid way through it's iteration.
-///
-/// For example, when using `try_collect` on an iterator that fails mid way through it's iteration,
-/// this error can be used to return the values collected so far, the partially iterated iter, and
-/// a nested error.
+/// An error that occurs when an collecting an iterator fails during it's collection.
 #[derive(derive_more::Deref)]
 #[deref(forward)]
-pub struct CollectionError<T, I, C, E>(Box<ReadOnlyCollectionError<T, I, C, E>>)
+pub struct CollectionError<T, I, C, E>(Box<CollectionErrorData<T, I, C, E>>)
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>;
@@ -18,9 +14,9 @@ where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>,
 {
-    /// Creates a new [`PartialIterErr`] from an `iterator`, `collected` values, optional `rejected` item, and a nested `error`.
+    /// Creates a new [`CollectionError`] from an `iterator`, `collected` values, optional `rejected` item, and a nested `error`.
     pub fn new(iterator: I, collected: C, rejected: Option<T>, error: E) -> Self {
-        ReadOnlyCollectionError { iterator, collected, rejected, error }.pipe(Box::new).pipe(CollectionError)
+        CollectionErrorData { iterator, collected, rejected, error }.pipe(Box::new).pipe(CollectionError)
     }
 
     /// Consumes the error, returning the nested error.
@@ -29,10 +25,10 @@ where
         self.0.error
     }
 
-    /// Consumes the error, returning a [`ReadOnlyPartialIterErr`] containing the `iterator`,
+    /// Consumes the error, returning a [`CollectionErrorData`] containing the `iterator`,
     /// `collected` values, the optional `rejected` item, and nested `error`.
     #[must_use]
-    pub fn into_parts(self) -> ReadOnlyCollectionError<T, I, C, E> {
+    pub fn into_parts(self) -> CollectionErrorData<T, I, C, E> {
         *self.0
     }
 
@@ -65,6 +61,8 @@ where
     type Item = T;
     type IntoIter = std::iter::Chain<std::iter::Chain<std::option::IntoIter<T>, C::IntoIter>, I>;
 
+    /// Consumes the error, and reconstructs the iterator it was created from. This will include
+    /// the `rejected` item, `collected` values, and the remaining `iterator`, in that order.
     fn into_iter(self) -> Self::IntoIter {
         self.0.rejected.into_iter().chain(self.0.collected).chain(self.0.iterator)
     }
@@ -107,8 +105,8 @@ where
     }
 }
 
-/// A read only version of [`CollectionError`].
-pub struct ReadOnlyCollectionError<T, I, C, E>
+/// The internal data of a [`CollectionError`].
+pub struct CollectionErrorData<T, I, C, E>
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>,
@@ -117,7 +115,7 @@ where
     pub iterator: I,
     /// The values that were collected
     pub collected: C,
-    /// The item that was rejected (consumed but couldn't be added)
+    /// An optional item that was rejected (consumed but couldn't be added)
     pub rejected: Option<T>,
     /// The error that occurred
     pub error: E,
