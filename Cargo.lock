@@ -52,6 +52,7 @@ dependencies = [
  "hashbrown 0.16.1",
  "include-doc",
  "indexmap",
+ "sealed",
  "size_guess",
  "tap",
  "thiserror",
