@@ -1,3 +1,4 @@
+/// A size hint for an iterator.
 pub type SizeHint = (usize, Option<usize>);
 
 /// An iterator adaptor that overrides the size hint of the underlying iterator.
