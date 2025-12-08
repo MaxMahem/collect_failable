@@ -2,7 +2,7 @@ pub type SizeHint = (usize, Option<usize>);
 
 /// An iterator adaptor that overrides the size hint of the underlying iterator.
 ///
-/// This is useful for easily hiding the size hint of an iterator in tests.
+/// This is useful for hiding the size hint of an iterator in tests.
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct FixedSizeHint<I: Iterator> {
@@ -40,6 +40,7 @@ impl<I: Iterator> Iterator for FixedSizeHint<I> {
 }
 
 /// Extension trait for [`Iterator`] to fluently override or hide size hints.
+#[sealed::sealed]
 pub trait FixedSizeHintEx: Iterator + Sized {
     /// Creates a new iterator with the size hint hidden.
     fn hide_size(self) -> FixedSizeHint<Self> {
@@ -52,4 +53,5 @@ pub trait FixedSizeHintEx: Iterator + Sized {
     }
 }
 
-impl<T: Iterator> FixedSizeHintEx for T {}
+#[sealed::sealed]
+impl<I: Iterator> FixedSizeHintEx for I {}

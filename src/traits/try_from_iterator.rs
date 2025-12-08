@@ -7,11 +7,14 @@ use std::collections::HashMap;
 /// returns an [`Err`] if it would be violated. And like with [`Iterator::collect`],
 /// containers implementing this trait can be collected into via
 /// [`TryCollectEx::try_collect_ex`].
-///
-/// Implementations for several common types are provided.
-pub trait TryFromIterator<T, I>: Sized 
+/// 
+/// Implementations may rely on [`Iterator::size_hint`] providing reliable bounds for the
+/// number of elements in the iterator in order to optimize their implementations. An incorrect
+/// size hint may cause panics, produce incorrect results, or produce a result that violates
+/// container constraints, but must not result in undefined behavior.
+pub trait TryFromIterator<T, I>: Sized
 where
-    I: IntoIterator<Item = T>
+    I: IntoIterator<Item = T>,
 {
     /// The error that may occur when converting the iterator into the container.
     type Error;
@@ -20,11 +23,6 @@ where
     ///
     /// Provided implementations all short-ciruit and error early if a constraint is violated,
     /// but implementors are not required to do so.
-    ///
-    /// Implementations may rely on [`Iterator::size_hint`] providing reliable bounds for the
-    /// number of elements in the iterator in order to optimize their implementations. An incorrect
-    /// size hint may cause panics, produce incorrect results, or produce a result that violates
-    /// container constraints, but must not result in undefined behavior.
     ///
     /// # Errors
     ///
@@ -42,10 +40,11 @@ where
 
 /// Extends [Iterator] with a failable collect method.
 ///
-/// This trait lets you have an iterator return any collection that can be created via
+/// This trait allows an iterator to return any collection that can be created via
 /// [`TryFromIterator`], similar to [`Iterator::collect`] and [`FromIterator::from_iter`],
 /// but with the ability to return a implementation specific error if the creation of the contaienr
 /// fails some invariant.
+#[sealed::sealed]
 pub trait TryCollectEx: Iterator {
     /// Tries to collects the iterator into a container, returning an error if construcing the
     /// container fails.
@@ -76,6 +75,7 @@ pub trait TryCollectEx: Iterator {
 }
 
 /// Implementation of [`TryCollectEx`] for all [`Iterator`].
+#[sealed::sealed]
 impl<I, T> TryCollectEx for I
 where
     I: Iterator<Item = T>,

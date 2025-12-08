@@ -52,6 +52,7 @@ dependencies = [
  "hashbrown 0.16.1",
  "include-doc",
  "indexmap",
+ "sealed",
  "size_guess",
  "tap",
  "thiserror",
@@ -153,8 +154,8 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "fluent_result"
-version = "0.8.2"
-source = "git+https://github.com/MaxMahem/fluent_result.git#2725f11f9cf79fd63d67a0e22f65bf9353141fc4"
+version = "0.8.4"
+source = "git+https://github.com/MaxMahem/fluent_result.git#8a27d6f8faaaa094523057d5b15fd191cd4843ca"
 dependencies = [
  "derive_more",
  "sealed",
