@@ -4,6 +4,7 @@ mod fold_mut;
 mod identifiable;
 
 pub(crate) use debug_option::OptionTypeDebug;
+
 #[allow(unused_imports)]
 pub use fixed_size_hint::{FixedSizeHint, FixedSizeHintEx};
 #[allow(unused_imports)]

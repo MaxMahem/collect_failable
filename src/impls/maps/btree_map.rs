@@ -42,7 +42,7 @@ where
             false => {
                 self.insert(key, value).expect_none("should not be occupied");
                 Ok(())
-            },
+            }
         })
         .map_err(|kvp| CollectionCollision::new(iter, BTreeMap::new(), kvp))
     }

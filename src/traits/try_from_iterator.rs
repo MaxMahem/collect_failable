@@ -7,7 +7,7 @@ use std::collections::HashMap;
 /// returns an [`Err`] if it would be violated. And like with [`Iterator::collect`],
 /// containers implementing this trait can be collected into via
 /// [`TryCollectEx::try_collect_ex`].
-/// 
+///
 /// Implementations may rely on [`Iterator::size_hint`] providing reliable bounds for the
 /// number of elements in the iterator in order to optimize their implementations. An incorrect
 /// size hint may cause panics, produce incorrect results, or produce a result that violates

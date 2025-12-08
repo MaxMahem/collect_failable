@@ -50,7 +50,7 @@ where
             false => {
                 self.insert(value).expect_true("Should not be occupied");
                 Ok(())
-            },
+            }
         })
         .map_err(|value| CollectionCollision::new(iter, IndexSet::new(), value))
     }
