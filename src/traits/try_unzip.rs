@@ -1,3 +1,5 @@
+use std::iter::Once;
+
 use crate::{OneOf2, TryExtend};
 
 /// Extends [`Iterator`] with a failable unzip method.
@@ -32,8 +34,8 @@ pub trait TryUnzip {
     /// ```
     fn try_unzip<A, B, FromA, FromB>(self) -> Result<(FromA, FromB), OneOf2<FromA::Error, FromB::Error>>
     where
-        FromA: Default + TryExtend<A>,
-        FromB: Default + TryExtend<B>,
+        FromA: Default + TryExtend<A, Once<A>>,
+        FromB: Default + TryExtend<B, Once<B>>,
         Self: Iterator<Item = (A, B)>;
 }
 
@@ -44,8 +46,8 @@ where
 {
     fn try_unzip<A, B, FromA, FromB>(mut self) -> Result<(FromA, FromB), OneOf2<FromA::Error, FromB::Error>>
     where
-        FromA: Default + TryExtend<A>,
-        FromB: Default + TryExtend<B>,
+        FromA: Default + TryExtend<A, Once<A>>,
+        FromB: Default + TryExtend<B, Once<B>>,
         Self: Iterator<Item = (A, B)>,
     {
         self.try_fold((FromA::default(), FromB::default()), |mut tuple, (a, b)| {

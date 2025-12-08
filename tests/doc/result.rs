@@ -6,19 +6,25 @@ fn try_from_iter_result_example() {
     // container error type can be inferred
     let iter: Vec<Result<i32, &str>> = vec![Ok(1), Ok(2), Ok(3)];
     let result: Result<Result<HashSet<i32>, _>, _> = Result::try_from_iter(iter);
-    let Ok(Ok(map)) = result else { panic!("should be ok"); };
+    let Ok(Ok(map)) = result else {
+        panic!("should be ok");
+    };
     assert_eq!(map, HashSet::from([1, 2, 3]));
 
     // Short-circuiting on the first error
     let data: Vec<Result<i32, &str>> = vec![Ok(1), Err("oops"), Ok(3)];
     let result: Result<Result<HashSet<i32>, _>, _> = data.into_iter().try_collect_ex();
-    let Err(err) = result else { panic!("should be err"); };
+    let Err(err) = result else {
+        panic!("should be err");
+    };
     assert_eq!(err, "oops");
 
     // Construction of a container can also fail
     let data: Vec<Result<i32, &str>> = vec![Ok(1), Ok(1), Ok(3)];
     let result: Result<Result<HashSet<i32>, _>, _> = data.into_iter().try_collect_ex();
-    let Ok(Err(err)) = result else { panic!("should be err"); };
+    let Ok(Err(err)) = result else {
+        panic!("should be err");
+    };
     assert_eq!(err.item, 1); // collision value
 }
 
@@ -29,11 +35,13 @@ fn try_from_iter_result_example() {
 /// approach when both error types can be converted to your function's return type.
 #[test]
 fn double_question_mark_example() {
-    use collect_failable::{TryCollectEx};
+    use collect_failable::TryCollectEx;
     use std::collections::HashSet;
 
     // Most errors can be converted to Box<dyn std::error::Error> using From
-    fn process_data(data: Vec<Result<i32, &'static str>>) -> Result<HashSet<i32>, Box<dyn std::error::Error + 'static>> {
+    fn process_data(
+        data: Vec<Result<i32, &'static str>>,
+    ) -> Result<HashSet<i32>, Box<dyn std::error::Error + 'static>> {
         let set = data.into_iter().try_collect_ex::<Result<HashSet<i32>, _>>()??;
         Ok(set)
     }

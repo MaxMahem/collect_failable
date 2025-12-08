@@ -1,26 +1,20 @@
 use std::hash::{BuildHasher, Hash};
 
-use fluent_result::into::IntoResult;
-use hashbrown::hash_map::{Entry, EntryRef, RawEntryMut};
+use hashbrown::hash_map::RawEntryMut;
 use hashbrown::HashMap;
-use size_guess::SizeGuess;
-use tap::Pipe;
 
-use crate::utils::FoldMut;
-use crate::{CollectionCollision, KeyCollision, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-/// Converts an iterator of key-value pairs into a [`HashMap`], failing if a key would collide.
-impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for HashMap<K, V> 
+impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for HashMap<K, V>
 where
-    I: IntoIterator<Item = (K, V)>
+    I: IntoIterator<Item = (K, V)>,
 {
     type Error = CollectionCollision<(K, V), I::IntoIter, HashMap<K, V>>;
 
-    /// Converts an iterator of key-value pairs into a [`HashMap`] failing if a key would collide.
-    /// 
+    /// Converts `iter` into a [`HashMap`], failing if a key would collide.
+    ///
     /// See [trait level documentation](trait@TryFromIterator) for an example.
-    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
-    {
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_hint().0;
 
@@ -38,53 +32,58 @@ where
     }
 }
 
-/// Appends an iterator of key-value pairs to the map, failing if a key would collide.
-impl<K: Eq + Hash, V, S: BuildHasher> TryExtend<(K, V)> for HashMap<K, V, S> {
-    type Error = KeyCollision<K>;
+impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtend<(K, V), I> for HashMap<K, V, S>
+where
+    I: IntoIterator<Item = (K, V)>,
+{
+    type Error = CollectionCollision<(K, V), I::IntoIter, HashMap<K, V, S>>;
 
-    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
-    ///
-    /// This implementation provides a basic error guarantee. If the method returns an error, the
-    /// map may be modified. However, it will still be in a valid state, and the specific
-    /// collision that caused the error will not take effect.
+    /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
     /// See [trait level documentation](trait@TryExtend) for an example.
-    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = (K, V)>,
-    {
+    fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
-        self.reserve(iter.size_guess());
+        self.reserve(iter.size_hint().0);
 
         iter.try_for_each(|(key, value)| match self.contains_key(&key) {
-            true => KeyCollision::new(key).into_err(),
+            true => Err((key, value)),
             false => Ok(_ = self.insert(key, value)),
         })
+        .map_err(|kvp| CollectionCollision::new(iter, HashMap::with_hasher(self.hasher().clone()), kvp))
     }
 }
 
-/// Appends an iterator of key-value pairs to the map with a strong error guarantee.
-impl<K: Eq + Hash, V, S: BuildHasher> TryExtendSafe<(K, V)> for HashMap<K, V, S> {
-    /// Appends an iterator of key-value pairs to the map, failing if a key would collide.
-    ///
-    /// This implementation provides a strong error guarantee. If the method returns an error, the
-    /// map is not modified.
+impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtendSafe<(K, V), I> for HashMap<K, V, S>
+where
+    I: IntoIterator<Item = (K, V)>,
+{
+    /// Extends the map with `iter`, erroring if a key would collide, with a strong error guarantee.
     ///
     /// See [trait level documentation](trait@TryExtendSafe) for an example.
-    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = (K, V)>,
-    {
+    fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
-        let size_guess = iter.size_guess();
 
-        iter.try_fold_mut(HashMap::with_capacity(size_guess), |map, (key, value)| match self.entry_ref(&key) {
-            EntryRef::Vacant(_) => match map.entry(key) {
-                Entry::Vacant(entry) => Ok(_ = entry.insert(value)),
-                Entry::Occupied(entry) => entry.remove_entry().0.pipe(KeyCollision::new).into_err(),
-            },
-            EntryRef::Occupied(_) => KeyCollision::new(key).into_err(),
+        // uses the same hasher as the main map in order to allow the has only have to be computed once
+        let staging_map = HashMap::with_capacity_and_hasher(iter.size_hint().0, self.hasher().clone());
+
+        iter.try_fold(staging_map, |mut staging_map, (key, value)| {
+            let shared_hash = staging_map.hasher().hash_one(&key);
+
+            // check for an entry in the staging map
+            match staging_map.raw_entry_mut().from_hash(shared_hash, |k| k == &key) {
+                RawEntryMut::Occupied(_) => Err((staging_map, (key, value))),
+
+                // check for an entry in the main map
+                RawEntryMut::Vacant(staging_entry) => match self.raw_entry().from_hash(shared_hash, |k| k == &key) {
+                    Some(_) => Err((staging_map, (key, value))),
+                    None => {
+                        staging_entry.insert_hashed_nocheck(shared_hash, key, value);
+                        Ok(staging_map)
+                    }
+                },
+            }
         })
-        .map(|map| self.extend(map))
+        .map(|staging_map| self.extend(staging_map))
+        .map_err(|(staging_map, kvp)| CollectionCollision::new(iter, staging_map, kvp))
     }
 }

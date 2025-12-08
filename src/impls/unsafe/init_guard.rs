@@ -31,13 +31,13 @@ impl<'a, T> InitGuard<'a, T> {
     }
 }
 
-impl<T> TryExtend<T> for InitGuard<'_, T> {
+impl<T, I> TryExtend<T, I> for InitGuard<'_, T>
+where
+    I: IntoIterator<Item = T>,
+{
     type Error = ItemCountMismatch;
 
-    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = T>,
-    {
+    fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter().fuse();
         std::iter::zip(&mut self.slice[self.initialized..], iter.by_ref()).for_each(|(slot, value)| {
             slot.write(value);

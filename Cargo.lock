@@ -53,7 +53,6 @@ dependencies = [
  "include-doc",
  "indexmap",
  "sealed",
- "size_guess",
  "tap",
  "thiserror",
 ]
@@ -517,11 +516,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "size_guess"
-version = "0.1.0"
-source = "git+https://github.com/MaxMahem/size_guess.git#60cd2bf1aaa629c52d5c23eaec3b3f36b87092a1"
 
 [[package]]
 name = "smallvec"

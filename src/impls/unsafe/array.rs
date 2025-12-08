@@ -3,9 +3,9 @@ use std::mem::MaybeUninit;
 use crate::{ItemCountMismatch, TryExtend, TryFromIterator};
 
 /// Create an array of size `N` from an iterator, failing if the iterator produces fewer or more items than `N`.
-impl<const N: usize, T, I> TryFromIterator<T, I> for [T; N] 
+impl<const N: usize, T, I> TryFromIterator<T, I> for [T; N]
 where
-    I: IntoIterator<Item = T>
+    I: IntoIterator<Item = T>,
 {
     type Error = ItemCountMismatch;
 

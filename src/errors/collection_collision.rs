@@ -11,7 +11,7 @@ use tap::Pipe;
 /// An error that occurs when an iterated value collides with a value mid way through iteration.
 ///
 /// For example, when using [`TryFromIterator::try_from_iter`] on an a type (such as a [`HashMap`])
-/// that does not allow duplicate keys, this error can return the values collected so far, the 
+/// that does not allow duplicate keys, this error can return the values collected so far, the
 /// partially iterated iter, and the colliding item, allowing those values to be handled as desired,
 /// or even the initial iterator to be reconstructed from those components.
 #[derive(derive_more::Deref, thiserror::Error)]
@@ -74,9 +74,9 @@ where
     type Item = T;
     type IntoIter = Chain<Chain<std::option::IntoIter<T>, C::IntoIter>, I>;
 
-    /// Consumes the error, returning an iterator over the colliding `item`, the `collected` values, 
+    /// Consumes the error, returning an iterator over the colliding `item`, the `collected` values,
     /// and the remaining `iterator`, in that order.
-    /// 
+    ///
     /// The exact iteration order depends on the implementation of `IntoIterator` for `C`, and may
     /// not be the same as the order in which the values were collected.
     fn into_iter(self) -> Self::IntoIter {
@@ -87,7 +87,7 @@ where
 impl<T, I, C> std::fmt::Debug for CollectionCollision<T, I, C>
 where
     I: Iterator<Item = T>,
-    C: IntoIterator<Item = T>
+    C: IntoIterator<Item = T>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CollectionCollision")

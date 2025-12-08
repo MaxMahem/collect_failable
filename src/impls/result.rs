@@ -96,13 +96,10 @@ where
         // 2. `extractor` is consumed by `C::try_from_iter` and never used again
         // 3. We only access `error` after `extractor` has been consumed
         let error_ref: &'static mut Option<E> = unsafe { std::mem::transmute(&mut error) };
-        let extractor = ExtractErr {
-            iter: into_iter.into_iter(),
-            error: error_ref,
-        };
+        let extractor = ExtractErr { iter: into_iter.into_iter(), error: error_ref };
 
         let try_from_result = C::try_from_iter(extractor);
-        
+
         match (error, try_from_result) {
             (Some(e), _) => Err(e),
             (None, Err(e)) => Ok(Err(e)),
@@ -120,10 +117,7 @@ mod tests {
     #[test]
     fn extract_err_zero_size_after_err() {
         let mut error = None;
-        let mut extractor = ExtractErr {
-            iter: TEST_DATA.into_iter(),
-            error: &mut error,
-        };
+        let mut extractor = ExtractErr { iter: TEST_DATA.into_iter(), error: &mut error };
 
         extractor.next();
         extractor.next();
@@ -135,10 +129,7 @@ mod tests {
     #[test]
     fn extract_err_forward_hint() {
         let mut error = None;
-        let mut extractor = ExtractErr {
-            iter: TEST_DATA.into_iter(),
-            error: &mut error,
-        };
+        let mut extractor = ExtractErr { iter: TEST_DATA.into_iter(), error: &mut error };
 
         extractor.next();
 
