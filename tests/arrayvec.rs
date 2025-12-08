@@ -8,8 +8,8 @@ const TOO_LONG_ARRAY: [u32; 3] = [1, 2, 3];
 const VALID_ARRAY: [u32; 2] = [1, 2];
 const EXTENDED_ARRAY: [u32; 4] = [1, 2, 1, 2];
 
-const TRY_FROM_ERR: ExceedsCapacity = ExceedsCapacity { capacity: 2, necessary: 3 };
-const EXTEND_ERR: ExceedsCapacity = ExceedsCapacity { capacity: 4, necessary: 5 };
+const TRY_FROM_ERR: ExceedsCapacity = ExceedsCapacity { capacity: 2, required: 3 };
+const EXTEND_ERR: ExceedsCapacity = ExceedsCapacity { capacity: 4, required: 5 };
 
 #[test]
 fn capcity_error_from_exceeds_capacity() {
@@ -26,14 +26,25 @@ fn try_from_iter_valid_array() {
 #[test]
 fn try_from_iter_too_long_data_early_return() {
     let err = ArrayVec::<_, 2>::try_from_iter(TOO_LONG_ARRAY).expect_err("Should be err");
-    assert_eq!(err, TRY_FROM_ERR, "Should match err");
+    assert_eq!(err.error, TRY_FROM_ERR, "Should match err");
 }
 
 #[test]
 fn try_from_iter_too_long_data_rollback() {
     let iter = FixedSizeHint::hide_size(TOO_LONG_ARRAY);
     let err = ArrayVec::<_, 2>::try_from_iter(iter).expect_err("Should be err");
-    assert_eq!(err, TRY_FROM_ERR, "Should match err");
+    assert_eq!(err.error, TRY_FROM_ERR, "Should match err");
+}
+
+#[test]
+fn try_from_iter_reconstruct() {
+    let err = ArrayVec::<_, 2>::try_from_iter([1, 2, 3]).expect_err("Should be err");
+
+    let reconstructed: Vec<_> = err.into_iter().collect();
+    assert_eq!(reconstructed.len(), 3, "Should reconstruct as: rejected, collected, remaining");
+    assert!(reconstructed.contains(&1));
+    assert!(reconstructed.contains(&2));
+    assert!(reconstructed.contains(&3));
 }
 
 #[test]

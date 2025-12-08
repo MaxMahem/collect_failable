@@ -29,8 +29,12 @@ use std::collections::HashMap;
 use collect_failable::{TryFromIterator, TryCollectEx};
 
 // can be called on any type that implements TryFromIterator
-let err = HashMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should be Err");
-assert_eq!(err.key, 1);
+let err = HashMap::try_from_iter([(1, 2), (2, 3), (1, 4), (3, 5)]).expect_err("should be Err");
+assert_eq!(err.item.0, 1); // err.item is the colliding (K, V) tuple
+
+// For `HashMap` the error contains all the data necessary to reconstruct the consumed iterator
+let all_items: Vec<_> = err.into_iter().collect();
+assert_eq!(all_items.len(), 4); // all 4 original items are present, though order is not guaranteed
 
 // or collected via the TryCollectEx trait a turbofish may be necessary to disambiguate
 let map = [(1, 2), (2, 3)].into_iter().try_collect_ex::<HashMap<_, _>>().expect("should be Ok");

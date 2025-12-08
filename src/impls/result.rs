@@ -2,46 +2,43 @@ use fluent_result::bool::Then;
 
 use crate::TryFromIterator;
 
-/// No more items hint for `ExtractErr`.
-const NO_MORE_ITEMS: (usize, Option<usize>) = (0, Some(0));
-
 /// Iterator adaptor that extracts [`Ok`] values from a [`Result`] [`Iterator`],
 /// storing the first encountered [`Err`] for later retrieval.
 #[derive(Debug)]
-struct ExtractErr<I, E> {
+pub struct ExtractErr<'a, I, E> {
     iter: I,
-    error: Option<E>,
+    error: &'a mut Option<E>,
 }
 
-impl<I, E> From<I> for ExtractErr<I, E> {
-    fn from(iter: I) -> Self {
-        Self { iter, error: None }
-    }
-}
+/// No more items hint for `ExtractErr`.
+const NO_MORE_ITEMS: (usize, Option<usize>) = (0, Some(0));
 
 /// Implements Iterator for `ExtractErr`, yielding Ok values and capturing the first Err.
 ///
 /// Once an Err is encountered, the iterator terminates and stores the error.
-impl<I, T, E> Iterator for ExtractErr<I, E>
+impl<I, T, E> Iterator for ExtractErr<'_, I, E>
 where
     I: Iterator<Item = Result<T, E>>,
 {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
+        //self.error.borrow().is_some().then_none()?;
         self.error.is_some().then_none()?;
 
         match self.iter.next() {
             None => None,
             Some(Ok(v)) => Some(v),
             Some(Err(e)) => {
-                self.error = Some(e);
+                //*self.error.borrow_mut() = Some(e);
+                *self.error = Some(e);
                 None
             }
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
+        //match self.error.borrow().is_some() {
         match self.error.is_some() {
             true => NO_MORE_ITEMS,
             false => (0, self.iter.size_hint().1),
@@ -76,9 +73,10 @@ where
 /// ```rust
 #[doc = include_doc::function_body!("tests/doc/result.rs", double_question_mark_example, [])]
 /// ```
-impl<T, E, C> TryFromIterator<Result<T, E>> for Result<C, C::Error>
+impl<T, I, E, C> TryFromIterator<Result<T, E>, I> for Result<C, C::Error>
 where
-    C: TryFromIterator<T>,
+    I: IntoIterator<Item = Result<T, E>>,
+    C: TryFromIterator<T, ExtractErr<'static, I::IntoIter, E>>,
 {
     type Error = E;
 
@@ -89,12 +87,20 @@ where
     /// ```rust
     #[doc = include_doc::function_body!("tests/doc/result.rs", try_from_iter_result_example, [])]
     /// ```
-    fn try_from_iter<I: IntoIterator<Item = Result<T, E>>>(into_iter: I) -> Result<Self, Self::Error> {
-        let mut extractor: ExtractErr<_, _> = into_iter.into_iter().into();
+    #[allow(private_interfaces)]
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
+        let mut error = None;
+        // SAFETY: We transmute the lifetime here to work around the self-referential structure.
+        // This is safe because:
+        // 1. `error` is created before `extractor` and lives until the end of the function
+        // 2. `extractor` is consumed by `C::try_from_iter` and never used again
+        // 3. We only access `error` after `extractor` has been consumed
+        let error_ref: &'static mut Option<E> = unsafe { std::mem::transmute(&mut error) };
+        let extractor = ExtractErr { iter: into_iter.into_iter(), error: error_ref };
 
-        let try_from_result = C::try_from_iter(&mut extractor);
+        let try_from_result = C::try_from_iter(extractor);
 
-        match (extractor.error, try_from_result) {
+        match (error, try_from_result) {
             (Some(e), _) => Err(e),
             (None, Err(e)) => Ok(Err(e)),
             (None, Ok(v)) => Ok(Ok(v)),
@@ -110,7 +116,8 @@ mod tests {
 
     #[test]
     fn extract_err_zero_size_after_err() {
-        let mut extractor = ExtractErr::from(TEST_DATA.into_iter());
+        let mut error = None;
+        let mut extractor = ExtractErr { iter: TEST_DATA.into_iter(), error: &mut error };
 
         extractor.next();
         extractor.next();
@@ -121,7 +128,8 @@ mod tests {
 
     #[test]
     fn extract_err_forward_hint() {
-        let mut extractor = ExtractErr::from(TEST_DATA.into_iter());
+        let mut error = None;
+        let mut extractor = ExtractErr { iter: TEST_DATA.into_iter(), error: &mut error };
 
         extractor.next();
 

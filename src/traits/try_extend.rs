@@ -17,7 +17,10 @@ use std::collections::HashMap;
 /// elements in the iterator in order to optimize their implementations. An iterator that violates
 /// the bounds returned by [`Iterator::size_hint`] may cause panics, produce incorrect results, or
 /// produce a result that violates container constraints, but must not result in undefined behavior.
-pub trait TryExtend<T> {
+pub trait TryExtend<T, I>
+where
+    I: IntoIterator<Item = T>,
+{
     /// Error type returned by the fallible extension methods.
     type Error;
 
@@ -39,9 +42,7 @@ pub trait TryExtend<T> {
     /// ```rust
     #[doc = include_doc::function_body!("tests/try-extend.rs", try_extend_basic_guarantee_example, [])]
     /// ```
-    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = T>;
+    fn try_extend(&mut self, iter: I) -> Result<(), Self::Error>;
 }
 
 /// Trait for extending a collection with a **strong error guarantee**.
@@ -58,7 +59,10 @@ pub trait TryExtend<T> {
 /// An iterator that violates the bounds returned by [`Iterator::size_hint`] may cause panics,
 /// produce incorrect results, or produce a result that violates container constraints, but must
 /// not result in undefined behavior.
-pub trait TryExtendSafe<T>: TryExtend<T> {
+pub trait TryExtendSafe<T, I>: TryExtend<T, I>
+where
+    I: IntoIterator<Item = T>,
+{
     /// Tries to extends the collection providing a **strong error guarantee**.
     ///
     /// On failure, the collection must remain unchanged. Implementors may need to buffer
@@ -77,7 +81,5 @@ pub trait TryExtendSafe<T>: TryExtend<T> {
     /// ```rust
     #[doc = include_doc::function_body!("tests/try-extend.rs", try_extend_safe_map_collision_example, [])]
     /// ```
-    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = T>;
+    fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error>;
 }

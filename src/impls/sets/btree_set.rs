@@ -1,75 +1,76 @@
 use std::collections::BTreeSet;
 
-use fluent_result::into::IntoResult;
+use fluent_result::bool::Expect;
 
-use crate::utils::FoldMut;
-use crate::{TryExtend, TryExtendSafe, TryFromIterator, ValueCollision};
+use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-/// Converts an iterator of values into a [`BTreeSet`], failing if a value would collide.
-impl<T: Ord> TryFromIterator<T> for BTreeSet<T> {
-    type Error = ValueCollision<T>;
+impl<T: Ord, I> TryFromIterator<T, I> for BTreeSet<T>
+where
+    I: IntoIterator<Item = T>,
+{
+    type Error = CollectionCollision<T, I::IntoIter, BTreeSet<T>>;
 
-    /// Converts an iterator of values into a [`BTreeSet`], failing if a key would collide.
-    ///
-    /// In the case of a collision, the value held by [`ValueCollision`] is the second value that was
-    /// seen during iteration. This may be relevant for keys that compare the same but still have
-    /// different values.
+    /// Converts `iter` into a [`BTreeSet`], failing if a value would collide.
     ///
     /// See [trait level documentation](trait@TryFromIterator) for an example.
-    fn try_from_iter<I>(into_iter: I) -> Result<Self, Self::Error>
+    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
     where
         Self: Sized,
-        I: IntoIterator<Item = T>,
     {
-        into_iter.into_iter().try_fold_mut(BTreeSet::new(), |set, value| match set.contains(&value) {
-            true => ValueCollision::new(value).into_err(),
-            false => Ok(_ = set.insert(value)),
+        let mut iter = into_iter.into_iter();
+        iter.try_fold(BTreeSet::new(), |mut set, value| match set.contains(&value) {
+            true => Err((set, value)),
+            false => {
+                set.insert(value).expect_true("should not be occupied");
+                Ok(set)
+            }
         })
+        .map_err(|(set, value)| CollectionCollision::new(iter, set, value))
     }
 }
 
-/// Appends an iterator of values to the [`BTreeSet`], failing if a value would collide.
-impl<T: Ord> TryExtend<T> for BTreeSet<T> {
-    type Error = ValueCollision<T>;
+impl<T: Ord, I> TryExtend<T, I> for BTreeSet<T>
+where
+    I: IntoIterator<Item = T>,
+{
+    type Error = CollectionCollision<T, I::IntoIter, BTreeSet<T>>;
 
-    /// Appends an iterator of values to the set, failing if a value would collide.
-    ///
-    /// This implementation provides a basic error guarantee. If the method returns an error, the
-    /// set may be modified. However, it will still be in a valid state, and the specific
-    /// collision that caused the error will not take effect.
+    /// Extends the set with `iter`, failing if a value would collide, with a basic error guarantee.
     ///
     /// See [trait level documentation](trait@TryExtend) for an example.
-    fn try_extend<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = T>,
-    {
-        iter.into_iter().try_for_each(|value| match self.contains(&value) {
-            true => ValueCollision::new(value).into_err(),
-            false => Ok(_ = self.insert(value)),
+    fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
+        let mut iter = iter.into_iter();
+        iter.try_for_each(|value| match self.contains(&value) {
+            true => Err(value),
+            false => {
+                self.insert(value).expect_true("Should not be occupied");
+                Ok(())
+            },
         })
+        .map_err(|value| CollectionCollision::new(iter, BTreeSet::new(), value))
     }
 }
 
-/// Appends an iterator of values to the [`BTreeSet`] with a strong error guarantee.
-impl<T: Ord> TryExtendSafe<T> for BTreeSet<T> {
-    /// Appends an iterator of values pairs to the [`BTreeSet`], failing if a value would collide.
-    ///
-    /// This implementation provides a strong error guarantee. If the method returns an error, the
-    /// set is not modified.
+impl<T: Ord, I> TryExtendSafe<T, I> for BTreeSet<T>
+where
+    I: IntoIterator<Item = T>,
+{
+    /// Extends the set with `iter`, erroring if a value would collide, with a strong error guarantee.
     ///
     /// See [trait level documentation](trait@TryExtendSafe) for an example.
-    fn try_extend_safe<I>(&mut self, iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = T>,
-    {
-        iter.into_iter()
-            .try_fold_mut(BTreeSet::new(), |set, value| match self.contains(&value) {
-                true => Err(ValueCollision::new(value)),
-                false => match set.contains(&value) {
-                    true => ValueCollision::new(value).into_err(),
-                    false => Ok(_ = set.insert(value)),
-                },
-            })
-            .map(|set| self.extend(set))
+    fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
+        let mut iter = iter.into_iter();
+        iter.try_fold(BTreeSet::new(), |mut set, value| match self.contains(&value) {
+            true => Err((set, value)),
+            false => match set.contains(&value) {
+                true => Err((set, value)),
+                false => {
+                    set.insert(value).expect_true("should not be occupied");
+                    Ok(set)
+                }
+            },
+        })
+        .map(|set| self.extend(set))
+        .map_err(|(set, value)| CollectionCollision::new(iter, set, value))
     }
 }

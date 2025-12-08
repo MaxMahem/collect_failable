@@ -10,19 +10,24 @@ macro_rules! try_from_iter_and_extend_iter {
         mod $module {
             use super::*;
 
-            use collect_failable::ValueCollision;
-
             const COLLIDE_WITH_SELF: [u32; 5] = [3, 4, 3, 5, 3];
-            const COLLIDE_WITH_UNQIUE: [u32; 3] = [3, 4, 1];
+            const COLLIDE_WITH_UNIQUE: [u32; 3] = [3, 4, 1];
             const UNIQUE_VALUES: [u32; 2] = [1, 2];
-            const SELF_COLLISION: ValueCollision<u32> = ValueCollision { value: 3 };
-            const SET_COLLISION: ValueCollision<u32> = ValueCollision { value: 1 };
 
             #[test]
             fn try_collect_value_collision() {
                 let err = <$set_type>::try_from_iter(COLLIDE_WITH_SELF).expect_err("should be err");
+                assert_eq!(err.len(), 5, "should have 5 items");
 
-                assert_eq!(err, SELF_COLLISION, "should match err");
+                let parts = err.into_parts();
+
+                let expected_collected = <$set_type>::from([3, 4]);
+                assert_eq!(parts.collected, expected_collected, "collected should have items before collision");
+
+                assert_eq!(parts.item, 3, "colliding value should be 3");
+
+                let remaining: Vec<_> = parts.iterator.collect();
+                assert_eq!(remaining, vec![5, 3], "remaining iterator should have 2 items");
             }
 
             #[test]
@@ -33,13 +38,25 @@ macro_rules! try_from_iter_and_extend_iter {
             }
 
             #[test]
-            fn try_extend_collision_with_map() {
+            fn try_extend_safe_collision_with_set() {
                 let mut set = <$set_type>::from(UNIQUE_VALUES);
 
-                let err = set.try_extend_safe(COLLIDE_WITH_UNQIUE).expect_err("should be err");
+                let err = set.try_extend_safe(COLLIDE_WITH_UNIQUE).expect_err("should be err");
+                assert_eq!(err.len(), 3, "should have 3 items");
 
                 assert_eq!(set, <$set_type>::from(UNIQUE_VALUES), "set should be unchanged");
-                assert_eq!(err, SET_COLLISION, "should match err");
+
+                let parts = err.into_parts();
+
+                // try_extend_safe doesn't add to collected on collision
+                assert_eq!(parts.collected.len(), 2, "collected should have 2 items before collision");
+                assert!(parts.collected.contains(&3), "collected should have 3");
+                assert!(parts.collected.contains(&4), "collected should have 4");
+
+                assert_eq!(parts.item, 1, "colliding value should be 1");
+
+                let remaining: Vec<_> = parts.iterator.collect();
+                assert_eq!(remaining.len(), 0, "remaining should be empty");
             }
 
             #[test]
@@ -49,7 +66,18 @@ macro_rules! try_from_iter_and_extend_iter {
                 let err = set.try_extend_safe(COLLIDE_WITH_SELF).expect_err("should be err");
 
                 assert_eq!(set, <$set_type>::from(UNIQUE_VALUES), "set should be unchanged");
-                assert_eq!(err, SELF_COLLISION, "err should have value");
+
+                let parts = err.into_parts();
+
+                // Should have collected items before collision
+                assert_eq!(parts.collected.len(), 2, "collected should have 2 items before collision");
+                assert!(parts.collected.contains(&3), "collected should have 3");
+                assert!(parts.collected.contains(&4), "collected should have 4");
+
+                assert_eq!(parts.item, 3, "colliding value should be 3");
+
+                let remaining: Vec<_> = parts.iterator.collect();
+                assert_eq!(remaining, vec![5, 3], "remaining should have 2 items");
             }
 
             #[test]
@@ -62,25 +90,51 @@ macro_rules! try_from_iter_and_extend_iter {
             }
 
             #[test]
-            fn try_extend_unsafe_collision_with_map() {
+            fn try_extend_collision_with_set() {
                 let mut set = <$set_type>::from(UNIQUE_VALUES);
 
-                let err = set.try_extend(COLLIDE_WITH_UNQIUE).expect_err("should be err");
+                let err = set.try_extend(COLLIDE_WITH_UNIQUE).expect_err("should be err");
 
-                assert_eq!(err, SET_COLLISION, "should match err");
+                // Set should have the items from COLLIDE_WITH_UNIQUE added before collision
+                assert_eq!(set.len(), 4, "set should have original 2 items plus 2 added before collision");
+                assert!(set.contains(&3), "set should have 3 from successful insert");
+                assert!(set.contains(&4), "set should have 4 from successful insert");
+
+                let parts = err.into_parts();
+
+                // try_extend doesn't collect items in the error
+                assert_eq!(parts.collected.len(), 0, "collected should be empty");
+
+                assert_eq!(parts.item, 1, "colliding value should be 1");
+
+                let remaining: Vec<_> = parts.iterator.collect();
+                assert_eq!(remaining.len(), 0, "remaining should be empty");
             }
 
             #[test]
-            fn try_extend_unsafe_collision_within_iter() {
+            fn try_extend_collision_within_iter() {
                 let mut set = <$set_type>::new();
 
                 let err = set.try_extend(COLLIDE_WITH_SELF).expect_err("should be err");
 
-                assert_eq!(err, SELF_COLLISION, "should match err");
+                // Set should have items before collision
+                assert_eq!(set.len(), 2, "set should have 2 items before collision");
+                assert!(set.contains(&3), "set should have 3");
+                assert!(set.contains(&4), "set should have 4");
+
+                let parts = err.into_parts();
+
+                // try_extend doesn't collect items in the error
+                assert_eq!(parts.collected.len(), 0, "collected should be empty");
+
+                assert_eq!(parts.item, 3, "colliding value should be 3");
+
+                let remaining: Vec<_> = parts.iterator.collect();
+                assert_eq!(remaining, vec![5, 3], "remaining should have 2 items");
             }
 
             #[test]
-            fn try_extend_unsafe_no_collision() {
+            fn try_extend_no_collision() {
                 let mut set = <$set_type>::new();
 
                 set.try_extend(UNIQUE_VALUES).expect("should be ok");
@@ -98,7 +152,9 @@ macro_rules! try_from_iter_and_extend_iter {
 
                 let err = set.try_extend(std::iter::once(v2)).expect_err("should be err");
 
-                assert_eq!(err, ValueCollision { value: v1.clone() }, "should return collision with original value");
+                let parts = err.into_parts();
+                assert_eq!(parts.item.value, 1, "should return collision with value 1");
+                assert_eq!(parts.item.id, 2, "colliding item should have id 2");
 
                 // Verify the set still contains the original value (id: 1)
                 let stored = set.iter().next().unwrap();

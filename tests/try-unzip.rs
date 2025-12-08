@@ -3,20 +3,20 @@ const INVALID_DATA_B: [(u32, u32); 2] = [(1, 2), (2, 2)];
 
 #[test]
 fn try_unzip_fail_a() {
-    use collect_failable::{TryUnzip, ValueCollision};
+    use collect_failable::TryUnzip;
     use std::collections::HashSet;
 
     let err = INVALID_DATA_A.into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>().expect_err("Should be Err");
-    assert_eq!(ValueCollision { value: 1 }, err.unwrap_a());
+    assert_eq!(err.unwrap_a().item, 1);
 }
 
 #[test]
 fn try_unzip_fail_b() {
-    use collect_failable::{TryUnzip, ValueCollision};
+    use collect_failable::TryUnzip;
     use std::collections::HashSet;
 
     let err = INVALID_DATA_B.into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>().expect_err("Should be Err");
-    assert_eq!(ValueCollision { value: 2 }, err.unwrap_b());
+    assert_eq!(err.unwrap_b().item, 2);
 }
 
 #[test]
@@ -33,12 +33,12 @@ fn try_unzip_success_example() {
 
 #[test]
 fn try_unzip_collision_example() {
-    use collect_failable::{OneOf2, TryUnzip, ValueCollision};
+    use collect_failable::TryUnzip;
     use std::collections::HashSet;
 
     let data = vec![(1, 2), (1, 3)];
-    let err = data.into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>().expect_err("Should be Err");
-    assert_eq!(err, OneOf2::A(ValueCollision { value: 1 }));
+    let err = data.into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>().expect_err("Should fail");
+    assert_eq!(err.unwrap_a().item, 1);
 }
 
 #[test]

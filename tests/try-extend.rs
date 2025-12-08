@@ -6,23 +6,23 @@ struct Collection {
 const DEFAULT: Collection = Collection { called: false };
 const CALLED: Collection = Collection { called: true };
 
-impl collect_failable::TryExtend<i32> for Collection {
+impl<I> collect_failable::TryExtend<i32, I> for Collection
+where
+    I: IntoIterator<Item = i32>,
+{
     type Error = ();
 
-    fn try_extend<I>(&mut self, _iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = i32>,
-    {
+    fn try_extend(&mut self, _iter: I) -> Result<(), Self::Error> {
         self.called = true;
         Ok(())
     }
 }
 
-impl collect_failable::TryExtendSafe<i32> for Collection {
-    fn try_extend_safe<I>(&mut self, _iter: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = i32>,
-    {
+impl<I> collect_failable::TryExtendSafe<i32, I> for Collection
+where
+    I: IntoIterator<Item = i32>,
+{
+    fn try_extend_safe(&mut self, _iter: I) -> Result<(), Self::Error> {
         self.called = true;
         Ok(())
     }
@@ -39,33 +39,34 @@ fn test_try_extend_calls_try_extend_safe_by_default() {
 
 #[test]
 fn try_extend_safe_map_collision_example() {
-    use collect_failable::{KeyCollision, TryExtendSafe};
+    use collect_failable::TryExtendSafe;
     use std::collections::HashMap;
 
-    let mut map = HashMap::from([(1, 2)]);
-    let result = map.try_extend_safe([(1, 3)]);
+    let mut map = HashMap::from([(1, 2), (2, 3)]);
+    let err = map.try_extend_safe([(3, 4), (1, 5), (4, 6)]).expect_err("should collide");
 
-    assert_eq!(result, Err(KeyCollision { key: 1 }));
+    assert_eq!(err.item, (1, 5));
 
-    // map is unchanged
-    assert_eq!(map, HashMap::from([(1, 2)]));
+    let all: Vec<_> = err.into_iter().collect();
+    assert_eq!(all.len(), 3, "length should be unchanged");
+    // iterator can be reconstructed. Order is not guranteed for hashmap
+    assert!(all.contains(&(3, 4)) && all.contains(&(1, 5)) && all.contains(&(4, 6)));
+
+    assert_eq!(map, HashMap::from([(1, 2), (2, 3)]), "map should be unchanged");
 }
 
 #[test]
 fn try_extend_safe_internal_iterator_collision() {
-    use collect_failable::{KeyCollision, TryExtendSafe};
+    use collect_failable::TryExtendSafe;
     use std::collections::HashMap;
 
     let mut map = HashMap::from([(1, 2)]);
 
-    // collisions within the iterator itself are also detected
-    let result = map.try_extend_safe([(2, 4), (2, 5)]);
+    let err = map.try_extend_safe([(2, 4), (3, 5), (2, 6)]).expect_err("should collide within iterator");
 
-    // result is an error with the colliding key
-    assert_eq!(result, Err(KeyCollision { key: 2 }));
+    assert_eq!(err.item, (2, 6), "should detect the colliding key");
 
-    // map is unchanged
-    assert_eq!(map, HashMap::from([(1, 2)]));
+    assert_eq!(map, HashMap::from([(1, 2)]), "map should be unchanged");
 }
 
 #[test]
@@ -83,16 +84,18 @@ fn try_extend_safe_success_example() {
 
 #[test]
 fn try_extend_basic_guarantee_example() {
-    use collect_failable::{KeyCollision, TryExtend};
+    use collect_failable::TryExtend;
     use std::collections::HashMap;
 
     let mut map = HashMap::from([(1, 2)]);
-    let err = map.try_extend([(2, 3), (1, 3)]).expect_err("should be err");
+    let err = map.try_extend([(2, 3), (3, 4), (1, 5)]).expect_err("should be err");
 
-    assert_eq!(err, KeyCollision { key: 1 });
+    assert_eq!(err.item, (1, 5));
 
     // map may be modified, but colliding value should not be changed
     assert_eq!(map[&1], 2);
+    assert_eq!(map[&2], 3);
+    assert_eq!(map[&3], 4);
 }
 
 #[test]
