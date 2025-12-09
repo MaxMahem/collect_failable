@@ -52,6 +52,7 @@ dependencies = [
  "hashbrown 0.16.1",
  "include-doc",
  "indexmap",
+ "no_drop",
  "sealed",
  "tap",
  "thiserror",
@@ -153,8 +154,8 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "fluent_result"
-version = "0.8.4"
-source = "git+https://github.com/MaxMahem/fluent_result.git#8a27d6f8faaaa094523057d5b15fd191cd4843ca"
+version = "0.9.0"
+source = "git+https://github.com/MaxMahem/fluent_result.git#2408193ac243e4028cf6530b0c7daeb637e4cd8b"
 dependencies = [
  "derive_more",
  "sealed",
@@ -282,6 +283,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52ffbca2f655e33c08be35d87278e5b18b89550a37dbd598c20db92f6a471123"
 dependencies = [
  "windows-sys",
+]
+
+[[package]]
+name = "no_drop"
+version = "0.1.2"
+source = "git+https://github.com/MaxMahem/no_drop.git#ae795692ab7c39ccccbea30fb7731428c7f46dc1"
+dependencies = [
+ "derive_more",
 ]
 
 [[package]]

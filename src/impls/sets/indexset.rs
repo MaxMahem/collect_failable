@@ -1,6 +1,6 @@
 use std::hash::{BuildHasher, Hash};
 
-use fluent_result::bool::Expect;
+use fluent_result::bool::dbg::Expect;
 use indexmap::IndexSet;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};

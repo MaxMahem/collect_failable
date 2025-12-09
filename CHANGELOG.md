@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - **Breaking:** Moved generic iterator parameter `I` from method level to trait level in `TryFromIterator`. The trait signature changed from `TryFromIterator<T>` to `TryFromIterator<T, I>`. Most user code remains compatible due to type inference.
  - **Breaking:** Changed the implementation of `TryFromIterator` for all set and map types to use `CollectionCollision` instead of `KeyCollision` and `ValueCollision`.
+ - **Breaking:** Changed `try_unzip` error type to `UnzipError<A, B, FromA, FromB, I>` which now contains `ZipErrorSide`. This provides enhanced error recovery by preserving the incomplete collection from the successful side, the unevaluated item from the opposite side, and the remaining iterator.
 
 ### Removed
 

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash};
 
-use fluent_result::expect::ExpectNone;
+use fluent_result::expect::dbg::ExpectNone;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
