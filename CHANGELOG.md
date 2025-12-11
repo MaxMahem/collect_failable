@@ -21,11 +21,16 @@ Change the error types of most implementations to allow recovering the consumed 
  - **Breaking:** Changed the implementation of `TryFromIterator` for all set and map types to use `CollectionCollision` instead of `KeyCollision` and `ValueCollision`.
  - **Breaking:** Changed `try_unzip` error type to `UnzipError<A, B, FromA, FromB, I>`.
  - **Breaking:** Changed `try_extend` error type to `TupleExtensionError<A, B, FromA, FromB, I>`.
+ - **Breaking:** Changed `ArrayVec` implementations to use `CollectionError<T, I::IntoIter, Vec<T>, ExceedsCapacity>` instead of `ExceedsCapacity`.
 
 ### Removed
 
  - **Breaking:** Removed `KeyCollision` and `ValueCollision` error types. Use `CollectionCollision` instead, which provides a unified error type for all collection collision scenarios.
  - **Breaking:** Removed `OneOf2` error type. Use `TupleCollectionError` or `TupleExtensionError` instead.
+
+### Migration Guide
+
+Use the new error types. In most cases, the original error types can be recovered via the `NewErrorType.error` field.
 
 ## [0.11.1] - 2025-12-02
 
