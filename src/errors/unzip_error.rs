@@ -1,3 +1,5 @@
+use std::error::Error;
+use std::fmt::{Debug, Display};
 use std::iter::Once;
 
 use tap::Pipe;
@@ -55,9 +57,9 @@ impl<Err, From, T, I> UnzipErrorSide<Err, From, T, I> {
     }
 }
 
-impl<Err, From, T, I> std::fmt::Debug for UnzipErrorSide<Err, From, T, I>
+impl<Err, From, T, I> Debug for UnzipErrorSide<Err, From, T, I>
 where
-    Err: std::fmt::Debug,
+    Err: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ZipErrorSide")
@@ -98,8 +100,8 @@ where
     #[must_use]
     pub fn expect_a(self, msg: &str) -> UnzipErrorSide<FromA::Error, FromB, B, I>
     where
-        FromA::Error: std::fmt::Debug,
-        FromB::Error: std::fmt::Debug,
+        FromA::Error: Debug,
+        FromB::Error: Debug,
     {
         self.try_unwrap_a().expect(msg)
     }
@@ -112,19 +114,19 @@ where
     #[must_use]
     pub fn expect_b(self, msg: &str) -> UnzipErrorSide<FromB::Error, FromA, A, I>
     where
-        FromA::Error: std::fmt::Debug,
-        FromB::Error: std::fmt::Debug,
+        FromA::Error: Debug,
+        FromB::Error: Debug,
     {
         self.try_unwrap_b().expect(msg)
     }
 }
 
-impl<A, B, FromA, FromB, I> std::fmt::Debug for UnzipError<A, B, FromA, FromB, I>
+impl<A, B, FromA, FromB, I> Debug for UnzipError<A, B, FromA, FromB, I>
 where
     FromA: TryExtend<A, Once<A>>,
     FromB: TryExtend<B, Once<B>>,
-    FromA::Error: std::fmt::Debug,
-    FromB::Error: std::fmt::Debug,
+    FromA::Error: Debug,
+    FromB::Error: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -134,12 +136,12 @@ where
     }
 }
 
-impl<A, B, FromA, FromB, I> std::fmt::Display for UnzipError<A, B, FromA, FromB, I>
+impl<A, B, FromA, FromB, I> Display for UnzipError<A, B, FromA, FromB, I>
 where
     FromA: TryExtend<A, Once<A>>,
     FromB: TryExtend<B, Once<B>>,
-    FromA::Error: std::fmt::Display,
-    FromB::Error: std::fmt::Display,
+    FromA::Error: Display,
+    FromB::Error: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -149,14 +151,14 @@ where
     }
 }
 
-impl<A, B, FromA, FromB, I> std::error::Error for UnzipError<A, B, FromA, FromB, I>
+impl<A, B, FromA, FromB, I> Error for UnzipError<A, B, FromA, FromB, I>
 where
     FromA: TryExtend<A, Once<A>>,
     FromB: TryExtend<B, Once<B>>,
-    FromA::Error: std::error::Error + 'static,
-    FromB::Error: std::error::Error + 'static,
+    FromA::Error: Error + 'static,
+    FromB::Error: Error + 'static,
 {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::A(side) => Some(&side.error),
             Self::B(side) => Some(&side.error),

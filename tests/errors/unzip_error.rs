@@ -1,6 +1,10 @@
 use collect_failable::{CollectionCollision, TryUnzip, UnzipError};
-use fluent_result::bool::dbg::Expect;
-use std::{collections::HashSet, iter::Once};
+use std::array::IntoIter;
+use std::collections::HashSet;
+use std::error::Error;
+use std::iter::Once;
+
+use crate::test_macros::{expect_panic, test_format};
 
 /// Data that will cause collision on first collection (A side)
 const COLLISION_DATA_A: [(u32, u32); 4] = [(1, 10), (2, 20), (1, 30), (3, 40)];
@@ -15,38 +19,17 @@ const EXPECTED_DISPLAY_UNZIP_ERROR_A: &str = "Failed while extending first colle
 const EXPECTED_DISPLAY_UNZIP_ERROR_B: &str = "Failed while extending second collection: Collection collision";
 
 type Collection = HashSet<u32>;
-type InnerError = CollectionCollision<u32, Once<u32>, Collection>;
 
-fn create_a_error() -> UnzipError<u32, u32, Collection, Collection, std::array::IntoIter<(u32, u32), 4>> {
+fn create_a_error() -> UnzipError<u32, u32, Collection, Collection, IntoIter<(u32, u32), 4>> {
     COLLISION_DATA_A.into_iter().try_unzip::<_, _, Collection, Collection>().expect_err("Should fail on A side")
 }
 
-fn create_b_error() -> UnzipError<u32, u32, Collection, Collection, std::array::IntoIter<(u32, u32), 4>> {
+fn create_b_error() -> UnzipError<u32, u32, Collection, Collection, IntoIter<(u32, u32), 4>> {
     COLLISION_DATA_B.into_iter().try_unzip::<_, _, Collection, Collection>().expect_err("Should fail on B side")
 }
 
-/// Test that a formatted output (Debug/Display) matches expected value
-macro_rules! test_format {
-    ($name:ident, $setup:expr, $format:literal, $expected:expr) => {
-        #[test]
-        fn $name() {
-            let output = format!($format, $setup);
-            assert_eq!(output, $expected);
-        }
-    };
-}
-
-#[test]
-#[should_panic(expected = "Should panic with msg")]
-fn expect_a_panic() {
-    _ = create_b_error().expect_a("Should panic with msg");
-}
-
-#[test]
-#[should_panic(expected = "Should panic with msg")]
-fn expect_b_panic() {
-    _ = create_a_error().expect_b("Should panic with msg");
-}
+expect_panic!(expect_a_panic, create_b_error(), expect_a, "Should panic with msg");
+expect_panic!(expect_b_panic, create_a_error(), expect_b, "Should panic with msg");
 
 #[test]
 fn zip_error_side_into_err() {
@@ -71,19 +54,15 @@ test_format!(unzip_error_display_b, create_b_error(), "{}", EXPECTED_DISPLAY_UNZ
 test_format!(zip_error_side_debug, create_a_error().unwrap_a(), "{:?}", EXPECTED_DEBUG_ZIP_ERROR_SIDE);
 
 #[test]
-fn error_trait_source_a() {
-    use std::error::Error;
-
-    let err_a = create_a_error();
-    let source = err_a.source().expect("Should have error source");
-    source.is::<InnerError>().expect_true("Should have error source");
+fn zip_error_side_a_source() {
+    let error = create_a_error();
+    let source = error.source().expect("Should have error source");
+    assert!(source.is::<CollectionCollision<u32, Once<u32>, Collection>>());
 }
 
 #[test]
-fn error_trait_source_b() {
-    use std::error::Error;
-
-    let err_b = create_b_error();
-    let source = err_b.source().expect("Should have error source");
-    source.is::<InnerError>().expect_true("Should have error source");
+fn zip_error_side_b_source() {
+    let error = create_b_error();
+    let source = error.source().expect("Should have error source");
+    assert!(source.is::<CollectionCollision<u32, Once<u32>, Collection>>());
 }

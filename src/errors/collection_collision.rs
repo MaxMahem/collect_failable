@@ -55,14 +55,14 @@ where
         (&self.0.collected).into_iter().len() + self.0.iterator.len() + 1
     }
 
-    /// Returns `true` if the iterator and collected values are empty.
+    /// Always returns `false` (presence of a colliding item precludes an empty collection).
     #[must_use]
     pub fn is_empty(&self) -> bool
     where
         I: ExactSizeIterator,
         for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
     {
-        self.len() == 0
+        false
     }
 }
 
