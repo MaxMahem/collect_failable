@@ -28,6 +28,18 @@ where
 #[deref(forward)]
 pub struct UnzipErrorSide<Err, From, T, I>(Box<UnzipErrorSideData<Err, From, T, I>>);
 
+/// The internal data of a [`ZipErrorSide`].
+pub struct UnzipErrorSideData<Err, From, T, I> {
+    /// The error caused during extension
+    pub error: Err,
+    /// The incomplete collection
+    pub incomplete: From,
+    /// The unevaluated item from the opposite side
+    pub unevaluated: Option<T>,
+    /// The remaining iterator
+    pub remaining: I,
+}
+
 impl<Err, From, T, I> UnzipErrorSide<Err, From, T, I> {
     /// Consumes the error, returning the nested error.
     #[must_use]
@@ -41,18 +53,6 @@ impl<Err, From, T, I> UnzipErrorSide<Err, From, T, I> {
     pub fn into_parts(self) -> UnzipErrorSideData<Err, From, T, I> {
         *self.0
     }
-}
-
-/// The internal data of a [`ZipErrorSide`].
-pub struct UnzipErrorSideData<Err, From, T, I> {
-    /// The error caused during extension
-    pub error: Err,
-    /// The incomplete collection
-    pub incomplete: From,
-    /// The unevaluated item from the opposite side
-    pub unevaluated: Option<T>,
-    /// The remaining iterator
-    pub remaining: I,
 }
 
 impl<Err, From, T, I> std::fmt::Debug for UnzipErrorSide<Err, From, T, I>

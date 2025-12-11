@@ -1,5 +1,4 @@
 use arrayvec::ArrayVec;
-use fluent_result::bool::Then;
 
 use crate::{CollectionError, ExceedsCapacity, TryExtend, TryExtendSafe, TryFromIterator};
 
@@ -46,7 +45,7 @@ impl<T, const N: usize, I> TryExtend<T, I> for ArrayVec<T, N>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = ExceedsCapacity;
+    type Error = CollectionError<T, I::IntoIter, Vec<T>, ExceedsCapacity>;
 
     /// Appends an iterator to the [`ArrayVec`], failing if the iterator produces more items than the [`ArrayVec`]'s
     /// remaining capacity.
@@ -62,9 +61,15 @@ where
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
         let size_guess = iter.size_hint().0;
-        (size_guess > self.remaining_capacity()).then_err(ExceedsCapacity::new(N, self.len() + size_guess))?;
+        if size_guess > self.remaining_capacity() {
+            let cap_err = ExceedsCapacity::new(N, self.len() + size_guess);
+            return Err(CollectionError::new(iter, Vec::new(), None, cap_err));
+        }
 
-        iter.try_for_each(|item| self.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1)))
+        iter.try_for_each(|item| self.try_push(item)).map_err(|err| {
+            let cap_err = ExceedsCapacity::new(N, N + 1);
+            CollectionError::new(iter, Vec::new(), Some(err.element()), cap_err)
+        })
     }
 }
 
@@ -87,12 +92,20 @@ where
         let mut iter = iter.into_iter();
 
         let size_guess = iter.size_hint().0;
-        (size_guess > self.remaining_capacity()).then_err(ExceedsCapacity::new(N, self.len() + size_guess))?;
+        if size_guess > self.remaining_capacity() {
+            let cap_err = ExceedsCapacity::new(N, self.len() + size_guess);
+            return Err(CollectionError::new(iter, Vec::new(), None, cap_err));
+        }
 
         let len = self.len();
 
-        iter.try_for_each(|item| self.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1))).inspect_err(|_| {
-            self.truncate(len);
-        })
+        match iter.try_for_each(|item| self.try_push(item)) {
+            Ok(()) => Ok(()),
+            Err(err) => {
+                let cap_err = ExceedsCapacity::new(N, N + 1);
+                let extended = self.drain(len..).collect();
+                Err(CollectionError::new(iter, extended, Some(err.element()), cap_err))
+            }
+        }
     }
 }

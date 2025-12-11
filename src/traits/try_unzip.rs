@@ -1,6 +1,7 @@
 use std::iter::Once;
 
-use no_drop::{dbg::Consume, dbg::IntoNoDrop};
+use fluent_result::into::IntoResult;
+use no_drop::dbg::IntoNoDrop;
 
 use crate::{TryExtend, UnzipError};
 
@@ -51,28 +52,26 @@ impl<I> TryUnzip for I
 where
     I: Iterator,
 {
-    fn try_unzip<A, B, FromA, FromB>(mut self) -> TryUnzipResult<A, B, FromA, FromB, Self>
+    fn try_unzip<A, B, FromA, FromB>(self) -> TryUnzipResult<A, B, FromA, FromB, Self>
     where
         FromA: Default + TryExtend<A, Once<A>> + IntoIterator<Item = A>,
         FromB: Default + TryExtend<B, Once<B>> + IntoIterator<Item = B>,
         Self: Iterator<Item = (A, B)> + Sized,
     {
-        let mut a_collection = FromA::default();
-        let mut b_collection = FromB::default();
+        let mut from = (FromA::default().no_drop(), FromB::default().no_drop());
+        let mut this = self.no_drop();
 
-        while let Some((a, b)) = self.next() {
-            let a = a.no_drop();
-            let b = b.no_drop();
-
-            if let Err(error_a) = a_collection.try_extend(std::iter::once(a.consume())) {
-                return Err(UnzipError::new_a(error_a, b_collection, Some(b.consume()), self));
+        for (a, b) in this.by_ref().map(|(a, b)| (a.no_drop(), b.no_drop())) {
+            if let Err(error_a) = from.0.try_extend(std::iter::once(a.unwrap())) {
+                return UnzipError::new_a(error_a, from.1.unwrap(), Some(b.unwrap()), this.unwrap()).into_err();
             }
 
-            if let Err(error_b) = b_collection.try_extend(std::iter::once(b.consume())) {
-                return Err(UnzipError::new_b(error_b, a_collection, None, self));
+            if let Err(error_b) = from.1.try_extend(std::iter::once(b.unwrap())) {
+                return UnzipError::new_b(error_b, from.0.unwrap(), None, this.unwrap()).into_err();
             }
         }
 
-        Ok((a_collection, b_collection))
+        this.forget();
+        (from.0.unwrap(), from.1.unwrap()).into_ok()
     }
 }

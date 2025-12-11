@@ -60,7 +60,7 @@ fn try_extend_safe_early_return() {
     let mut array: ExtendArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
 
     let err = array.try_extend_safe(TOO_LONG_ARRAY).expect_err("Should fail early");
-    assert_eq!(err, EXTEND_ERR);
+    assert_eq!(err.error, EXTEND_ERR);
     assert_eq!(*array, VALID_ARRAY, "Should be unchanged");
 }
 
@@ -71,7 +71,7 @@ fn try_extend_safe_rollback() {
     let iter = FixedSizeHint::hide_size(TOO_LONG_ARRAY);
     let err = array.try_extend_safe(iter).expect_err("Should rollback");
 
-    assert_eq!(err, EXTEND_ERR);
+    assert_eq!(err.error, EXTEND_ERR);
     assert_eq!(*array, VALID_ARRAY, "Should be unchanged");
 }
 
@@ -88,7 +88,7 @@ fn try_extend_early_return() {
     let mut array: ExtendArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
 
     let err = array.try_extend(TOO_LONG_ARRAY).expect_err("Should fail early");
-    assert_eq!(err, EXTEND_ERR);
+    assert_eq!(err.error, EXTEND_ERR);
 }
 
 #[test]
@@ -98,5 +98,5 @@ fn try_extend_push_fail() {
     let iter = FixedSizeHint::hide_size(TOO_LONG_ARRAY);
     let err = array.try_extend(iter).expect_err("Should rollback");
 
-    assert_eq!(err, EXTEND_ERR);
+    assert_eq!(err.error, EXTEND_ERR);
 }

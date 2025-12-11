@@ -21,8 +21,10 @@ fn try_extend_safe_arrayvec_example() {
     assert_eq!(*array, [1, 2, 3]);
 
     let err = array.try_extend_safe([4, 5]).expect_err("Should be err");
-    assert_eq!(err, ExceedsCapacity { capacity: 4, required: 5 });
+    assert_eq!(err.error, ExceedsCapacity { capacity: 4, required: 5 });
     assert_eq!(*array, [1, 2, 3]); // Unchanged
+    let collected: Vec<i32> = err.into_iter().collect(); // the iterator can be reconstructed
+    assert_eq!(collected, [4, 5]);
 }
 
 #[test]
@@ -36,5 +38,5 @@ fn try_extend_arrayvec_example() {
     assert_eq!(*array, [1, 2, 3]);
 
     let err = array.try_extend([4, 5]).expect_err("Should be err");
-    assert_eq!(err, ExceedsCapacity { capacity: 4, required: 5 });
+    assert_eq!(err.error, ExceedsCapacity { capacity: 4, required: 5 });
 }

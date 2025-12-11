@@ -10,16 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - Added `ReadOnlyPartialIterErr` and `PartialIterErr` for returning errors from failable collection methods.
  - Added `CollectionCollision` for returning errors when a collision occurs during a collection operation.
+ - Added `TupleCollectionError` and `TupleExtensionError` for returning errors when a tuple collection operation fails.
 
 ### Changed
 
- - **Breaking:** Moved generic iterator parameter `I` from method level to trait level in `TryFromIterator`. The trait signature changed from `TryFromIterator<T>` to `TryFromIterator<T, I>`. Most user code remains compatible due to type inference.
+ - **Breaking:** Moved generic iterator parameter `I` from method level to trait level in `TryFromIterator`. The trait signature changed from `TryFromIterator<T>` to `TryFromIterator<T, I>`. This allows the error type to see the iterator type, which is useful for error recovery. Most user code remains compatible due to type inference.
+
+Change the error types of most implementations to allow recovering the consumed data on an error.
+
  - **Breaking:** Changed the implementation of `TryFromIterator` for all set and map types to use `CollectionCollision` instead of `KeyCollision` and `ValueCollision`.
- - **Breaking:** Changed `try_unzip` error type to `UnzipError<A, B, FromA, FromB, I>` which now contains `ZipErrorSide`. This provides enhanced error recovery by preserving the incomplete collection from the successful side, the unevaluated item from the opposite side, and the remaining iterator.
+ - **Breaking:** Changed `try_unzip` error type to `UnzipError<A, B, FromA, FromB, I>`.
+ - **Breaking:** Changed `try_extend` error type to `TupleExtensionError<A, B, FromA, FromB, I>`.
 
 ### Removed
 
  - **Breaking:** Removed `KeyCollision` and `ValueCollision` error types. Use `CollectionCollision` instead, which provides a unified error type for all collection collision scenarios.
+ - **Breaking:** Removed `OneOf2` error type. Use `TupleCollectionError` or `TupleExtensionError` instead.
 
 ## [0.11.1] - 2025-12-02
 

@@ -54,6 +54,7 @@ dependencies = [
  "indexmap",
  "no_drop",
  "sealed",
+ "subdef",
  "tap",
  "thiserror",
 ]
@@ -287,10 +288,12 @@ dependencies = [
 
 [[package]]
 name = "no_drop"
-version = "0.1.2"
-source = "git+https://github.com/MaxMahem/no_drop.git#ae795692ab7c39ccccbea30fb7731428c7f46dc1"
+version = "0.2.2"
+source = "git+https://github.com/MaxMahem/no_drop.git#9529dfae4fdd4bae14b776f660ef0a35b75e76e9"
 dependencies = [
  "derive_more",
+ "sealed",
+ "thiserror",
 ]
 
 [[package]]
@@ -539,6 +542,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd538fb6910ac1099850255cf94a94df6551fbdd602454387d0adb2d1ca6dead"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "subdef"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1b129909a0e58e1eb7f4e16318e3a4db537325f7dc3fcd0ee7c47f62c82ff80"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
