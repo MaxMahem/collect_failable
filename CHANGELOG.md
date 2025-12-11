@@ -30,7 +30,8 @@ Change the error types of most implementations to allow recovering the consumed 
 
 ### Migration Guide
 
-Use the new error types. In most cases, the original error types can be recovered via the `NewErrorType.error` field.
+ - Use the new error types. In most cases, the original error types can be recovered via the `NewErrorType.error` field.
+ - Migrate implementations to use the new interface shape.
 
 ## [0.11.1] - 2025-12-02
 
