@@ -63,10 +63,12 @@ where
 
         for (a, b) in this.by_ref().map(|(a, b)| (a.no_drop(), b.no_drop())) {
             if let Err(error_a) = from.0.try_extend(std::iter::once(a.unwrap())) {
+                from.0.forget(); // Side A failed, forget it
                 return UnzipError::new_a(error_a, from.1.unwrap(), Some(b.unwrap()), this.unwrap()).into_err();
             }
 
             if let Err(error_b) = from.1.try_extend(std::iter::once(b.unwrap())) {
+                from.1.forget(); // Side B failed, forget it
                 return UnzipError::new_b(error_b, from.0.unwrap(), None, this.unwrap()).into_err();
             }
         }
