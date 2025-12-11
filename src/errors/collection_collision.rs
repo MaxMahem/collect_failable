@@ -14,10 +14,27 @@ use tap::Pipe;
 /// that does not allow duplicate keys, this error can return the values collected so far, the
 /// partially iterated iter, and the colliding item, allowing those values to be handled as desired,
 /// or even the initial iterator to be reconstructed from those components.
+#[subdef::subdef]
 #[derive(derive_more::Deref, thiserror::Error)]
 #[error("Collection collision")]
 #[deref(forward)]
-pub struct CollectionCollision<T, I, C>(Box<ReadOnlyCollectionCollision<T, I, C>>)
+pub struct CollectionCollision<T, I, C>(
+    [Box<ReadOnlyCollectionCollision<T, I, C>>; {
+        /// A read only version of [`CollectionCollision`].
+        pub struct ReadOnlyCollectionCollision<T, I, C>
+        where
+            I: Iterator<Item = T>,
+            C: IntoIterator<Item = T>,
+        {
+            /// The iterator that was partially iterated
+            pub iterator: I,
+            /// The values that were collected
+            pub collected: C,
+            /// The item that caused the collision
+            pub item: T,
+        }
+    }],
+)
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>;
@@ -96,18 +113,4 @@ where
             .field("iterator", &std::any::type_name::<I>())
             .finish()
     }
-}
-
-/// A read only version of [`CollectionCollision`].
-pub struct ReadOnlyCollectionCollision<T, I, C>
-where
-    I: Iterator<Item = T>,
-    C: IntoIterator<Item = T>,
-{
-    /// The iterator that was partially iterated
-    pub iterator: I,
-    /// The values that were collected
-    pub collected: C,
-    /// The item that caused the collision
-    pub item: T,
 }

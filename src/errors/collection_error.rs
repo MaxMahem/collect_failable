@@ -2,9 +2,28 @@ use crate::utils::OptionTypeDebug;
 use tap::{Conv, Pipe};
 
 /// An error that occurs when an collecting an iterator fails during it's collection.
+#[subdef::subdef]
 #[derive(derive_more::Deref)]
 #[deref(forward)]
-pub struct CollectionError<T, I, C, E>(Box<CollectionErrorData<T, I, C, E>>)
+pub struct CollectionError<T, I, C, E>(
+    [Box<CollectionErrorData<T, I, C, E>>; {
+        /// The internal data of a [`CollectionError`].
+        pub struct CollectionErrorData<T, I, C, E>
+        where
+            I: Iterator<Item = T>,
+            C: IntoIterator<Item = T>,
+        {
+            /// The iterator that was partially iterated
+            pub iterator: I,
+            /// The values that were collected
+            pub collected: C,
+            /// An optional item that was rejected (consumed but couldn't be added)
+            pub rejected: Option<T>,
+            /// The error that occurred
+            pub error: E,
+        }
+    }],
+)
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>;
@@ -103,20 +122,4 @@ where
             .field("iterator", &std::any::type_name::<I>())
             .finish()
     }
-}
-
-/// The internal data of a [`CollectionError`].
-pub struct CollectionErrorData<T, I, C, E>
-where
-    I: Iterator<Item = T>,
-    C: IntoIterator<Item = T>,
-{
-    /// The iterator that was partially iterated
-    pub iterator: I,
-    /// The values that were collected
-    pub collected: C,
-    /// An optional item that was rejected (consumed but couldn't be added)
-    pub rejected: Option<T>,
-    /// The error that occurred
-    pub error: E,
 }

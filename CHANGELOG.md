@@ -22,6 +22,7 @@ Change the error types of most implementations to allow recovering the consumed 
  - **Breaking:** Changed `try_unzip` error type to `UnzipError<A, B, FromA, FromB, I>`.
  - **Breaking:** Changed `try_extend` error type to `TupleExtensionError<A, B, FromA, FromB, I>`.
  - **Breaking:** Changed `ArrayVec` implementations to use `CollectionError<T, I::IntoIter, Vec<T>, ExceedsCapacity>` instead of `ExceedsCapacity`.
+ - **Breaking:** Changed `TryFromIterator` for `Result<C, C::Error>` to return `ResultCollectionError<E, C, C::Error>` instead of `E`. This preserves both the iterator error and the partial collection result, allowing full recovery of all information when an error occurs.
 
 ### Removed
 

@@ -1,6 +1,6 @@
 use fluent_result::bool::Then;
 
-use crate::TryFromIterator;
+use crate::{ResultIterError, TryFromIterator};
 
 /// Iterator adaptor that extracts [`Ok`] values from a [`Result`] [`Iterator`],
 /// storing the first encountered [`Err`] for later retrieval.
@@ -78,7 +78,7 @@ where
     I: IntoIterator<Item = Result<T, E>>,
     C: TryFromIterator<T, ExtractErr<'static, I::IntoIter, E>>,
 {
-    type Error = E;
+    type Error = ResultIterError<E, C, C::Error>;
 
     /// Converts an iterator of `Result<A, E>` into a `Result<V, E>`.
     ///
@@ -87,23 +87,22 @@ where
     /// ```rust
     #[doc = include_doc::function_body!("tests/doc/result.rs", try_from_iter_result_example, [])]
     /// ```
-    #[allow(private_interfaces)]
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
-        let mut error = None;
+        let mut iter_error = None;
         // SAFETY: We transmute the lifetime here to work around the self-referential structure.
         // This is safe because:
         // 1. `error` is created before `extractor` and lives until the end of the function
         // 2. `extractor` is consumed by `C::try_from_iter` and never used again
         // 3. We only access `error` after `extractor` has been consumed
-        let error_ref: &'static mut Option<E> = unsafe { std::mem::transmute(&mut error) };
-        let extractor = ExtractErr { iter: into_iter.into_iter(), error: error_ref };
+        let iter_error_ref: &'static mut Option<E> = unsafe { std::mem::transmute(&mut iter_error) };
+        let extractor = ExtractErr { iter: into_iter.into_iter(), error: iter_error_ref };
 
         let try_from_result = C::try_from_iter(extractor);
 
-        match (error, try_from_result) {
-            (Some(e), _) => Err(e),
-            (None, Err(e)) => Ok(Err(e)),
+        match (iter_error, try_from_result) {
             (None, Ok(v)) => Ok(Ok(v)),
+            (None, Err(e)) => Ok(Err(e)),
+            (Some(iter_err), coll_result) => Err(ResultIterError::new(iter_err, coll_result)),
         }
     }
 }
