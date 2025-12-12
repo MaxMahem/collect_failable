@@ -17,7 +17,7 @@ fn try_from_iter_result_example() {
     let Err(err) = result else {
         panic!("should be err");
     };
-    assert_eq!(err.iterator_error, "oops");
+    assert_eq!(err.iteration_error, "oops");
 
     // Construction of a container can also fail
     let data: Vec<Result<i32, &str>> = vec![Ok(1), Ok(1), Ok(3)];
@@ -84,7 +84,7 @@ fn error_recovery_example() {
             let parts = err.into_parts();
 
             // Check the iterator error
-            assert_eq!(parts.iterator_error, "invalid");
+            assert_eq!(parts.iteration_error, "invalid");
 
             // Recover the partial collection that was successfully built
             match parts.collection_result {

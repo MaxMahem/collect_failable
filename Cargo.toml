@@ -29,6 +29,7 @@ include-doc = "0.2.2"
 sealed = "0.6.0"
 no_drop = { git = "https://github.com/MaxMahem/no_drop.git", version = "0.2.2" }
 subdef = "0.1.2"
+itertools = "0.14.0"
 
 [dev-dependencies]
 collect_failable = { path = ".", features = ["hashbrown", "indexmap", "arrayvec", "utils"] }

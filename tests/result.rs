@@ -5,7 +5,7 @@ fn try_from_iter_result_success() {
     use collect_failable::TryFromIterator;
 
     let input: Vec<Result<i32, &str>> = vec![Ok(1), Ok(2), Ok(3)];
-    let result = Result::<[i32; 3], _>::try_from_iter(input);
+    let result: Result<Result<[i32; 3], _>, _> = Result::try_from_iter(input);
     assert_eq!(result, Ok(Ok([1, 2, 3])));
 }
 

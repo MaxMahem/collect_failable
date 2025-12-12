@@ -1,7 +1,11 @@
 use std::error::Error;
 use std::fmt::{Debug, Display};
 
+use itertools::Either;
 use tap::Pipe;
+
+use crate::utils::ResultTypeDebug;
+use crate::TryFromIterator;
 
 /// An error that occurs when collecting an iterator of [`Result`]s fails.
 ///
@@ -17,7 +21,7 @@ pub struct ResultIterError<E, C, CErr>(
         #[derive(PartialEq, Eq)]
         pub struct ResultIterErrorData<E, C, CErr> {
             /// The error from the Result iterator (first Err encountered)
-            pub iterator_error: E,
+            pub iteration_error: E,
             /// The partial collection result (Ok with partial data, or Err with collection error)
             pub collection_result: Result<C, CErr>,
         }
@@ -26,21 +30,18 @@ pub struct ResultIterError<E, C, CErr>(
 
 impl<E, C, CErr> ResultIterError<E, C, CErr> {
     /// Creates a new [`ResultCollectionError`] from an iterator error and collection result.
-    pub fn new(iterator_error: E, collection_result: Result<C, CErr>) -> Self {
-        ResultIterErrorData { iterator_error, collection_result }.pipe(Box::new).pipe(ResultIterError)
+    pub fn new(iteration_error: E, collection_result: Result<C, CErr>) -> Self {
+        ResultIterErrorData { iteration_error, collection_result }.pipe(Box::new).pipe(ResultIterError)
     }
 
     /// Consumes the error, returning the iterator error.
     #[must_use]
-    pub fn into_iterator_error(self) -> E {
-        self.0.iterator_error
+    pub fn into_iteration_error(self) -> E {
+        self.0.iteration_error
     }
 
     /// Consumes the error, returning the collection result.
-    ///
-    /// # Errors
-    ///
-    /// Returns the collection error if collection failed.
+    #[must_use]
     pub fn into_collection_result(self) -> Result<C, CErr> {
         self.0.collection_result
     }
@@ -53,25 +54,34 @@ impl<E, C, CErr> ResultIterError<E, C, CErr> {
     }
 }
 
+impl<T, E, C, CErr> IntoIterator for ResultIterError<E, C, CErr>
+where
+    C: IntoIterator<Item = T>,
+    CErr: IntoIterator<Item = T>,
+{
+    type Item = T;
+    type IntoIter = Either<C::IntoIter, CErr::IntoIter>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self.0.collection_result {
+            Ok(c) => Either::Left(c.into_iter()),
+            Err(e) => Either::Right(e.into_iter()),
+        }
+    }
+}
+
 impl<E: Debug, C, CErr: Debug> Debug for ResultIterError<E, C, CErr> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ResultCollectionError")
-            .field("iterator_error", &self.iterator_error)
-            .field("collection_type", &std::any::type_name::<C>())
-            .field(
-                "collection_result",
-                match &self.collection_result {
-                    Ok(_) => &"Ok(_)",
-                    Err(e) => e,
-                },
-            )
+        f.debug_struct("ResultIterError")
+            .field("iteration_error", &self.iteration_error)
+            .field("collection_result", &ResultTypeDebug(&self.collection_result))
             .finish()
     }
 }
 
 impl<E: Display, C, CErr: Display> Display for ResultIterError<E, C, CErr> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Iterator error: {}", self.iterator_error)?;
+        write!(f, "Iterator error: {}", self.iteration_error)?;
         if let Err(e) = &self.collection_result {
             write!(f, "; Collection error: {e}")?;
         }
@@ -79,12 +89,8 @@ impl<E: Display, C, CErr: Display> Display for ResultIterError<E, C, CErr> {
     }
 }
 
-impl<E, C, CErr> Error for ResultIterError<E, C, CErr>
-where
-    E: Error + 'static,
-    CErr: Error + 'static,
-{
+impl<E: Error + 'static, C, CErr: Error> Error for ResultIterError<E, C, CErr> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(&self.iterator_error)
+        Some(&self.iteration_error)
     }
 }

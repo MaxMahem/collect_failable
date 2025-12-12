@@ -22,8 +22,8 @@ test_format!(display_format_ok, create_err(), "{}", EXPECTED_DISPLAY_OK);
 test_format!(display_format_err, create_err_collection(), "{}", EXPECTED_DISPLAY_ERR);
 
 #[test]
-fn into_iterator_error() {
-    let error = create_err().into_iterator_error();
+fn into_iteration_error() {
+    let error = create_err().into_iteration_error();
     assert_eq!(error, TestError::new("iter error"));
 }
 
@@ -42,14 +42,14 @@ fn into_collection_result_err() {
 #[test]
 fn into_parts_ok() {
     let parts = create_err().into_parts();
-    assert_eq!(parts.iterator_error, TestError::new("iter error"));
+    assert_eq!(parts.iteration_error, TestError::new("iter error"));
     assert_eq!(parts.collection_result, Ok(HashSet::from([1, 2, 3])));
 }
 
 #[test]
 fn into_parts_err() {
     let parts = create_err_collection().into_parts();
-    assert_eq!(parts.iterator_error, TestError::new("iter error"));
+    assert_eq!(parts.iteration_error, TestError::new("iter error"));
     assert_eq!(parts.collection_result, Err(TestError::new("collection error")));
 }
 

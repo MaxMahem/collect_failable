@@ -59,6 +59,22 @@ where
 /// - `E`: The error type returned by the fallible extension methods.
 /// - `C`: The type of the container to be constructed.
 ///
+/// # Return Value
+///
+/// Returns a nested [`Result<Result<C, C::Error>, ResultIterError<E, C, C::Error>>`](ResultIterError).
+/// The outer `Result` represents the result of iteration. Any [`Err`] value encountered during
+/// iteration is stored in the returned [`ResultIterError`], which will also contain the results of
+/// attempting to construct the container with the results of the partial iteration, which could be
+/// [`Ok`] or [`Err`], depending on the container's [`TryFromIterator`] implementation.
+///
+/// The inner [`Result`] represents the result of the container construction.
+///
+/// Put another way, there are three possible states this function can return:
+///
+/// - `Ok(Ok(_))`: The iterator completed successfully and the container was successfully constructed.
+/// - `Ok(Err(_))`: The iterator completed successfully, but the container construction failed.
+/// - `Err(_)`: The iterator encountered an error before completion.
+///
 /// # Examples
 ///
 /// ```rust
@@ -72,6 +88,15 @@ where
 ///
 /// ```rust
 #[doc = include_doc::function_body!("tests/doc/result.rs", double_question_mark_example, [])]
+/// ```
+///
+/// ## Recovering Data
+///
+/// If the container type and error type are both [`IntoIterator`], you can use the [`IntoIterator`]
+/// implementation to recover the data consumed by the iterator.
+///
+/// ```rust
+#[doc = include_doc::function_body!("tests/doc/result.rs", error_recovery_example, [])]
 /// ```
 impl<T, I, E, C> TryFromIterator<Result<T, E>, I> for Result<C, C::Error>
 where
@@ -91,15 +116,15 @@ where
         let mut iter_error = None;
         // SAFETY: We transmute the lifetime here to work around the self-referential structure.
         // This is safe because:
-        // 1. `error` is created before `extractor` and lives until the end of the function
+        // 1. `iter_error` is created before `extractor` and lives until the end of the function
         // 2. `extractor` is consumed by `C::try_from_iter` and never used again
-        // 3. We only access `error` after `extractor` has been consumed
+        // 3. We only access `iter_error` after `extractor` has been consumed
         let iter_error_ref: &'static mut Option<E> = unsafe { std::mem::transmute(&mut iter_error) };
         let extractor = ExtractErr { iter: into_iter.into_iter(), error: iter_error_ref };
 
         let try_from_result = C::try_from_iter(extractor);
 
-        match (iter_error, try_from_result) {
+        match (iter_error.take(), try_from_result) {
             (None, Ok(v)) => Ok(Ok(v)),
             (None, Err(e)) => Ok(Err(e)),
             (Some(iter_err), coll_result) => Err(ResultIterError::new(iter_err, coll_result)),
