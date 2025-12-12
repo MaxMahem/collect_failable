@@ -6,7 +6,8 @@ fn try_from_iter_result_success() {
 
     let input: Vec<Result<i32, &str>> = vec![Ok(1), Ok(2), Ok(3)];
     let result: Result<Result<[i32; 3], _>, _> = Result::try_from_iter(input);
-    assert_eq!(result, Ok(Ok([1, 2, 3])));
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), Ok([1, 2, 3]));
 }
 
 #[test]
@@ -30,8 +31,8 @@ fn try_from_iter_result_container_failure_example() {
     // Test that a collision in the inner container causes the inner Result to be Err
     let result: Result<Result<HashMap<i32, i32>, _>, _> = Result::try_from_iter(input);
     match result {
+        Ok(Err(_err)) => {} // This is the expected case - collision in the hashmap
         Ok(Ok(ok)) => panic!("inner result should be Err due to collision: {ok:?}"),
         Err(e) => panic!("outer result should be Ok, got Err: {e:?}"),
-        Ok(Err(err)) => panic!("inner result should be Err due to collision: {err:?}"),
     }
 }

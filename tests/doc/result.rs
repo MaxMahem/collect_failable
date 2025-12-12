@@ -74,7 +74,7 @@ fn error_recovery_example() {
 
     // Collect items until an error is encountered
     let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
-    let result = data.into_iter().try_collect_ex::<Result<HashSet<i32>, _>>();
+    let result: Result<Result<HashSet<_>, _>, _> = data.into_iter().try_collect_ex();
 
     match result {
         Ok(Ok(set)) => panic!("Expected error, got success: {:?}", set),

@@ -5,13 +5,13 @@ use crate::test_macros::{test_format, TestError};
 
 type Collection = HashSet<u32>;
 
-fn create_err() -> ResultIterError<TestError, Collection, TestError> {
+fn create_err() -> ResultIterError<TestError, Collection, TestError, std::option::IntoIter<u32>> {
     let collected = HashSet::from([1, 2, 3]);
-    ResultIterError::new(TestError::new("iter error"), Ok(collected))
+    ResultIterError::new(TestError::new("iter error"), Ok(collected), None)
 }
 
-fn create_err_collection() -> ResultIterError<TestError, Collection, TestError> {
-    ResultIterError::new(TestError::new("iter error"), Err(TestError::new("collection error")))
+fn create_err_collection() -> ResultIterError<TestError, Collection, TestError, std::option::IntoIter<u32>> {
+    ResultIterError::new(TestError::new("iter error"), Err(TestError::new("collection error")), None)
 }
 
 const EXPECTED_DISPLAY_OK: &str = "Iterator error: Test error: iter error";
