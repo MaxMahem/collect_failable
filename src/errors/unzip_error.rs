@@ -2,9 +2,10 @@ use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::iter::Once;
 
+use display_as_debug::option::OpaqueOptionDbg;
 use tap::Pipe;
 
-use crate::{utils::OptionTypeDebug, TryExtend};
+use crate::TryExtend;
 
 #[cfg(doc)]
 use crate::TryUnzip;
@@ -65,7 +66,7 @@ where
         f.debug_struct("ZipErrorSide")
             .field("error", &self.error)
             .field("incomplete", &std::any::type_name::<From>())
-            .field("unevaluated", &OptionTypeDebug(&self.unevaluated))
+            .field("unevaluated", &OpaqueOptionDbg(&self.unevaluated))
             .field("remaining", &std::any::type_name::<I>())
             .finish()
     }

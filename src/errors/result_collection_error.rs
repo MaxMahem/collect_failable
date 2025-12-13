@@ -1,10 +1,9 @@
 use std::error::Error;
 use std::fmt::{Debug, Display};
 
+use display_as_debug::result::OpaqueResultDbg;
 use itertools::Either;
 use tap::Pipe;
-
-use crate::utils::ResultTypeDebug;
 
 /// An error that occurs when collecting an iterator of [`Result`]s fails.
 ///
@@ -23,7 +22,7 @@ pub struct ResultIterError<E, C, CErr, I>(
             /// The partial collection result (Ok with partial data, or Err with collection error)
             pub collection_result: Result<C, CErr>,
             /// The remaining iterator (items not yet consumed when the error occurred)
-            pub iter: I,
+            pub result_iter: I,
         }
     }],
 );
@@ -31,7 +30,9 @@ pub struct ResultIterError<E, C, CErr, I>(
 impl<E, C, CErr, I> ResultIterError<E, C, CErr, I> {
     /// Creates a new [`ResultCollectionError`] from an iterator error and collection result.
     pub fn new(iteration_error: E, collection_result: Result<C, CErr>, iter: I) -> Self {
-        ResultIterErrorData { iteration_error, collection_result, iter }.pipe(Box::new).pipe(ResultIterError)
+        ResultIterErrorData { iteration_error, collection_result, result_iter: iter }
+            .pipe(Box::new)
+            .pipe(ResultIterError)
     }
 
     /// Consumes the error, returning the iterator error.
@@ -51,8 +52,8 @@ impl<E, C, CErr, I> ResultIterError<E, C, CErr, I> {
 
     /// Consumes the error, returning the remaining iterator.
     #[must_use]
-    pub fn into_iter(self) -> I {
-        self.0.iter
+    pub fn into_result_iter(self) -> I {
+        self.0.result_iter
     }
 
     /// Consumes the error, returning a [`ResultCollectionErrorData`] containing the
@@ -83,8 +84,8 @@ impl<E: Debug, C, CErr: Debug, I> Debug for ResultIterError<E, C, CErr, I> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ResultIterError")
             .field("iteration_error", &self.iteration_error)
-            .field("collection_result", &ResultTypeDebug(&self.collection_result))
-            .field("iter", &std::any::type_name::<I>())
+            .field("collection_result", &OpaqueResultDbg(&self.collection_result))
+            .field("result_iter", &std::any::type_name::<I>())
             .finish()
     }
 }

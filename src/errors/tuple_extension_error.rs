@@ -1,6 +1,5 @@
+use display_as_debug::option::OpaqueOptionDbg;
 use tap::Pipe;
-
-use crate::utils::OptionTypeDebug;
 
 #[cfg(doc)]
 use crate::TryExtend;
@@ -105,7 +104,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TupleExtensionErrorSide")
             .field("error", &self.error)
-            .field("unevaluated", &OptionTypeDebug(&self.unevaluated))
+            .field("unevaluated", &OpaqueOptionDbg(&self.unevaluated))
             .field("remaining", &std::any::type_name::<I>())
             .finish()
     }

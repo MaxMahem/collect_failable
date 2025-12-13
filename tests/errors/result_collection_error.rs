@@ -5,21 +5,24 @@ use crate::test_macros::{test_format, TestError};
 
 type Collection = HashSet<u32>;
 
-fn create_err() -> ResultIterError<TestError, Collection, TestError, std::option::IntoIter<u32>> {
+fn create_err() -> ResultIterError<TestError, Collection, TestError, std::iter::Empty<u32>> {
     let collected = HashSet::from([1, 2, 3]);
-    ResultIterError::new(TestError::new("iter error"), Ok(collected), None)
+    ResultIterError::new(TestError::new("iter error"), Ok(collected), std::iter::empty())
 }
 
-fn create_err_collection() -> ResultIterError<TestError, Collection, TestError, std::option::IntoIter<u32>> {
-    ResultIterError::new(TestError::new("iter error"), Err(TestError::new("collection error")), None)
+fn create_err_collection() -> ResultIterError<TestError, Collection, TestError, std::iter::Empty<u32>> {
+    ResultIterError::new(TestError::new("iter error"), Err(TestError::new("collection error")), std::iter::empty())
 }
 
 const EXPECTED_DISPLAY_OK: &str = "Iterator error: Test error: iter error";
 const EXPECTED_DISPLAY_ERR: &str =
     "Iterator error: Test error: iter error; Collection error: Test error: collection error";
+const EXPECTED_DEBUG: &str =
+    "ResultIterError { iteration_error: TestError { identity: \"iter error\" }, collection_result: Ok(...), result_iter: \"core::iter::sources::empty::Empty<u32>\" }";
 
 test_format!(display_format_ok, create_err(), "{}", EXPECTED_DISPLAY_OK);
 test_format!(display_format_err, create_err_collection(), "{}", EXPECTED_DISPLAY_ERR);
+test_format!(debug_format_ok, create_err(), "{:?}", EXPECTED_DEBUG);
 
 #[test]
 fn into_iteration_error() {

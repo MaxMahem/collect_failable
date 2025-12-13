@@ -12,7 +12,7 @@ fn can_recover_iterator_from_result_iter_error() {
     assert_eq!(err.iteration_error, "error at 3");
 
     // Recover the remaining iterator
-    let remaining_iter = err.into_iter();
+    let remaining_iter = err.into_result_iter();
 
     // The remaining iterator should contain Ok(4) and Ok(5)
     let remaining: Vec<_> = remaining_iter.collect();

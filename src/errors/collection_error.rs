@@ -1,4 +1,4 @@
-use crate::utils::OptionTypeDebug;
+use display_as_debug::option::OpaqueOptionDbg;
 use tap::{Conv, Pipe};
 
 /// An error that occurs when an collecting an iterator fails during it's collection.
@@ -117,7 +117,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PartialIterErr")
             .field("collected", &std::any::type_name::<C>())
-            .field("rejected", &OptionTypeDebug(&self.rejected))
+            .field("rejected", &OpaqueOptionDbg(&self.rejected))
             .field("error", &self.error)
             .field("iterator", &std::any::type_name::<I>())
             .finish()

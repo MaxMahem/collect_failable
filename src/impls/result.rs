@@ -1,29 +1,64 @@
+use std::iter;
 use std::sync::{Arc, Mutex};
 
-use fluent_result::into::IntoOption;
+use fluent_result::bool::Then;
+use itertools::Either;
 use tap::Pipe;
 
 use crate::{ResultIterError, TryFromIterator};
 
+type ArcMutex<T> = Arc<Mutex<T>>;
+type IterOrEmpty<I, T> = Either<I, iter::Empty<T>>;
+
 /// Iterator adaptor that extracts [`Ok`] values from a [`Result`] [`Iterator`],
 /// storing the first encountered [`Err`] and remaining iterator for later retrieval.
-#[subdef::subdef]
-#[derive(Debug)]
-pub struct ExtractErr<I, E>(
-    [Arc<Mutex<Option<ExtractErrState<I, E>>>>; {
-        #[derive(Debug)]
-        struct ExtractErrState<I, E> {
-            iter: I,
-            state: [ErrState<E>; {
-                #[derive(Debug)]
-                enum ErrState<E> {
-                    Active,
-                    Errored(E),
-                }
-            }],
+#[subdef::subdef(derive(Debug))]
+pub struct ExtractErr<I: Iterator, E>(
+    [ArcMutex<ExtractErrState<IterOrEmpty<I, I::Item>, E>>; {
+        struct ExtractErrState<Iter, E> {
+            iter: Iter,
+            error: Option<E>,
         }
     }],
 );
+
+impl<Iter: Iterator, E> ExtractErrState<Iter, E> {
+    const EMPTY_STATE: ExtractErrState<IterOrEmpty<Iter, Iter::Item>, E> =
+        ExtractErrState { iter: Either::Right(iter::empty()), error: None };
+}
+
+impl<I, E, T> Default for ExtractErrState<IterOrEmpty<I, I::Item>, E>
+where
+    I: Iterator<Item = Result<T, E>>,
+{
+    fn default() -> Self {
+        ExtractErrState::EMPTY_STATE
+    }
+}
+
+impl<I, E, T> ExtractErr<I, E>
+where
+    I: Iterator<Item = Result<T, E>>,
+{
+    /// Creates a new `ExtractErr` wrapping the given iterator.
+    fn new(iter: I) -> Self {
+        ExtractErrState { iter: Either::Left(iter), error: None }.pipe(Mutex::new).pipe(Arc::new).pipe(ExtractErr)
+    }
+
+    /// Takes and returns the inner state, replacing it with an empty state.
+    fn take_inner(&self) -> ExtractErrState<IterOrEmpty<I, I::Item>, E> {
+        std::mem::take(&mut *self.0.lock().expect("Mutex should not be poisened"))
+    }
+}
+
+impl<I, E, T> Clone for ExtractErr<I, E>
+where
+    I: Iterator<Item = Result<T, E>>,
+{
+    fn clone(&self) -> Self {
+        self.0.clone().pipe(ExtractErr)
+    }
+}
 
 /// No more items hint for `ExtractErr`.
 const NO_MORE_ITEMS: (usize, Option<usize>) = (0, Some(0));
@@ -38,23 +73,22 @@ where
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.0.lock().unwrap().as_mut()? {
-            ExtractErrState { state: ErrState::Errored(_), .. } => None,
-            ExtractErrState { ref mut iter, ref mut state } => match iter.next() {
-                None => None,
-                Some(Ok(v)) => Some(v),
-                Some(Err(e)) => {
-                    *state = ErrState::Errored(e);
-                    None
-                }
-            },
+        let mut guard = self.0.lock().expect("Mutex should not be poisened");
+        guard.error.is_some().then_none()?;
+        match guard.iter.next() {
+            None => None,
+            Some(Ok(v)) => Some(v),
+            Some(Err(e)) => {
+                guard.error = Some(e);
+                None
+            }
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        match self.0.lock().unwrap().as_ref() {
-            Some(ExtractErrState { state: ErrState::Errored(_), .. }) | None => NO_MORE_ITEMS,
-            Some(ExtractErrState { iter, .. }) => (0, iter.size_hint().1),
+        match &*self.0.lock().expect("Mutex should not be poisened") {
+            ExtractErrState { error: Some(_), .. } => NO_MORE_ITEMS,
+            ExtractErrState { error: None, iter } => (0, iter.size_hint().1),
         }
     }
 }
@@ -63,30 +97,29 @@ where
 ///
 /// That is, given a iterator that yields [`Result<T, E>`], this implementation will collect all [`Ok`] values
 /// into a container `C` that implements [`TryFromIterator<T>`], short-circuiting on the first [`Err`] encountered.
-/// If an [`Err`] is found, it is returned immediately. If all values are [`Ok`], but the inner collection fails to
-/// construct, that error is propagated.
+/// If all iterator values are [`Ok`], then the outer [`Result`] will be [`Ok`], and the value of the inner [`Result`]
+/// will be the result of the container construction.
 ///
 /// # Type Parameters
 ///
-/// - `T`: The type of the values in the iterator.
-/// - `E`: The error type returned by the fallible extension methods.
-/// - `C`: The type of the container to be constructed.
+/// - `I`: The type of the [`IntoIterator`], must produce [`Result<T, E>`].
+/// - `T`: The type of [`Ok`] values in the `I::IntoIter` [`Iterator`].
+/// - `E`: The type of [`Err`] values in the `I::IntoIter` [`Iterator`].
+/// - `C`: The type of the container to be constructed, must implement [`TryFromIterator<T>`].
+/// - `C::Error`: The [`TryFromIterator::Error`] from `C`'s [`TryFromIterator`] implementation.
 ///
 /// # Return Value
 ///
-/// Returns a nested [`Result<Result<C, C::Error>, ResultIterError<E, C, C::Error>>`](ResultIterError).
-/// The outer `Result` represents the result of iteration. Any [`Err`] value encountered during
-/// iteration is stored in the returned [`ResultIterError`], which will also contain the results of
-/// attempting to construct the container with the results of the partial iteration, which could be
-/// [`Ok`] or [`Err`], depending on the container's [`TryFromIterator`] implementation.
-///
-/// The inner [`Result`] represents the result of the container construction.
-///
-/// Put another way, there are three possible states this function can return:
+/// There are three possible states this function can return:
 ///
 /// - `Ok(Ok(_))`: The iterator completed successfully and the container was successfully constructed.
 /// - `Ok(Err(_))`: The iterator completed successfully, but the container construction failed.
 /// - `Err(_)`: The iterator encountered an error before completion.
+///
+/// The outer [`Result`] error type is [`ResultIterError`]. In the event of an error during iteration
+/// (the last case above), this type will contain the error encountered, the remaining iterator, and the
+/// result of the container construction over the values successfully collected (which could succeed or
+/// fail, depending on the container type).
 ///
 /// # Examples
 ///
@@ -111,12 +144,12 @@ where
 /// ```rust
 #[doc = include_doc::function_body!("tests/doc/result.rs", error_recovery_example, [])]
 /// ```
-impl<T, I, E, C> TryFromIterator<Result<T, E>, I> for Result<C, C::Error>
+impl<I, T, E, C> TryFromIterator<Result<T, E>, I> for Result<C, C::Error>
 where
     I: IntoIterator<Item = Result<T, E>>,
     C: TryFromIterator<T, ExtractErr<I::IntoIter, E>>,
 {
-    type Error = ResultIterError<E, C, C::Error, I::IntoIter>;
+    type Error = ResultIterError<E, C, C::Error, Either<I::IntoIter, iter::Empty<Result<T, E>>>>;
 
     /// Converts an iterator of `Result<A, E>` into a `Result<V, E>`.
     ///
@@ -126,27 +159,16 @@ where
     #[doc = include_doc::function_body!("tests/doc/result.rs", try_from_iter_result_example, [])]
     /// ```
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
-        let state = ExtractErrState { iter: into_iter.into_iter(), state: ErrState::Active }
-            .into_some()
-            .pipe(Mutex::new)
-            .pipe(Arc::new);
+        let extractor = ExtractErr::new(into_iter.into_iter());
 
-        let extractor = ExtractErr(state.clone());
+        let try_from_result = extractor.clone().pipe(C::try_from_iter);
 
-        let try_from_result = C::try_from_iter(extractor);
-
-        let result = {
-            match (state.lock().unwrap().take(), try_from_result) {
-                (None, _) => unreachable!("state already extracted!?"),
-                (Some(ExtractErrState { state: ErrState::Active, .. }), Ok(v)) => Ok(Ok(v)), // iter without err, and succesfull collect
-                (Some(ExtractErrState { state: ErrState::Active, .. }), Err(e)) => Ok(Err(e)), // iter without err, but collect failed
-                (Some(ExtractErrState { state: ErrState::Errored(error), iter }), collect_result) => {
-                    // errored during iter,
-                    Err(ResultIterError::new(error, collect_result, iter)) // collect may have succeded or failed.
-                }
-            }
-        };
-        result
+        match (extractor.take_inner(), try_from_result) {
+            (ExtractErrState { error: None, .. }, Ok(v)) => Ok(Ok(v)), // iter without err, and successful collect
+            (ExtractErrState { error: None, .. }, Err(e)) => Ok(Err(e)), // iter without err, but collect failed
+            // errored during iter, collect may have succeeded or failed.
+            (ExtractErrState { error: Some(error), iter }, result) => Err(ResultIterError::new(error, result, iter)),
+        }
     }
 }
 
@@ -158,10 +180,7 @@ mod tests {
 
     #[test]
     fn extract_err_zero_size_after_err() {
-        let mut extractor = ExtractErr(Arc::new(Mutex::new(Some(ExtractErrState {
-            iter: TEST_DATA.into_iter(),
-            state: ErrState::Active,
-        }))));
+        let mut extractor = ExtractErr::new(TEST_DATA.into_iter());
 
         extractor.next(); // Ok(1)
         extractor.next(); // Err(3) - stops here
@@ -172,10 +191,7 @@ mod tests {
 
     #[test]
     fn extract_err_forward_hint() {
-        let mut extractor = ExtractErr(Arc::new(Mutex::new(Some(ExtractErrState {
-            iter: TEST_DATA.into_iter(),
-            state: ErrState::Active,
-        }))));
+        let mut extractor = ExtractErr::new(TEST_DATA.into_iter());
 
         extractor.next(); // Ok(1)
 

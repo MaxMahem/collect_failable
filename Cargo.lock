@@ -48,6 +48,7 @@ dependencies = [
  "arrayvec",
  "collect_failable",
  "derive_more",
+ "display_as_debug",
  "fluent_result",
  "hashbrown 0.16.1",
  "include-doc",
@@ -135,6 +136,11 @@ dependencies = [
  "rustc_version",
  "syn",
 ]
+
+[[package]]
+name = "display_as_debug"
+version = "0.2.0"
+source = "git+https://github.com/MaxMahem/display_as_debug.git#98ce97871055b6cfe890a9de78bb2aa45d417fff"
 
 [[package]]
 name = "drop_bomb"
