@@ -99,3 +99,22 @@ fn try_extend_push_fail() {
 
     assert_eq!(err.error, EXTEND_OVERFLOW_ERR);
 }
+
+#[test]
+fn try_from_iter_exact_size_optimization() {
+    // Tests the exact-size optimization path (line 28): (_, Some(max)) if max <= N
+    // This path uses direct collect() instead of try_fold when size is known and fits
+    let data = [1u32, 2u32];
+    let array: ArrayVec<_, 2> = ArrayVec::try_from_iter(data).expect("Should succeed");
+    assert_eq!(*array, data, "Should match via exact-size path");
+}
+
+#[test]
+fn try_from_iter_hidden_size_success() {
+    // Tests the try_fold success path with hidden size hints
+    // Complements try_from_iter_too_long_data_rollback by testing success case
+    let iter = FixedSizeHint::hide_size([1u32, 2u32]);
+    let array: ArrayVec<_, 3> = ArrayVec::try_from_iter(iter).expect("Should succeed");
+    assert_eq!(array.len(), 2, "Should collect both items");
+    assert!(array.contains(&1) && array.contains(&2), "Should contain correct items");
+}
