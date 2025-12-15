@@ -1,3 +1,7 @@
+use std::error::Error;
+use std::fmt::{Debug, Display, Formatter};
+use std::iter::Chain;
+
 use display_as_debug::option::OpaqueOptionDbg;
 use tap::{Conv, Pipe};
 
@@ -40,7 +44,7 @@ where
 
     /// Consumes the error, returning the nested error.
     #[must_use]
-    pub fn into_err(self) -> E {
+    pub fn into_error(self) -> E {
         self.0.error
     }
 
@@ -78,7 +82,7 @@ where
     C: IntoIterator<Item = T>,
 {
     type Item = T;
-    type IntoIter = std::iter::Chain<std::iter::Chain<std::option::IntoIter<T>, C::IntoIter>, I>;
+    type IntoIter = Chain<Chain<std::option::IntoIter<T>, C::IntoIter>, I>;
 
     /// Consumes the error, and reconstructs the iterator it was created from. This will include
     /// the `rejected` item, `collected` values, and the remaining `iterator`, in that order.
@@ -87,34 +91,34 @@ where
     }
 }
 
-impl<T, I, C, E: std::fmt::Display> std::fmt::Display for CollectionError<T, I, C, E>
+impl<T, I, C, E: Display> Display for CollectionError<T, I, C, E>
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.error)
     }
 }
 
-impl<T, I, C, E: std::error::Error> std::error::Error for CollectionError<T, I, C, E>
+impl<T, I, C, E> Error for CollectionError<T, I, C, E>
 where
     I: Iterator<Item = T>,
-    C: IntoIterator<Item = T> + std::fmt::Debug,
-    E: std::fmt::Debug + 'static,
+    C: IntoIterator<Item = T> + Debug,
+    E: Error + Debug + 'static,
 {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.error)
     }
 }
 
-impl<T, I, C, E> std::fmt::Debug for CollectionError<T, I, C, E>
+impl<T, I, C, E> Debug for CollectionError<T, I, C, E>
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>,
-    E: std::fmt::Debug,
+    E: Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PartialIterErr")
             .field("collected", &std::any::type_name::<C>())
             .field("rejected", &OpaqueOptionDbg(&self.rejected))

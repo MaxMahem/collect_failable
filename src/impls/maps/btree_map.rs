@@ -8,14 +8,14 @@ impl<K: Ord, V, I> TryFromIterator<(K, V), I> for BTreeMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, BTreeMap<K, V>>;
+    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
 
     /// Converts `iter` into a [`BTreeMap`], failing if a key would collide.
     ///
     /// See [trait level documentation](trait@TryFromIterator) for an example.
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut iter = into_iter.into_iter();
-        iter.try_fold(BTreeMap::new(), |mut map, (k, v)| match map.contains_key(&k) {
+        iter.try_fold(Self::new(), |mut map, (k, v)| match map.contains_key(&k) {
             true => Err((map, (k, v))),
             false => {
                 map.insert(k, v).expect_none("should not be occupied");
@@ -30,7 +30,7 @@ impl<K: Ord, V, I> TryExtend<(K, V), I> for BTreeMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, BTreeMap<K, V>>;
+    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -44,7 +44,7 @@ where
                 Ok(())
             }
         })
-        .map_err(|kvp| CollectionCollision::new(iter, BTreeMap::new(), kvp))
+        .map_err(|kvp| CollectionCollision::new(iter, Self::new(), kvp))
     }
 }
 
@@ -57,7 +57,7 @@ where
     /// See [trait level documentation](trait@TryExtendSafe) for an example.
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
-        iter.try_fold(BTreeMap::new(), |mut map, (key, value)| match self.contains_key(&key) {
+        iter.try_fold(Self::new(), |mut map, (key, value)| match self.contains_key(&key) {
             true => Err((map, (key, value))),
             false => match map.contains_key(&key) {
                 true => Err((map, (key, value))),

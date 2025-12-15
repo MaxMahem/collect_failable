@@ -1,5 +1,6 @@
 max_width = 120
 use_small_heuristics = "Max"
+# match_arm_blocks = false
 
 # where_single_line = true
 

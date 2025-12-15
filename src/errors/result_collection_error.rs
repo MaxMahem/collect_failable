@@ -13,10 +13,10 @@ use tap::Pipe;
 #[subdef::subdef]
 #[derive(derive_more::Deref)]
 #[deref(forward)]
-pub struct ResultIterError<E, C, CErr, I>(
-    [Box<ResultIterErrorData<E, C, CErr, I>>; {
+pub struct ResultCollectionError<E, C, CErr, I>(
+    [Box<ResultCollectionErrorData<E, C, CErr, I>>; {
         /// The internal data of a [`ResultCollectionError`].
-        pub struct ResultIterErrorData<E, C, CErr, I> {
+        pub struct ResultCollectionErrorData<E, C, CErr, I> {
             /// The error from the Result iterator (first Err encountered)
             pub iteration_error: E,
             /// The partial collection result (Ok with partial data, or Err with collection error)
@@ -27,12 +27,12 @@ pub struct ResultIterError<E, C, CErr, I>(
     }],
 );
 
-impl<E, C, CErr, I> ResultIterError<E, C, CErr, I> {
+impl<E, C, CErr, I> ResultCollectionError<E, C, CErr, I> {
     /// Creates a new [`ResultCollectionError`] from an iterator error and collection result.
     pub fn new(iteration_error: E, collection_result: Result<C, CErr>, iter: I) -> Self {
-        ResultIterErrorData { iteration_error, collection_result, result_iter: iter }
+        ResultCollectionErrorData { iteration_error, collection_result, result_iter: iter }
             .pipe(Box::new)
-            .pipe(ResultIterError)
+            .pipe(ResultCollectionError)
     }
 
     /// Consumes the error, returning the iterator error.
@@ -59,12 +59,12 @@ impl<E, C, CErr, I> ResultIterError<E, C, CErr, I> {
     /// Consumes the error, returning a [`ResultCollectionErrorData`] containing the
     /// `iterator_error`, `collection_result`, and `iter`.
     #[must_use]
-    pub fn into_parts(self) -> ResultIterErrorData<E, C, CErr, I> {
+    pub fn into_parts(self) -> ResultCollectionErrorData<E, C, CErr, I> {
         *self.0
     }
 }
 
-impl<T, E, C, CErr, I> IntoIterator for ResultIterError<E, C, CErr, I>
+impl<T, E, C, CErr, I> IntoIterator for ResultCollectionError<E, C, CErr, I>
 where
     C: IntoIterator<Item = T>,
     CErr: IntoIterator<Item = T>,
@@ -80,7 +80,7 @@ where
     }
 }
 
-impl<E: Debug, C, CErr: Debug, I> Debug for ResultIterError<E, C, CErr, I> {
+impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectionError<E, C, CErr, I> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ResultIterError")
             .field("iteration_error", &self.iteration_error)
@@ -90,7 +90,7 @@ impl<E: Debug, C, CErr: Debug, I> Debug for ResultIterError<E, C, CErr, I> {
     }
 }
 
-impl<E: Display, C, CErr: Display, I> Display for ResultIterError<E, C, CErr, I> {
+impl<E: Display, C, CErr: Display, I> Display for ResultCollectionError<E, C, CErr, I> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Iterator error: {}", self.iteration_error)?;
         if let Err(e) = &self.collection_result {
@@ -100,7 +100,7 @@ impl<E: Display, C, CErr: Display, I> Display for ResultIterError<E, C, CErr, I>
     }
 }
 
-impl<E: Error + 'static, C, CErr: Error, I> Error for ResultIterError<E, C, CErr, I> {
+impl<E: Error + 'static, C, CErr: Error, I> Error for ResultCollectionError<E, C, CErr, I> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.iteration_error)
     }

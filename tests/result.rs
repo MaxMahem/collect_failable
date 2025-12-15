@@ -6,8 +6,12 @@ fn try_from_iter_result_success() {
 
     let input: Vec<Result<i32, &str>> = vec![Ok(1), Ok(2), Ok(3)];
     let result: Result<Result<[i32; 3], _>, _> = Result::try_from_iter(input);
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), Ok([1, 2, 3]));
+    // Outer Result is from the Result iterator itself, inner Result is from array collection
+    match result {
+        Ok(Ok(arr)) => assert_eq!(arr, [1, 2, 3]),
+        Ok(Err(e)) => panic!("Inner result should be Ok, got {e:?}"),
+        Err(_) => panic!("Outer result should be Ok"),
+    }
 }
 
 #[test]

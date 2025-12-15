@@ -27,7 +27,7 @@ fn create_empty() -> CollectionError<u32, std::vec::IntoIter<u32>, Collection, T
     CollectionError::new(vec![].into_iter(), HashSet::new(), None, TestError::new("empty"))
 }
 
-const EXPECTED_DEBUG_WITH_REJECTED: &str = r#"PartialIterErr { collected: "std::collections::hash::set::HashSet<u32>", rejected: Some(u32), error: TestError { identity: "with rejected" }, iterator: "core::array::iter::IntoIter<u32, 2>" }"#;
+const EXPECTED_DEBUG_WITH_REJECTED: &str = r#"PartialIterErr { collected: "std::collections::hash::set::HashSet<u32>", rejected: Some(..), error: TestError { identity: "with rejected" }, iterator: "core::array::iter::IntoIter<u32, 2>" }"#;
 const EXPECTED_DEBUG_WITHOUT_REJECTED: &str = r#"PartialIterErr { collected: "std::collections::hash::set::HashSet<u32>", rejected: None, error: TestError { identity: "without rejected" }, iterator: "core::array::iter::IntoIter<u32, 2>" }"#;
 const EXPECTED_DISPLAY_WITH_REJECTED: &str = "Test error: with rejected";
 const EXPECTED_DISPLAY_WITHOUT_REJECTED: &str = "Test error: without rejected";
@@ -39,7 +39,7 @@ test_format!(display_format_without_rejected, create_without_rejected(), "{}", E
 
 #[test]
 fn into_err() {
-    let error = create_with_rejected().into_err();
+    let error = create_with_rejected().into_error();
     assert_eq!(error, TestError::new("with rejected"));
 }
 

@@ -10,7 +10,7 @@ impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for HashMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, HashMap<K, V>>;
+    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
 
     /// Converts `iter` into a [`HashMap`], failing if a key would collide.
     ///
@@ -22,7 +22,7 @@ where
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_hint().0;
 
-        iter.try_fold(HashMap::with_capacity(size_guess), |mut map, (k, v)| match map.contains_key(&k) {
+        iter.try_fold(Self::with_capacity(size_guess), |mut map, (k, v)| match map.contains_key(&k) {
             true => Err((map, (k, v))),
             false => {
                 map.insert(k, v).expect_none("should not be occupied");

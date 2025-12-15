@@ -1,4 +1,5 @@
 mod array;
-mod init_guard;
+mod slice_guard;
 
-pub use init_guard::InitGuard;
+pub use slice_guard::DisarmError;
+pub use slice_guard::SliceGuard;

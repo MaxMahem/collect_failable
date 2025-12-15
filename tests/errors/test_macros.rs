@@ -58,7 +58,31 @@ macro_rules! into_iterator {
     };
 }
 
+/// Test that a constructor produces the expected value
+///
+/// - `identity!(test_name, ctor_call(), expected_value);`
+/// - `identity!(test_name, ctor_call(), panics: "panic message");`
+macro_rules! identity {
+    // Success case: constructor should equal expected value
+    ($name:ident, $ctor:expr, $expected:expr) => {
+        #[test]
+        fn $name() {
+            assert_eq!($ctor, $expected);
+        }
+    };
+
+    // Panic case: constructor should panic with expected message
+    ($name:ident, $ctor:expr, panics: $msg:expr) => {
+        #[test]
+        #[should_panic(expected = $msg)]
+        fn $name() {
+            let _ = $ctor;
+        }
+    };
+}
+
 pub(crate) use expect_panic;
 pub(crate) use getter;
+pub(crate) use identity;
 pub(crate) use into_iterator;
 pub(crate) use test_format;

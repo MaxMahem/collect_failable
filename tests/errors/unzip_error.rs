@@ -12,9 +12,9 @@ const COLLISION_DATA_A: [(u32, u32); 4] = [(1, 10), (2, 20), (1, 30), (3, 40)];
 /// Data that will cause collision on second collection (B side)
 const COLLISION_DATA_B: [(u32, u32); 4] = [(10, 1), (20, 2), (30, 1), (40, 3)];
 
-const EXPECTED_DEBUG_UNZIP_ERROR_A: &str = r#"UnzipError::A(ZipErrorSide { error: CollectionCollision { collected: "std::collections::hash::set::HashSet<u32>", item: "u32", iterator: "core::iter::sources::once::Once<u32>" }, incomplete: "std::collections::hash::set::HashSet<u32>", unevaluated: Some(u32), remaining: "core::array::iter::IntoIter<(u32, u32), 4>" })"#;
+const EXPECTED_DEBUG_UNZIP_ERROR_A: &str = r#"UnzipError::A(ZipErrorSide { error: CollectionCollision { collected: "std::collections::hash::set::HashSet<u32>", item: "u32", iterator: "core::iter::sources::once::Once<u32>" }, incomplete: "std::collections::hash::set::HashSet<u32>", unevaluated: Some(..), remaining: "core::array::iter::IntoIter<(u32, u32), 4>" })"#;
 const EXPECTED_DEBUG_UNZIP_ERROR_B: &str = r#"UnzipError::B(ZipErrorSide { error: CollectionCollision { collected: "std::collections::hash::set::HashSet<u32>", item: "u32", iterator: "core::iter::sources::once::Once<u32>" }, incomplete: "std::collections::hash::set::HashSet<u32>", unevaluated: None, remaining: "core::array::iter::IntoIter<(u32, u32), 4>" })"#;
-const EXPECTED_DEBUG_ZIP_ERROR_SIDE: &str = r#"ZipErrorSide { error: CollectionCollision { collected: "std::collections::hash::set::HashSet<u32>", item: "u32", iterator: "core::iter::sources::once::Once<u32>" }, incomplete: "std::collections::hash::set::HashSet<u32>", unevaluated: Some(u32), remaining: "core::array::iter::IntoIter<(u32, u32), 4>" }"#;
+const EXPECTED_DEBUG_ZIP_ERROR_SIDE: &str = r#"ZipErrorSide { error: CollectionCollision { collected: "std::collections::hash::set::HashSet<u32>", item: "u32", iterator: "core::iter::sources::once::Once<u32>" }, incomplete: "std::collections::hash::set::HashSet<u32>", unevaluated: Some(..), remaining: "core::array::iter::IntoIter<(u32, u32), 4>" }"#;
 const EXPECTED_DISPLAY_UNZIP_ERROR_A: &str = "Failed while extending first collection: Collection collision";
 const EXPECTED_DISPLAY_UNZIP_ERROR_B: &str = "Failed while extending second collection: Collection collision";
 

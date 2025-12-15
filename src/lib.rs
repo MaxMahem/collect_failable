@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
 #![warn(missing_docs)]
 #![allow(clippy::match_bool)]
@@ -20,6 +21,3 @@ mod utils;
 
 pub use errors::*;
 pub use traits::*;
-
-#[cfg(feature = "arrayvec")]
-pub use errors::ExceedsCapacity;

@@ -1,6 +1,7 @@
 use arrayvec::ArrayVec;
+use fluent_result::into::IntoResult;
 
-use crate::{CollectionError, ExceedsCapacity, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::{CapacityMismatch, CollectionError, TryExtend, TryExtendSafe, TryFromIterator};
 
 /// Tries to create an [`ArrayVec`] from an iterator.
 ///
@@ -15,27 +16,24 @@ impl<T, I, const N: usize> TryFromIterator<T, I> for ArrayVec<T, N>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionError<T, I::IntoIter, ArrayVec<T, N>, ExceedsCapacity>;
+    type Error = CollectionError<T, I::IntoIter, Self, CapacityMismatch>;
 
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut iter = into_iter.into_iter();
 
         match iter.size_hint() {
-            (min, _) if min > N => {
-                let err = ExceedsCapacity::new(N, min);
-                return Err(CollectionError::new(iter, ArrayVec::new(), None, err));
+            hint @ (min, _) if min > N => {
+                return Err(CollectionError::new(iter, Self::new(), None, CapacityMismatch::bounds(N..=N, hint)))
             }
             (_, Some(max)) if max <= N => return Ok(iter.collect()),
             _ => (),
         }
 
-        iter.try_fold(ArrayVec::new(), |mut array, item| match array.try_push(item) {
+        iter.try_fold(Self::new(), |mut array, item| match array.try_push(item) {
             Ok(()) => Ok(array),
             Err(capacity_err) => Err((array, capacity_err.element())),
         })
-        .map_err(|(array, rejected_item)| {
-            CollectionError::new(iter, array, Some(rejected_item), ExceedsCapacity::new(N, N + 1))
-        })
+        .map_err(|(array, reject)| CollectionError::new(iter, array, Some(reject), CapacityMismatch::overflow(N..=N)))
     }
 }
 
@@ -45,7 +43,7 @@ impl<T, const N: usize, I> TryExtend<T, I> for ArrayVec<T, N>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionError<T, I::IntoIter, Vec<T>, ExceedsCapacity>;
+    type Error = CollectionError<T, I::IntoIter, Vec<T>, CapacityMismatch>;
 
     /// Appends an iterator to the [`ArrayVec`], failing if the iterator produces more items than the [`ArrayVec`]'s
     /// remaining capacity.
@@ -60,15 +58,13 @@ where
     /// ```
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
-        let size_guess = iter.size_hint().0;
-        if size_guess > self.remaining_capacity() {
-            let cap_err = ExceedsCapacity::new(N, self.len() + size_guess);
-            return Err(CollectionError::new(iter, Vec::new(), None, cap_err));
+        let hint = iter.size_hint();
+        if hint.0 > self.remaining_capacity() {
+            return Err(CollectionError::new(iter, Vec::new(), None, CapacityMismatch::bounds(N..=N, hint)));
         }
 
         iter.try_for_each(|item| self.try_push(item)).map_err(|err| {
-            let cap_err = ExceedsCapacity::new(N, N + 1);
-            CollectionError::new(iter, Vec::new(), Some(err.element()), cap_err)
+            CollectionError::new(iter, Vec::new(), Some(err.element()), CapacityMismatch::overflow(N..=N))
         })
     }
 }
@@ -91,21 +87,22 @@ where
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
 
-        let size_guess = iter.size_hint().0;
-        if size_guess > self.remaining_capacity() {
-            let cap_err = ExceedsCapacity::new(N, self.len() + size_guess);
-            return Err(CollectionError::new(iter, Vec::new(), None, cap_err));
+        let hint = iter.size_hint();
+        if hint.0 > self.remaining_capacity() {
+            return Err(CollectionError::new(iter, Vec::new(), None, CapacityMismatch::bounds(N..=N, hint)));
         }
 
         let len = self.len();
 
         match iter.try_for_each(|item| self.try_push(item)) {
             Ok(()) => Ok(()),
-            Err(err) => {
-                let cap_err = ExceedsCapacity::new(N, N + 1);
-                let extended = self.drain(len..).collect();
-                Err(CollectionError::new(iter, extended, Some(err.element()), cap_err))
-            }
+            Err(err) => CollectionError::new(
+                iter,
+                self.drain(len..).collect(),
+                Some(err.element()),
+                CapacityMismatch::overflow(N..=N),
+            )
+            .into_err(),
         }
     }
 }

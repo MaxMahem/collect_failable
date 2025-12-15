@@ -5,7 +5,7 @@ use fluent_result::bool::Then;
 use itertools::Either;
 use tap::Pipe;
 
-use crate::{ResultIterError, TryFromIterator};
+use crate::{ResultCollectionError, TryFromIterator};
 
 type ArcMutex<T> = Arc<Mutex<T>>;
 type IterOrEmpty<I, T> = Either<I, iter::Empty<T>>;
@@ -149,7 +149,7 @@ where
     I: IntoIterator<Item = Result<T, E>>,
     C: TryFromIterator<T, ExtractErr<I::IntoIter, E>>,
 {
-    type Error = ResultIterError<E, C, C::Error, Either<I::IntoIter, iter::Empty<Result<T, E>>>>;
+    type Error = ResultCollectionError<E, C, C::Error, Either<I::IntoIter, iter::Empty<Result<T, E>>>>;
 
     /// Converts an iterator of `Result<A, E>` into a `Result<V, E>`.
     ///
@@ -167,7 +167,9 @@ where
             (ExtractErrState { error: None, .. }, Ok(v)) => Ok(Ok(v)), // iter without err, and successful collect
             (ExtractErrState { error: None, .. }, Err(e)) => Ok(Err(e)), // iter without err, but collect failed
             // errored during iter, collect may have succeeded or failed.
-            (ExtractErrState { error: Some(error), iter }, result) => Err(ResultIterError::new(error, result, iter)),
+            (ExtractErrState { error: Some(error), iter }, result) => {
+                Err(ResultCollectionError::new(error, result, iter))
+            }
         }
     }
 }

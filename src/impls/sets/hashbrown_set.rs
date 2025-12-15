@@ -9,7 +9,7 @@ impl<T: Eq + Hash, I> TryFromIterator<T, I> for HashSet<T>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<T, I::IntoIter, HashSet<T>>;
+    type Error = CollectionCollision<T, I::IntoIter, Self>;
 
     /// Converts `iter` into a [`HashSet`], failing if a value would collide.
     ///
@@ -21,7 +21,7 @@ where
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_hint().0;
 
-        iter.try_fold(HashSet::with_capacity(size_guess), |mut set, value| match set.contains(&value) {
+        iter.try_fold(Self::with_capacity(size_guess), |mut set, value| match set.contains(&value) {
             true => Err((set, value)),
             false => {
                 set.insert(value).expect_true("should not be occupied");

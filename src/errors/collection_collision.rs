@@ -4,6 +4,7 @@ use crate::TryFromIterator;
 #[cfg(doc)]
 use std::collections::HashMap;
 
+use std::fmt::{Debug, Formatter};
 use std::iter::Chain;
 
 use tap::Pipe;
@@ -74,7 +75,7 @@ where
 
     /// Always returns `false` (presence of a colliding item precludes an empty collection).
     #[must_use]
-    pub fn is_empty(&self) -> bool
+    pub const fn is_empty(&self) -> bool
     where
         I: ExactSizeIterator,
         for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
@@ -89,7 +90,7 @@ where
     C: IntoIterator<Item = T>,
 {
     type Item = T;
-    type IntoIter = Chain<Chain<std::option::IntoIter<T>, C::IntoIter>, I>;
+    type IntoIter = Chain<Chain<std::iter::Once<T>, C::IntoIter>, I>;
 
     /// Consumes the error, returning an iterator over the colliding `item`, the `collected` values,
     /// and the remaining `iterator`, in that order.
@@ -97,16 +98,16 @@ where
     /// The exact iteration order depends on the implementation of `IntoIterator` for `C`, and may
     /// not be the same as the order in which the values were collected.
     fn into_iter(self) -> Self::IntoIter {
-        Some(self.0.item).into_iter().chain(self.0.collected).chain(self.0.iterator)
+        std::iter::once(self.0.item).chain(self.0.collected).chain(self.0.iterator)
     }
 }
 
-impl<T, I, C> std::fmt::Debug for CollectionCollision<T, I, C>
+impl<T, I, C> Debug for CollectionCollision<T, I, C>
 where
     I: Iterator<Item = T>,
     C: IntoIterator<Item = T>,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CollectionCollision")
             .field("collected", &std::any::type_name::<C>())
             .field("item", &std::any::type_name::<T>())

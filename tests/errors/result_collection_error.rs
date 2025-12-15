@@ -1,17 +1,17 @@
-use collect_failable::ResultIterError;
+use collect_failable::ResultCollectionError;
 use std::collections::HashSet;
 
 use crate::test_macros::{test_format, TestError};
 
 type Collection = HashSet<u32>;
 
-fn create_err() -> ResultIterError<TestError, Collection, TestError, std::iter::Empty<u32>> {
+fn create_err() -> ResultCollectionError<TestError, Collection, TestError, std::iter::Empty<u32>> {
     let collected = HashSet::from([1, 2, 3]);
-    ResultIterError::new(TestError::new("iter error"), Ok(collected), std::iter::empty())
+    ResultCollectionError::new(TestError::new("iter error"), Ok(collected), std::iter::empty())
 }
 
-fn create_err_collection() -> ResultIterError<TestError, Collection, TestError, std::iter::Empty<u32>> {
-    ResultIterError::new(TestError::new("iter error"), Err(TestError::new("collection error")), std::iter::empty())
+fn create_err_collection() -> ResultCollectionError<TestError, Collection, TestError, std::iter::Empty<u32>> {
+    ResultCollectionError::new(TestError::new("iter error"), Err(TestError::new("collection error")), std::iter::empty())
 }
 
 const EXPECTED_DISPLAY_OK: &str = "Iterator error: Test error: iter error";
@@ -63,4 +63,29 @@ fn error_trait_source() {
     let error = create_err();
     let source = error.source().expect("Should have error source");
     assert!(source.is::<TestError>());
+}
+
+// Helper functions for into_iter tests (require both C and CErr to implement IntoIterator)
+fn create_err_iterable_ok() -> ResultCollectionError<TestError, Vec<u32>, Vec<u32>, std::iter::Empty<u32>> {
+    let collected = vec![1, 2, 3];
+    ResultCollectionError::new(TestError::new("iter error"), Ok(collected), std::iter::empty())
+}
+
+fn create_err_iterable_err() -> ResultCollectionError<TestError, Vec<u32>, Vec<u32>, std::iter::Empty<u32>> {
+    let rejected = vec![4, 5, 6];
+    ResultCollectionError::new(TestError::new("iter error"), Err(rejected), std::iter::empty())
+}
+
+#[test]
+fn into_iter_ok() {
+    let error = create_err_iterable_ok();
+    let collected: Vec<u32> = error.into_iter().collect();
+    assert_eq!(collected, vec![1, 2, 3]);
+}
+
+#[test]
+fn into_iter_err() {
+    let error = create_err_iterable_err();
+    let collected: Vec<u32> = error.into_iter().collect();
+    assert_eq!(collected, vec![4, 5, 6]);
 }

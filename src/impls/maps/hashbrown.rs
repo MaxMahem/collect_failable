@@ -9,7 +9,7 @@ impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for HashMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, HashMap<K, V>>;
+    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
 
     /// Converts `iter` into a [`HashMap`], failing if a key would collide.
     ///
@@ -18,7 +18,7 @@ where
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_hint().0;
 
-        iter.try_fold(HashMap::with_capacity(size_guess), |mut map, (key, value)| {
+        iter.try_fold(Self::with_capacity(size_guess), |mut map, (key, value)| {
             let hash = map.hasher().hash_one(&key);
             match map.raw_entry_mut().from_hash(hash, |k| k == &key) {
                 RawEntryMut::Occupied(_) => Err((map, (key, value))),
@@ -36,7 +36,7 @@ impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtend<(K, V), I> for HashMa
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, HashMap<K, V, S>>;
+    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -49,7 +49,7 @@ where
             true => Err((key, value)),
             false => Ok(_ = self.insert(key, value)),
         })
-        .map_err(|kvp| CollectionCollision::new(iter, HashMap::with_hasher(self.hasher().clone()), kvp))
+        .map_err(|kvp| CollectionCollision::new(iter, Self::with_hasher(self.hasher().clone()), kvp))
     }
 }
 
@@ -64,7 +64,7 @@ where
         let mut iter = iter.into_iter();
 
         // uses the same hasher as the main map in order to allow the has only have to be computed once
-        let staging_map = HashMap::with_capacity_and_hasher(iter.size_hint().0, self.hasher().clone());
+        let staging_map = Self::with_capacity_and_hasher(iter.size_hint().0, self.hasher().clone());
 
         iter.try_fold(staging_map, |mut staging_map, (key, value)| {
             let shared_hash = staging_map.hasher().hash_one(&key);
