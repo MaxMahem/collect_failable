@@ -154,8 +154,8 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "fluent_result"
-version = "0.8.0"
-source = "git+https://github.com/MaxMahem/fluent_result.git#3f0e7de9aae593d6a5291c5ac332a1968648f504"
+version = "0.9.0"
+source = "git+https://github.com/MaxMahem/fluent_result.git#2408193ac243e4028cf6530b0c7daeb637e4cd8b"
 dependencies = [
  "derive_more",
  "sealed",
