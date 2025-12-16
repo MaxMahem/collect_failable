@@ -42,20 +42,17 @@ pub trait TryUnzip {
     /// ```
     fn try_unzip<A, B, FromA, FromB>(self) -> TryUnzipResult<A, B, FromA, FromB, Self>
     where
-        FromA: Default + TryExtend<A, Once<A>> + IntoIterator<Item = A>,
-        FromB: Default + TryExtend<B, Once<B>> + IntoIterator<Item = B>,
+        FromA: Default + TryExtend<Once<A>> + IntoIterator<Item = A>,
+        FromB: Default + TryExtend<Once<B>> + IntoIterator<Item = B>,
         Self: Iterator<Item = (A, B)> + Sized;
 }
 
 #[sealed::sealed]
-impl<I> TryUnzip for I
-where
-    I: Iterator,
-{
+impl<I: Iterator> TryUnzip for I {
     fn try_unzip<A, B, FromA, FromB>(self) -> TryUnzipResult<A, B, FromA, FromB, Self>
     where
-        FromA: Default + TryExtend<A, Once<A>> + IntoIterator<Item = A>,
-        FromB: Default + TryExtend<B, Once<B>> + IntoIterator<Item = B>,
+        FromA: Default + TryExtend<Once<A>> + IntoIterator<Item = A>,
+        FromB: Default + TryExtend<Once<B>> + IntoIterator<Item = B>,
         Self: Iterator<Item = (A, B)> + Sized,
     {
         let mut from = (FromA::default().no_drop(), FromB::default().no_drop());

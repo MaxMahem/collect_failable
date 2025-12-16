@@ -1,3 +1,5 @@
+use std::iter::Once;
+
 use no_drop::dbg::IntoNoDrop;
 
 use crate::{TryExtend, TryFromIterator, TupleCollectionError, TupleExtensionError};
@@ -7,11 +9,11 @@ use crate::TryUnzip;
 
 /// Converts an iterator of `(A, B)` into a `(TryFromA, TryFromB)`, upholding the
 /// [`TryFromIterator`] contract of both types.
-impl<A, B, TryFromA, TryFromB, I> TryFromIterator<(A, B), I> for (TryFromA, TryFromB)
+impl<A, B, TryFromA, TryFromB, I> TryFromIterator<I> for (TryFromA, TryFromB)
 where
     I: IntoIterator<Item = (A, B)>,
-    TryFromA: TryFromIterator<A, Vec<A>>,
-    TryFromB: TryFromIterator<B, Vec<B>>,
+    TryFromA: TryFromIterator<Vec<A>>,
+    TryFromB: TryFromIterator<Vec<B>>,
 {
     type Error = TupleCollectionError<TryFromA::Error, TryFromB::Error, TryFromA, Vec<B>>;
 
@@ -48,11 +50,11 @@ where
 /// Note: Tuples do not implement [`TryExtendSafe`](crate::TryExtendSafe) because they cannot
 /// provide a strong error guarantee. Extension has to proceed element by element and if the
 /// second collection fails to extend, the first may have already been modified.
-impl<A, B, TryFromA, TryFromB, I> TryExtend<(A, B), I> for (TryFromA, TryFromB)
+impl<A, B, TryFromA, TryFromB, I> TryExtend<I> for (TryFromA, TryFromB)
 where
     I: IntoIterator<Item = (A, B)>,
-    TryFromA: TryExtend<A, std::iter::Once<A>> + Default,
-    TryFromB: TryExtend<B, std::iter::Once<B>> + Default,
+    TryFromA: TryExtend<Once<A>> + Default,
+    TryFromB: TryExtend<Once<B>> + Default,
 {
     type Error = TupleExtensionError<TryFromA::Error, TryFromB::Error, A, B, I::IntoIter>;
 

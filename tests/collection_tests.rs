@@ -1,0 +1,83 @@
+/// Generalized macro that generates complete test functions for collection creation
+///
+/// Supports both success and error cases for any collection type (arrays, ArrayVec, etc.):
+/// - `collection_test!(name, Type, iter, Ok(expected))`
+/// - `collection_test!(name, Type, iter, Err(expected_error))`
+#[allow(unused_macros)]
+macro_rules! try_collect {
+    ($name:ident, $collection_type:ty, $iter:expr, Ok($expected:expr)) => {
+        #[test]
+        fn $name() {
+            let found = <$collection_type>::try_from_iter($iter).expect("should be ok");
+            assert_eq!(found, $expected, "should match expected value");
+        }
+    };
+
+    ($name:ident, $collection_type:ty, $iter:expr, Err($expected_error:expr)) => {
+        #[test]
+        fn $name() {
+            let err = <$collection_type>::try_from_iter($iter).expect_err("should be err");
+            assert_eq!(err.error, $expected_error, "should match expected error");
+        }
+    };
+}
+
+/// Macro for try_extend_safe tests
+///
+/// Supports:
+/// - `try_extend_safe!(name, initial_collection, extend_iter, Ok(expected))`
+/// - `try_extend_safe!(name, initial_collection, extend_iter, Err(expected_error, expected_state))`
+#[allow(unused_macros)]
+macro_rules! try_extend_safe {
+    ($name:ident, $initial:expr, $extend:expr, Ok($expected:expr)) => {
+        #[test]
+        fn $name() {
+            let mut collection = $initial;
+            collection.try_extend_safe($extend).expect("should extend successfully");
+            assert_eq!(collection, $expected, "should match expected value");
+        }
+    };
+
+    ($name:ident, $initial:expr, $extend:expr, Err($expected_error:expr)) => {
+        #[test]
+        fn $name() {
+            let mut collection = $initial;
+            let err = collection.try_extend_safe($extend).expect_err("should fail to extend");
+            assert_eq!(err.error, $expected_error, "should match expected error");
+            assert_eq!(collection, $initial, "should be unchanged on error");
+        }
+    };
+}
+
+/// Macro for try_extend tests
+///
+/// Supports:
+/// - `try_extend!(name, initial_collection, extend_iter, Ok(expected))`
+/// - `try_extend!(name, initial_collection, extend_iter, Err(expected_error))`
+#[allow(unused_macros)]
+macro_rules! try_extend {
+    ($name:ident, $initial:expr, $extend:expr, Ok($expected:expr)) => {
+        #[test]
+        fn $name() {
+            let mut collection = $initial;
+            collection.try_extend($extend).expect("should extend successfully");
+            assert_eq!(collection, $expected, "should match expected value");
+        }
+    };
+
+    ($name:ident, $initial:expr, $extend:expr, Err($expected_error:expr)) => {
+        #[test]
+        fn $name() {
+            let mut collection = $initial;
+            let err = collection.try_extend($extend).expect_err("should fail to extend");
+            assert_eq!(err.error, $expected_error, "should match expected error");
+        }
+    };
+}
+
+#[allow(unused_imports)]
+pub(crate) use try_collect;
+#[allow(unused_imports)]
+pub(crate) use try_extend;
+#[allow(unused_imports)]
+pub(crate) use try_extend_safe;

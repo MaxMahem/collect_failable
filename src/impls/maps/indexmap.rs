@@ -5,11 +5,11 @@ use indexmap::IndexMap;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for IndexMap<K, V>
+impl<K: Eq + Hash, V, I> TryFromIterator<I> for IndexMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Converts `iter` into a [`IndexMap`], failing if a key would collide.
     ///
@@ -32,11 +32,11 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtend<(K, V), I> for IndexMap<K, V, S>
+impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtend<I> for IndexMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, IndexMap<K, V>>;
+    type Error = CollectionCollision<I::IntoIter, IndexMap<K, V>>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtendSafe<(K, V), I> for IndexMap<K, V, S>
+impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtendSafe<I> for IndexMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {

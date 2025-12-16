@@ -5,7 +5,7 @@ use crate::test_macros::{getter, into_iterator, test_format, TestError};
 
 type Collection = HashSet<u32>;
 
-fn create_with_rejected() -> CollectionError<u32, std::array::IntoIter<u32, 2>, Collection, TestError> {
+fn create_with_rejected() -> CollectionError<std::array::IntoIter<u32, 2>, Collection, TestError> {
     let remaining = [3, 4];
     let iter = remaining.into_iter();
     let collected = HashSet::from([1, 2]);
@@ -14,7 +14,7 @@ fn create_with_rejected() -> CollectionError<u32, std::array::IntoIter<u32, 2>, 
     CollectionError::new(iter, collected, rejected, TestError::new("with rejected"))
 }
 
-fn create_without_rejected() -> CollectionError<u32, std::array::IntoIter<u32, 2>, Collection, TestError> {
+fn create_without_rejected() -> CollectionError<std::array::IntoIter<u32, 2>, Collection, TestError> {
     let remaining = [3, 4];
     let iter = remaining.into_iter();
     let collected = HashSet::from([1, 2]);
@@ -23,7 +23,7 @@ fn create_without_rejected() -> CollectionError<u32, std::array::IntoIter<u32, 2
     CollectionError::new(iter, collected, rejected, TestError::new("without rejected"))
 }
 
-fn create_empty() -> CollectionError<u32, std::vec::IntoIter<u32>, Collection, TestError> {
+fn create_empty() -> CollectionError<std::vec::IntoIter<u32>, Collection, TestError> {
     CollectionError::new(vec![].into_iter(), HashSet::new(), None, TestError::new("empty"))
 }
 
@@ -45,7 +45,7 @@ fn into_err() {
 
 #[test]
 fn into_parts_with_rejected() {
-    let parts = create_with_rejected().into_parts();
+    let parts = create_with_rejected().into_data();
 
     assert_eq!(parts.error, TestError::new("with rejected"));
     assert_eq!(parts.collected, HashSet::from([1, 2]));
@@ -56,7 +56,7 @@ fn into_parts_with_rejected() {
 #[test]
 fn into_parts_without_rejected() {
     let error = create_without_rejected();
-    let parts = error.into_parts();
+    let parts = error.into_data();
 
     assert_eq!(parts.error, TestError::new("without rejected"));
     assert_eq!(parts.collected, HashSet::from([1, 2]));

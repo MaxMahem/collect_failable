@@ -5,11 +5,11 @@ use indexmap::IndexSet;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-impl<T: Eq + Hash, I> TryFromIterator<T, I> for IndexSet<T>
+impl<T: Eq + Hash, I> TryFromIterator<I> for IndexSet<T>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<T, I::IntoIter, Self>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Converts `iter` into a [`IndexSet`], failing if a value would collide.
     ///
@@ -32,11 +32,11 @@ where
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher, I> TryExtend<T, I> for IndexSet<T, S>
+impl<T: Eq + Hash, S: BuildHasher, I> TryExtend<I> for IndexSet<T, S>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<T, I::IntoIter, IndexSet<T>>;
+    type Error = CollectionCollision<I::IntoIter, IndexSet<T>>;
 
     /// Extends the set with `iter`, failing if a value would collide, with a basic error guarantee.
     ///
@@ -56,7 +56,7 @@ where
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher, I> TryExtendSafe<T, I> for IndexSet<T, S>
+impl<T: Eq + Hash, S: BuildHasher, I> TryExtendSafe<I> for IndexSet<T, S>
 where
     I: IntoIterator<Item = T>,
 {

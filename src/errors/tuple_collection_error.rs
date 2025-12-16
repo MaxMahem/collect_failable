@@ -82,7 +82,7 @@ impl<Err, From> TupleCollectionErrorSide<Err, From> {
 
     /// Consumes the error, returning the data.
     #[must_use]
-    pub fn into_parts(self) -> TupleCollectionErrorSideData<Err, From> {
+    pub fn into_data(self) -> TupleCollectionErrorSideData<Err, From> {
         *self.0
     }
 }

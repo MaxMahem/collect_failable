@@ -4,11 +4,11 @@ use fluent_result::bool::dbg::Expect;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-impl<T: Ord, I> TryFromIterator<T, I> for BTreeSet<T>
+impl<T: Ord, I> TryFromIterator<I> for BTreeSet<T>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<T, I::IntoIter, Self>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Converts `iter` into a [`BTreeSet`], failing if a value would collide.
     ///
@@ -29,11 +29,11 @@ where
     }
 }
 
-impl<T: Ord, I> TryExtend<T, I> for BTreeSet<T>
+impl<T: Ord, I> TryExtend<I> for BTreeSet<T>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<T, I::IntoIter, Self>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Extends the set with `iter`, failing if a value would collide, with a basic error guarantee.
     ///
@@ -51,7 +51,7 @@ where
     }
 }
 
-impl<T: Ord, I> TryExtendSafe<T, I> for BTreeSet<T>
+impl<T: Ord, I> TryExtendSafe<I> for BTreeSet<T>
 where
     I: IntoIterator<Item = T>,
 {

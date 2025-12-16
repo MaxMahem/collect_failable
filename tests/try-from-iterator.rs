@@ -4,7 +4,7 @@ fn try_from_iter_collision_example() {
     use std::collections::HashMap;
 
     let err = HashMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should collide");
-    let parts = err.into_parts();
+    let parts = err.into_data();
     assert_eq!(parts.item.0, 1, "colliding key should be 1");
 }
 

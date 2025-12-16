@@ -6,7 +6,7 @@ struct Collection {
 const DEFAULT: Collection = Collection { called: false };
 const CALLED: Collection = Collection { called: true };
 
-impl<I> collect_failable::TryExtend<i32, I> for Collection
+impl<I> collect_failable::TryExtend<I> for Collection
 where
     I: IntoIterator<Item = i32>,
 {
@@ -18,7 +18,7 @@ where
     }
 }
 
-impl<I> collect_failable::TryExtendSafe<i32, I> for Collection
+impl<I> collect_failable::TryExtendSafe<I> for Collection
 where
     I: IntoIterator<Item = i32>,
 {

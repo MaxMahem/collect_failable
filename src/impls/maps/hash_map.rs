@@ -6,11 +6,11 @@ use fluent_result::expect::dbg::ExpectNone;
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
 #[allow(clippy::implicit_hasher)]
-impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for HashMap<K, V>
+impl<K: Eq + Hash, V, I> TryFromIterator<I> for HashMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Converts `iter` into a [`HashMap`], failing if a key would collide.
     ///
@@ -33,11 +33,11 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtend<(K, V), I> for HashMap<K, V, S>
+impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtend<I> for HashMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, HashMap<K, V>>;
+    type Error = CollectionCollision<I::IntoIter, HashMap<K, V>>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -54,7 +54,7 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtendSafe<(K, V), I> for HashMap<K, V, S>
+impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtendSafe<I> for HashMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {

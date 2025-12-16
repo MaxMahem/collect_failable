@@ -17,8 +17,8 @@ use crate::TryUnzip;
 #[derive(derive_more::TryUnwrap, derive_more::IsVariant, derive_more::Unwrap)]
 pub enum UnzipError<A, B, FromA, FromB, I>
 where
-    FromA: TryExtend<A, Once<A>>,
-    FromB: TryExtend<B, Once<B>>,
+    FromA: TryExtend<Once<A>>,
+    FromB: TryExtend<Once<B>>,
 {
     /// Failed to extend the first collection (`FromA`).
     A(UnzipErrorSide<FromA::Error, FromB, B, I>),
@@ -53,7 +53,7 @@ impl<Err, From, T, I> UnzipErrorSide<Err, From, T, I> {
     /// Consumes the error, returning a [`UnzipErrorSideData`] containing the `error`,
     /// `incomplete` collection, the optional `unevaluated` item, and the remaining `iterator`.
     #[must_use]
-    pub fn into_parts(self) -> UnzipErrorSideData<Err, From, T, I> {
+    pub fn into_data(self) -> UnzipErrorSideData<Err, From, T, I> {
         *self.0
     }
 }
@@ -74,23 +74,17 @@ where
 
 impl<A, B, FromA, FromB, I> UnzipError<A, B, FromA, FromB, I>
 where
-    FromA: TryExtend<A, Once<A>>,
-    FromB: TryExtend<B, Once<B>>,
+    FromA: TryExtend<Once<A>>,
+    FromB: TryExtend<Once<B>>,
 {
     /// Creates a new [`UnzipError::A`] variant.
     pub fn new_a(error: FromA::Error, incomplete: FromB, unevaluated: Option<B>, remaining: I) -> Self {
-        UnzipErrorSideData { error, incomplete, unevaluated, remaining }
-            .pipe(Box::new)
-            .pipe(UnzipErrorSide)
-            .pipe(Self::A)
+        UnzipErrorSideData { error, incomplete, unevaluated, remaining }.pipe(Box::new).pipe(UnzipErrorSide).pipe(Self::A)
     }
 
     /// Creates a new [`UnzipError::B`] variant.
     pub fn new_b(error: FromB::Error, incomplete: FromA, unevaluated: Option<A>, remaining: I) -> Self {
-        UnzipErrorSideData { error, incomplete, unevaluated, remaining }
-            .pipe(Box::new)
-            .pipe(UnzipErrorSide)
-            .pipe(Self::B)
+        UnzipErrorSideData { error, incomplete, unevaluated, remaining }.pipe(Box::new).pipe(UnzipErrorSide).pipe(Self::B)
     }
 
     /// Unwraps the [`UnzipError::A`] variant, or panics with `msg`.
@@ -124,8 +118,8 @@ where
 
 impl<A, B, FromA, FromB, I> Debug for UnzipError<A, B, FromA, FromB, I>
 where
-    FromA: TryExtend<A, Once<A>>,
-    FromB: TryExtend<B, Once<B>>,
+    FromA: TryExtend<Once<A>>,
+    FromB: TryExtend<Once<B>>,
     FromA::Error: Debug,
     FromB::Error: Debug,
 {
@@ -139,8 +133,8 @@ where
 
 impl<A, B, FromA, FromB, I> Display for UnzipError<A, B, FromA, FromB, I>
 where
-    FromA: TryExtend<A, Once<A>>,
-    FromB: TryExtend<B, Once<B>>,
+    FromA: TryExtend<Once<A>>,
+    FromB: TryExtend<Once<B>>,
     FromA::Error: Display,
     FromB::Error: Display,
 {
@@ -154,8 +148,8 @@ where
 
 impl<A, B, FromA, FromB, I> Error for UnzipError<A, B, FromA, FromB, I>
 where
-    FromA: TryExtend<A, Once<A>>,
-    FromB: TryExtend<B, Once<B>>,
+    FromA: TryExtend<Once<A>>,
+    FromB: TryExtend<Once<B>>,
     FromA::Error: Error + 'static,
     FromB::Error: Error + 'static,
 {

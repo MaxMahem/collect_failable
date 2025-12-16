@@ -9,13 +9,13 @@ use std::collections::HashMap;
 /// [`TryCollectEx::try_collect_ex`].
 ///
 /// Implementations may rely on [`Iterator::size_hint`] providing reliable bounds for the
-/// number of elements in the iterator in order to optimize their implementations. An incorrect
-/// size hint may cause panics, produce incorrect results, or produce a result that violates
-/// container constraints, but must not result in undefined behavior.
-pub trait TryFromIterator<T, I>: Sized
-where
-    I: IntoIterator<Item = T>,
-{
+/// number of elements in the iterator in order to optimize their implementations. A size hint
+/// that provides incorrect bounds may cause panics, produce incorrect results, or produce a
+/// result that violates container constraints, but must not result in undefined behavior.
+///
+/// Implementations are encouraged to return all the data consumed by the iterator, as well
+/// as the partially consumed iterator on an error, but are not required to do so.
+pub trait TryFromIterator<I: IntoIterator>: Sized {
     /// The error that may occur when converting the iterator into the container.
     type Error;
 
@@ -70,7 +70,7 @@ pub trait TryCollectEx: Iterator {
     /// ```
     fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where
-        C: TryFromIterator<Self::Item, Self>,
+        C: TryFromIterator<Self>,
         Self: Sized;
 }
 
@@ -82,7 +82,7 @@ where
 {
     fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where
-        C: TryFromIterator<Self::Item, Self>,
+        C: TryFromIterator<Self>,
     {
         C::try_from_iter(self)
     }

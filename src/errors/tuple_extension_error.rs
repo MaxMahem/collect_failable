@@ -23,7 +23,7 @@ pub enum TupleExtensionError<ErrA, ErrB, A, B, I> {
                     pub struct TupleExtensionErrorSideData<Err, T, I> {
                         /// The error caused during extension
                         pub error: Err,
-                        /// The unevaluated item from the other side
+                        /// A possible unevaluated item from the other side
                         pub unevaluated: Option<T>,
                         /// The remaining iterator
                         pub remaining: I,
@@ -39,18 +39,12 @@ pub enum TupleExtensionError<ErrA, ErrB, A, B, I> {
 impl<ErrA, ErrB, A, B, I> TupleExtensionError<ErrA, ErrB, A, B, I> {
     /// Creates a new [`TupleExtensionError::A`] variant.
     pub fn new_a(error: ErrA, unevaluated: Option<B>, remaining: I) -> Self {
-        TupleExtensionErrorSideData { error, unevaluated, remaining }
-            .pipe(Box::new)
-            .pipe(TupleExtensionErrorSide)
-            .pipe(Self::A)
+        TupleExtensionErrorSideData { error, unevaluated, remaining }.pipe(Box::new).pipe(TupleExtensionErrorSide).pipe(Self::A)
     }
 
     /// Creates a new [`TupleExtensionError::B`] variant.
     pub fn new_b(error: ErrB, unevaluated: Option<A>, remaining: I) -> Self {
-        TupleExtensionErrorSideData { error, unevaluated, remaining }
-            .pipe(Box::new)
-            .pipe(TupleExtensionErrorSide)
-            .pipe(Self::B)
+        TupleExtensionErrorSideData { error, unevaluated, remaining }.pipe(Box::new).pipe(TupleExtensionErrorSide).pipe(Self::B)
     }
 
     /// Unwraps the [`TupleExtensionError::A`] variant, or panics with `msg`.
@@ -92,7 +86,7 @@ impl<Err, T, I> TupleExtensionErrorSide<Err, T, I> {
     /// Consumes the error, returning a [`TupleExtensionErrorSideData`] containing the `error`,
     /// the optional `unevaluated` item, and the remaining `iterator`.
     #[must_use]
-    pub fn into_parts(self) -> TupleExtensionErrorSideData<Err, T, I> {
+    pub fn into_data(self) -> TupleExtensionErrorSideData<Err, T, I> {
         *self.0
     }
 }

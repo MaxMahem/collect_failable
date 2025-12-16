@@ -7,7 +7,7 @@ fn try_from_iter_arrayvec_example() {
     assert_eq!(array.as_slice(), &[1, 2, 3]);
 
     let err = ArrayVec::<i32, 3>::try_from_iter(1..=4).expect_err("should be err");
-    assert_eq!(err.error, CapacityMismatch::bounds(3..=3, (4, Some(4))));
+    assert_eq!(err.error, CapacityMismatch::bounds(0..=3, (4, Some(4))));
 }
 
 #[test]
@@ -21,7 +21,7 @@ fn try_extend_safe_arrayvec_example() {
     assert_eq!(*array, [1, 2, 3]);
 
     let err = array.try_extend_safe([4, 5]).expect_err("Should be err");
-    assert_eq!(err.error, CapacityMismatch::bounds(4..=4, (2, Some(2))));
+    assert_eq!(err.error, CapacityMismatch::bounds(0..=1, (2, Some(2))));
     assert_eq!(*array, [1, 2, 3]); // Unchanged
     let collected: Vec<i32> = err.into_iter().collect(); // the iterator can be reconstructed
     assert_eq!(collected, [4, 5]);
@@ -38,5 +38,5 @@ fn try_extend_arrayvec_example() {
     assert_eq!(*array, [1, 2, 3]);
 
     let err = array.try_extend([4, 5]).expect_err("Should be err");
-    assert_eq!(err.error, CapacityMismatch::bounds(4..=4, (2, Some(2))));
+    assert_eq!(err.error, CapacityMismatch::bounds(0..=1, (2, Some(2))));
 }

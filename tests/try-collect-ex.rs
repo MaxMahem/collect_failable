@@ -20,6 +20,6 @@ fn try_collect_ex_collision_example() {
     let result = data.into_iter().try_collect_ex::<HashMap<_, _>>().expect_err("should be err");
 
     // CollectionCollision now contains the entire collision context
-    let parts = result.into_parts();
+    let parts = result.into_data();
     assert_eq!(parts.item.0, 1, "colliding key should be 1");
 }

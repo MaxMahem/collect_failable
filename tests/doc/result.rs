@@ -81,7 +81,7 @@ fn error_recovery_example() {
         Ok(Err(coll_err)) => panic!("Expected iterator error, got collection error: {}", coll_err),
         Err(err) => {
             // Use into_parts() to consume the error and extract all components
-            let parts = err.into_parts();
+            let parts = err.into_data();
 
             // Check the iterator error
             assert_eq!(parts.iteration_error, "invalid");

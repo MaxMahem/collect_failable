@@ -15,26 +15,24 @@ impl std::fmt::Display for TestError {
 
 impl std::error::Error for TestError {}
 
-fn create_a_error_with_unevaluated(
-) -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
+fn create_a_error_with_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_a(TestError("A side failed".to_string()), Some(20), remaining.into_iter())
 }
 
-fn create_a_error_without_unevaluated(
-) -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
+fn create_a_error_without_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>>
+{
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_a(TestError("A side failed".to_string()), None, remaining.into_iter())
 }
 
-fn create_b_error_with_unevaluated(
-) -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
+fn create_b_error_with_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_b(TestError("B side failed".to_string()), Some(10), remaining.into_iter())
 }
 
-fn create_b_error_without_unevaluated(
-) -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
+fn create_b_error_without_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>>
+{
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_b(TestError("B side failed".to_string()), None, remaining.into_iter())
 }
@@ -82,7 +80,7 @@ fn error_side_into_error() {
 fn error_side_into_parts_with_unevaluated() {
     let error = create_a_error_with_unevaluated();
     let side = error.unwrap_a();
-    let parts = side.into_parts();
+    let parts = side.into_data();
 
     assert_eq!(parts.error, TestError("A side failed".to_string()));
     assert_eq!(parts.unevaluated, Some(20));
@@ -93,7 +91,7 @@ fn error_side_into_parts_with_unevaluated() {
 fn error_side_into_parts_without_unevaluated() {
     let error = create_a_error_without_unevaluated();
     let side = error.unwrap_a();
-    let parts = side.into_parts();
+    let parts = side.into_data();
 
     assert_eq!(parts.error, TestError("A side failed".to_string()));
     assert_eq!(parts.unevaluated, None);

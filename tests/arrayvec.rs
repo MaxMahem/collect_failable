@@ -1,120 +1,44 @@
+mod collection_tests;
+use collection_tests::{try_collect, try_extend, try_extend_safe};
+
 use arrayvec::ArrayVec;
-use collect_failable::{utils::FixedSizeHint, CapacityMismatch, TryExtend, TryExtendSafe, TryFromIterator};
 
-type TryFromArray<T> = ArrayVec<T, 2>;
-type ExtendArray<T> = ArrayVec<T, 4>;
+use collect_failable::utils::FixedSizeHintEx;
+use collect_failable::{CapacityMismatch, TryExtend, TryExtendSafe, TryFromIterator};
 
-const TOO_LONG_ARRAY: [u32; 3] = [1, 2, 3];
-const VALID_ARRAY: [u32; 2] = [1, 2];
-const EXTENDED_ARRAY: [u32; 4] = [1, 2, 1, 2];
+type TestArray = ArrayVec<u32, 2>;
 
-// Bounds errors occur when size hints indicate overflow (early return)
-const TRY_FROM_BOUNDS_ERR: CapacityMismatch = CapacityMismatch::bounds(2..=2, (3, Some(3)));
-const EXTEND_BOUNDS_ERR: CapacityMismatch = CapacityMismatch::bounds(4..=4, (3, Some(3)));
+mod try_from_iter {
+    use super::*;
 
-// Overflow errors occur when actual collection fails (after hidden size hints)
-const TRY_FROM_OVERFLOW_ERR: CapacityMismatch = CapacityMismatch::overflow(2..=2);
-const EXTEND_OVERFLOW_ERR: CapacityMismatch = CapacityMismatch::overflow(4..=4);
-
-#[test]
-fn try_from_iter_valid_array() {
-    let array: TryFromArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
-    assert_eq!(*array, VALID_ARRAY, "Should match data");
-}
-
-#[test]
-fn try_from_iter_too_long_data_early_return() {
-    let err = ArrayVec::<_, 2>::try_from_iter(TOO_LONG_ARRAY).expect_err("Should be err");
-    assert_eq!(err.error, TRY_FROM_BOUNDS_ERR, "Should match err");
-}
-
-#[test]
-fn try_from_iter_too_long_data_rollback() {
-    let iter = FixedSizeHint::hide_size(TOO_LONG_ARRAY);
-    let err = ArrayVec::<_, 2>::try_from_iter(iter).expect_err("Should be err");
-    assert_eq!(err.error, TRY_FROM_OVERFLOW_ERR, "Should match err");
+    try_collect!(valid, TestArray, 1..=2, Ok(ArrayVec::from_iter(1..=2)));
+    try_collect!(bounds, TestArray, 1..=3, Err(CapacityMismatch::bounds(0..=2, (3, Some(3)))));
+    try_collect!(overflow, TestArray, (1..=3).hide_size(), Err(CapacityMismatch::overflow(0..=2)));
 }
 
 #[test]
 fn try_from_iter_reconstruct() {
-    let err = ArrayVec::<_, 2>::try_from_iter([1, 2, 3]).expect_err("Should be err");
+    let err = TestArray::try_from_iter(1..=3).expect_err("Should be err");
 
-    let reconstructed: Vec<_> = err.into_iter().collect();
+    let reconstructed: Vec<u32> = err.into_iter().collect();
     assert_eq!(reconstructed.len(), 3, "Should reconstruct as: rejected, collected, remaining");
     assert!(reconstructed.contains(&1));
     assert!(reconstructed.contains(&2));
     assert!(reconstructed.contains(&3));
 }
 
-#[test]
-fn try_extend_safe_valid() {
-    let mut array: ExtendArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
+mod try_extend_safe {
+    use super::*;
 
-    array.try_extend_safe(VALID_ARRAY).expect("Should be ok");
-    assert_eq!(*array, EXTENDED_ARRAY, "Should match data");
+    try_extend_safe!(valid, TestArray::from_iter(3..=3), 3..=3, Ok(TestArray::from_iter([3, 3])));
+    try_extend_safe!(bound_fail, TestArray::from_iter(3..=3), 1..=3, Err(CapacityMismatch::bounds(0..=1, (1..=3).size_hint())));
+    try_extend_safe!(overflow, TestArray::from_iter(3..=3), (1..=2).hide_size(), Err(CapacityMismatch::overflow(0..=1)));
 }
 
-#[test]
-fn try_extend_safe_early_return() {
-    let mut array: ExtendArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
+mod try_extend {
+    use super::*;
 
-    let err = array.try_extend_safe(TOO_LONG_ARRAY).expect_err("Should fail early");
-    assert_eq!(err.error, EXTEND_BOUNDS_ERR);
-    assert_eq!(*array, VALID_ARRAY, "Should be unchanged");
-}
-
-#[test]
-fn try_extend_safe_rollback() {
-    let mut array: ExtendArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
-
-    let iter = FixedSizeHint::hide_size(TOO_LONG_ARRAY);
-    let err = array.try_extend_safe(iter).expect_err("Should rollback");
-
-    assert_eq!(err.error, EXTEND_OVERFLOW_ERR);
-    assert_eq!(*array, VALID_ARRAY, "Should be unchanged");
-}
-
-#[test]
-fn try_extend_valid() {
-    let mut array: ExtendArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
-
-    array.try_extend(VALID_ARRAY).expect("Should be ok");
-    assert_eq!(*array, EXTENDED_ARRAY, "Should match data");
-}
-
-#[test]
-fn try_extend_early_return() {
-    let mut array: ExtendArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
-
-    let err = array.try_extend(TOO_LONG_ARRAY).expect_err("Should fail early");
-    assert_eq!(err.error, EXTEND_BOUNDS_ERR);
-}
-
-#[test]
-fn try_extend_push_fail() {
-    let mut array: ExtendArray<_> = ArrayVec::try_from_iter(VALID_ARRAY).expect("Should be ok");
-
-    let iter = FixedSizeHint::hide_size(TOO_LONG_ARRAY);
-    let err = array.try_extend(iter).expect_err("Should rollback");
-
-    assert_eq!(err.error, EXTEND_OVERFLOW_ERR);
-}
-
-#[test]
-fn try_from_iter_exact_size_optimization() {
-    // Tests the exact-size optimization path (line 28): (_, Some(max)) if max <= N
-    // This path uses direct collect() instead of try_fold when size is known and fits
-    let data = [1u32, 2u32];
-    let array: ArrayVec<_, 2> = ArrayVec::try_from_iter(data).expect("Should succeed");
-    assert_eq!(*array, data, "Should match via exact-size path");
-}
-
-#[test]
-fn try_from_iter_hidden_size_success() {
-    // Tests the try_fold success path with hidden size hints
-    // Complements try_from_iter_too_long_data_rollback by testing success case
-    let iter = FixedSizeHint::hide_size([1u32, 2u32]);
-    let array: ArrayVec<_, 3> = ArrayVec::try_from_iter(iter).expect("Should succeed");
-    assert_eq!(array.len(), 2, "Should collect both items");
-    assert!(array.contains(&1) && array.contains(&2), "Should contain correct items");
+    try_extend!(valid, ArrayVec::<u32, 2>::from_iter(3..=3), 3..=3, Ok(ArrayVec::from_iter([3, 3])));
+    try_extend!(bounds_fail, ArrayVec::<u32, 2>::from_iter(3..=3), 1..=3, Err(CapacityMismatch::bounds(0..=1, (3, Some(3)))));
+    try_extend!(overflow, ArrayVec::<u32, 2>::from_iter(3..=3), (1..=2).hide_size(), Err(CapacityMismatch::overflow(0..=1)));
 }

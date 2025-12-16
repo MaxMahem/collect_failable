@@ -19,7 +19,7 @@ fn try_unzip_collision_example() {
 
     match vec![(1, "a"), (2, "b"), (1, "c"), (3, "d")].into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>() {
         Err(UnzipError::A(err_a)) => {
-            let err_a = err_a.into_parts(); // take ownership of the error data
+            let err_a = err_a.into_data(); // take ownership of the error data
             assert_eq!(err_a.error.item, 1);
 
             // The incomplete collection from the non-failing side

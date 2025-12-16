@@ -39,7 +39,7 @@ fn zip_error_side_into_err() {
 
 #[test]
 fn zip_error_side_into_parts() {
-    let parts = create_a_error().expect_a("Should fail on A side").into_parts();
+    let parts = create_a_error().expect_a("Should fail on A side").into_data();
 
     assert_eq!(parts.error.item, 1);
     assert_eq!(parts.incomplete, HashSet::from([10, 20]));
@@ -57,12 +57,12 @@ test_format!(zip_error_side_debug, create_a_error().unwrap_a(), "{:?}", EXPECTED
 fn zip_error_side_a_source() {
     let error = create_a_error();
     let source = error.source().expect("Should have error source");
-    assert!(source.is::<CollectionCollision<u32, Once<u32>, Collection>>());
+    assert!(source.is::<CollectionCollision<Once<u32>, Collection>>());
 }
 
 #[test]
 fn zip_error_side_b_source() {
     let error = create_b_error();
     let source = error.source().expect("Should have error source");
-    assert!(source.is::<CollectionCollision<u32, Once<u32>, Collection>>());
+    assert!(source.is::<CollectionCollision<Once<u32>, Collection>>());
 }

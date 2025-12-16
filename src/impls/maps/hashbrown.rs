@@ -5,11 +5,11 @@ use hashbrown::HashMap;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for HashMap<K, V>
+impl<K: Eq + Hash, V, I> TryFromIterator<I> for HashMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Converts `iter` into a [`HashMap`], failing if a key would collide.
     ///
@@ -32,11 +32,11 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtend<(K, V), I> for HashMap<K, V, S>
+impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtend<I> for HashMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtendSafe<(K, V), I> for HashMap<K, V, S>
+impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtendSafe<I> for HashMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {

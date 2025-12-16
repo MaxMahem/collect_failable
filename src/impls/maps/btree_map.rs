@@ -4,11 +4,11 @@ use fluent_result::expect::dbg::ExpectNone;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-impl<K: Ord, V, I> TryFromIterator<(K, V), I> for BTreeMap<K, V>
+impl<K: Ord, V, I> TryFromIterator<I> for BTreeMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Converts `iter` into a [`BTreeMap`], failing if a key would collide.
     ///
@@ -26,11 +26,11 @@ where
     }
 }
 
-impl<K: Ord, V, I> TryExtend<(K, V), I> for BTreeMap<K, V>
+impl<K: Ord, V, I> TryExtend<I> for BTreeMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, Self>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -48,7 +48,7 @@ where
     }
 }
 
-impl<K: Ord, V, I> TryExtendSafe<(K, V), I> for BTreeMap<K, V>
+impl<K: Ord, V, I> TryExtendSafe<I> for BTreeMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {

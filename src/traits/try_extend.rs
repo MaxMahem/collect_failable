@@ -17,10 +17,7 @@ use std::collections::HashMap;
 /// elements in the iterator in order to optimize their implementations. An iterator that violates
 /// the bounds returned by [`Iterator::size_hint`] may cause panics, produce incorrect results, or
 /// produce a result that violates container constraints, but must not result in undefined behavior.
-pub trait TryExtend<T, I>
-where
-    I: IntoIterator<Item = T>,
-{
+pub trait TryExtend<I: IntoIterator> {
     /// Error type returned by the fallible extension methods.
     type Error;
 
@@ -59,10 +56,7 @@ where
 /// An iterator that violates the bounds returned by [`Iterator::size_hint`] may cause panics,
 /// produce incorrect results, or produce a result that violates container constraints, but must
 /// not result in undefined behavior.
-pub trait TryExtendSafe<T, I>: TryExtend<T, I>
-where
-    I: IntoIterator<Item = T>,
-{
+pub trait TryExtendSafe<I: IntoIterator>: TryExtend<I> {
     /// Tries to extends the collection providing a **strong error guarantee**.
     ///
     /// On failure, the collection must remain unchanged. Implementors may need to buffer

@@ -10,6 +10,13 @@ use tap::Pipe;
 /// This error preserves both the iterator error (the first [`Err`] encountered),
 /// the partial collection result (which may be [`Ok`] with a partial collection
 /// or [`Err`] with a collection error), and the remaining iterator.
+///
+/// # Type Parameters
+///
+/// - `E`: The type of the iterator error.
+/// - `C`: The type of the collection.
+/// - `CErr`: The type of the collection error.
+/// - `I`: The type of the remaining iterator.
 #[subdef::subdef]
 #[derive(derive_more::Deref)]
 #[deref(forward)]
@@ -59,7 +66,7 @@ impl<E, C, CErr, I> ResultCollectionError<E, C, CErr, I> {
     /// Consumes the error, returning a [`ResultCollectionErrorData`] containing the
     /// `iterator_error`, `collection_result`, and `iter`.
     #[must_use]
-    pub fn into_parts(self) -> ResultCollectionErrorData<E, C, CErr, I> {
+    pub fn into_data(self) -> ResultCollectionErrorData<E, C, CErr, I> {
         *self.0
     }
 }
@@ -92,11 +99,10 @@ impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectionError<E, C, CErr, I>
 
 impl<E: Display, C, CErr: Display, I> Display for ResultCollectionError<E, C, CErr, I> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Iterator error: {}", self.iteration_error)?;
-        if let Err(e) = &self.collection_result {
-            write!(f, "; Collection error: {e}")?;
-        }
-        Ok(())
+        write!(f, "Iterator error: {}", self.iteration_error).and_then(|()| match &self.collection_result {
+            Err(e) => write!(f, "; Collection error: {e}"),
+            _ => Ok(()),
+        })
     }
 }
 

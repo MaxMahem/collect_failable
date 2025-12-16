@@ -5,7 +5,7 @@ use crate::TryFromIterator;
 use std::collections::HashMap;
 
 use std::fmt::{Debug, Formatter};
-use std::iter::Chain;
+use std::iter::{Chain, Once};
 
 use tap::Pipe;
 
@@ -19,47 +19,36 @@ use tap::Pipe;
 #[derive(derive_more::Deref, thiserror::Error)]
 #[error("Collection collision")]
 #[deref(forward)]
-pub struct CollectionCollision<T, I, C>(
-    [Box<ReadOnlyCollectionCollision<T, I, C>>; {
+pub struct CollectionCollision<I: Iterator, C>(
+    [Box<CollectionCollisionData<I, C>>; {
         /// A read only version of [`CollectionCollision`].
-        pub struct ReadOnlyCollectionCollision<T, I, C>
-        where
-            I: Iterator<Item = T>,
-            C: IntoIterator<Item = T>,
-        {
+        pub struct CollectionCollisionData<I: Iterator, C> {
             /// The iterator that was partially iterated
             pub iterator: I,
             /// The values that were collected
             pub collected: C,
             /// The item that caused the collision
-            pub item: T,
+            pub item: I::Item,
         }
     }],
-)
-where
-    I: Iterator<Item = T>,
-    C: IntoIterator<Item = T>;
+);
 
-impl<T, I, C> CollectionCollision<T, I, C>
-where
-    I: Iterator<Item = T>,
-    C: IntoIterator<Item = T>,
-{
+impl<I: Iterator, C> CollectionCollision<I, C> {
     /// Creates a new [`CollectionCollision`] from an `iterator`, `collected` values, and a colliding `item`.
-    pub fn new(iterator: I, collected: C, item: T) -> Self {
-        ReadOnlyCollectionCollision { iterator, collected, item }.pipe(Box::new).pipe(CollectionCollision)
+    pub fn new(iterator: I, collected: C, item: I::Item) -> Self {
+        CollectionCollisionData { iterator, collected, item }.pipe(Box::new).pipe(CollectionCollision)
     }
 
     /// Consumes the error, returning the colliding item.
     #[must_use]
-    pub fn into_item(self) -> T {
+    pub fn into_item(self) -> I::Item {
         self.0.item
     }
 
     /// Consumes the error, returning a [`ReadOnlyCollectionCollision`] containing the `iterator`,
     /// `collected` values, and colliding `item`.
     #[must_use]
-    pub fn into_parts(self) -> ReadOnlyCollectionCollision<T, I, C> {
+    pub fn into_data(self) -> CollectionCollisionData<I, C> {
         *self.0
     }
 
@@ -84,13 +73,9 @@ where
     }
 }
 
-impl<T, I, C> IntoIterator for CollectionCollision<T, I, C>
-where
-    I: Iterator<Item = T>,
-    C: IntoIterator<Item = T>,
-{
-    type Item = T;
-    type IntoIter = Chain<Chain<std::iter::Once<T>, C::IntoIter>, I>;
+impl<I: Iterator, C: IntoIterator<Item = I::Item>> IntoIterator for CollectionCollision<I, C> {
+    type Item = I::Item;
+    type IntoIter = Chain<Chain<Once<I::Item>, C::IntoIter>, I>;
 
     /// Consumes the error, returning an iterator over the colliding `item`, the `collected` values,
     /// and the remaining `iterator`, in that order.
@@ -102,15 +87,11 @@ where
     }
 }
 
-impl<T, I, C> Debug for CollectionCollision<T, I, C>
-where
-    I: Iterator<Item = T>,
-    C: IntoIterator<Item = T>,
-{
+impl<I: Iterator, C> Debug for CollectionCollision<I, C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CollectionCollision")
             .field("collected", &std::any::type_name::<C>())
-            .field("item", &std::any::type_name::<T>())
+            .field("item", &std::any::type_name::<I::Item>())
             .field("iterator", &std::any::type_name::<I>())
             .finish()
     }

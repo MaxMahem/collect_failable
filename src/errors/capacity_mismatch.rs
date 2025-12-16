@@ -32,34 +32,9 @@ pub struct CapacityMismatch {
         }
     }],
 }
-// pub enum CountMismatch {
-//     /// The bounds provided by [`Iterator::size_hint`] were out of bounds.
-//     #[error("Out of bounds expected {expected}, bound {bound}")]
-//     OutOfBounds {
-//         /// The expected value
-//         expected: usize,
-//         /// The indicated bound
-//         bound: usize,
-//     },
-
-//     /// The [`Iterator`] exceeded the expected capacity.
-//     #[error("Exceeds capacity ({capacity})")]
-//     Exceeded {
-//         /// The expected capacity
-//         capacity: usize,
-//     },
-//     /// The [`Iterator`] did not produce the expected number of items
-//     #[error("Mismatch: expected {expected}, actual {actual}")]
-//     Mismatch {
-//         /// The expected number of items
-//         expected: usize,
-//         /// The actual number of items
-//         actual: usize,
-//     },
-// }
 
 impl CapacityMismatch {
-    /// Creates a new [`CountMismatch`] indicating that the bounds provided by [`Iterator::size_hint`] were out of bounds.
+    /// Creates a new [`CapacityMismatch`] indicating that the bounds provided by [`Iterator::size_hint`] were out of bounds.
     ///
     /// # Panics
     ///
@@ -79,13 +54,13 @@ impl CapacityMismatch {
         }
     }
 
-    /// Creates a new [`CountMismatch`] indicating that the iterator exceeded the expected capacity.
+    /// Creates a new [`CapacityMismatch`] indicating that the iterator exceeded the expected capacity.
     #[must_use]
     pub const fn overflow(capacity: RangeInclusive<usize>) -> Self {
         Self { capacity: *capacity.start()..capacity.end().saturating_add(1), kind: MismatchKind::Overflow }
     }
 
-    /// Creates a new [`CountMismatch`] indicating that the iterator did not produce the expected number of items.
+    /// Creates a new [`CapacityMismatch`] indicating that the iterator did not produce the expected number of items.
     ///
     /// # Panics
     ///

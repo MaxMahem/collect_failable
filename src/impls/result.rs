@@ -144,10 +144,10 @@ where
 /// ```rust
 #[doc = include_doc::function_body!("tests/doc/result.rs", error_recovery_example, [])]
 /// ```
-impl<I, T, E, C> TryFromIterator<Result<T, E>, I> for Result<C, C::Error>
+impl<I, T, E, C> TryFromIterator<I> for Result<C, C::Error>
 where
     I: IntoIterator<Item = Result<T, E>>,
-    C: TryFromIterator<T, ExtractErr<I::IntoIter, E>>,
+    C: TryFromIterator<ExtractErr<I::IntoIter, E>>,
 {
     type Error = ResultCollectionError<E, C, C::Error, Either<I::IntoIter, iter::Empty<Result<T, E>>>>;
 
@@ -167,9 +167,7 @@ where
             (ExtractErrState { error: None, .. }, Ok(v)) => Ok(Ok(v)), // iter without err, and successful collect
             (ExtractErrState { error: None, .. }, Err(e)) => Ok(Err(e)), // iter without err, but collect failed
             // errored during iter, collect may have succeeded or failed.
-            (ExtractErrState { error: Some(error), iter }, result) => {
-                Err(ResultCollectionError::new(error, result, iter))
-            }
+            (ExtractErrState { error: Some(error), iter }, result) => Err(ResultCollectionError::new(error, result, iter)),
         }
     }
 }

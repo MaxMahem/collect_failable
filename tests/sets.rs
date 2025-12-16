@@ -19,7 +19,7 @@ macro_rules! try_from_iter_and_extend_iter {
                 let err = <$set_type>::try_from_iter(COLLIDE_WITH_SELF).expect_err("should be err");
                 assert_eq!(err.len(), 5, "should have 5 items");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
 
                 let expected_collected = <$set_type>::from([3, 4]);
                 assert_eq!(parts.collected, expected_collected, "collected should have items before collision");
@@ -46,7 +46,7 @@ macro_rules! try_from_iter_and_extend_iter {
 
                 assert_eq!(set, <$set_type>::from(UNIQUE_VALUES), "set should be unchanged");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
 
                 // try_extend_safe doesn't add to collected on collision
                 assert_eq!(parts.collected.len(), 2, "collected should have 2 items before collision");
@@ -67,7 +67,7 @@ macro_rules! try_from_iter_and_extend_iter {
 
                 assert_eq!(set, <$set_type>::from(UNIQUE_VALUES), "set should be unchanged");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
 
                 // Should have collected items before collision
                 assert_eq!(parts.collected.len(), 2, "collected should have 2 items before collision");
@@ -100,7 +100,7 @@ macro_rules! try_from_iter_and_extend_iter {
                 assert!(set.contains(&3), "set should have 3 from successful insert");
                 assert!(set.contains(&4), "set should have 4 from successful insert");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
 
                 // try_extend doesn't collect items in the error
                 assert_eq!(parts.collected.len(), 0, "collected should be empty");
@@ -122,7 +122,7 @@ macro_rules! try_from_iter_and_extend_iter {
                 assert!(set.contains(&3), "set should have 3");
                 assert!(set.contains(&4), "set should have 4");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
 
                 // try_extend doesn't collect items in the error
                 assert_eq!(parts.collected.len(), 0, "collected should be empty");
@@ -152,7 +152,7 @@ macro_rules! try_from_iter_and_extend_iter {
 
                 let err = set.try_extend(std::iter::once(v2)).expect_err("should be err");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
                 assert_eq!(parts.item.value, 1, "should return collision with value 1");
                 assert_eq!(parts.item.id, 2, "colliding item should have id 2");
 

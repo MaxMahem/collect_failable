@@ -15,8 +15,7 @@ fn create_err_collection() -> ResultCollectionError<TestError, Collection, TestE
 }
 
 const EXPECTED_DISPLAY_OK: &str = "Iterator error: Test error: iter error";
-const EXPECTED_DISPLAY_ERR: &str =
-    "Iterator error: Test error: iter error; Collection error: Test error: collection error";
+const EXPECTED_DISPLAY_ERR: &str = "Iterator error: Test error: iter error; Collection error: Test error: collection error";
 const EXPECTED_DEBUG: &str =
     "ResultIterError { iteration_error: TestError { identity: \"iter error\" }, collection_result: Ok(...), result_iter: \"core::iter::sources::empty::Empty<u32>\" }";
 
@@ -44,14 +43,14 @@ fn into_collection_result_err() {
 
 #[test]
 fn into_parts_ok() {
-    let parts = create_err().into_parts();
+    let parts = create_err().into_data();
     assert_eq!(parts.iteration_error, TestError::new("iter error"));
     assert_eq!(parts.collection_result, Ok(HashSet::from([1, 2, 3])));
 }
 
 #[test]
 fn into_parts_err() {
-    let parts = create_err_collection().into_parts();
+    let parts = create_err_collection().into_data();
     assert_eq!(parts.iteration_error, TestError::new("iter error"));
     assert_eq!(parts.collection_result, Err(TestError::new("collection error")));
 }

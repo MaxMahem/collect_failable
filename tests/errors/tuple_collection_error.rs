@@ -50,7 +50,7 @@ fn error_side_into_error() {
 fn error_side_into_parts() {
     let error = create_a_error();
     let side = error.unwrap_a();
-    let parts = side.into_parts();
+    let parts = side.into_data();
 
     assert_eq!(parts.error, TestError::new("A side failed"));
     assert_eq!(parts.from, vec![1, 2, 3]);

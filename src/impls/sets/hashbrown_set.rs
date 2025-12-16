@@ -5,11 +5,11 @@ use hashbrown::HashSet;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-impl<T: Eq + Hash, I> TryFromIterator<T, I> for HashSet<T>
+impl<T: Eq + Hash, I> TryFromIterator<I> for HashSet<T>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<T, I::IntoIter, Self>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Converts `iter` into a [`HashSet`], failing if a value would collide.
     ///
@@ -32,11 +32,11 @@ where
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher, I> TryExtend<T, I> for HashSet<T, S>
+impl<T: Eq + Hash, S: BuildHasher, I> TryExtend<I> for HashSet<T, S>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<T, I::IntoIter, HashSet<T>>;
+    type Error = CollectionCollision<I::IntoIter, HashSet<T>>;
 
     /// Extends the set with `iter`, failing if a value would collide, with a basic error guarantee.
     ///
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher, I> TryExtendSafe<T, I> for HashSet<T, S>
+impl<T: Eq + Hash, S: BuildHasher, I> TryExtendSafe<I> for HashSet<T, S>
 where
     I: IntoIterator<Item = T>,
 {

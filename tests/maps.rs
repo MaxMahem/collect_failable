@@ -19,7 +19,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 let err = <$map_type>::try_from_iter(COLLIDE_WITH_REMAINING).expect_err("should be err");
                 assert_eq!(err.len(), 5, "should have 5 items");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
 
                 let expected_collected = <$map_type>::from([(1, 2), (2, 3)]);
                 assert_eq!(parts.collected, expected_collected, "collected should have items before collision");
@@ -61,7 +61,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
 
                 assert_eq!(map, <$map_type>::from(UNIQUE_KEYS), "map should be unchanged");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
 
                 // try_extend_safe doesn't add to collected on collision
                 assert_eq!(parts.collected.len(), 1, "collected should have 1 item before collision");
@@ -82,7 +82,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
 
                 assert_eq!(map, <$map_type>::from(UNIQUE_KEYS), "map should be unchanged");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
 
                 // Should have collected items before collision (both (3,3) and (4,4))
                 assert_eq!(parts.collected.len(), 2, "collected should have 2 items before collision");
@@ -115,7 +115,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 assert_eq!(map.len(), 3, "map should have original 2 items plus 1 added before collision");
                 assert_eq!(map.get(&3), Some(&3), "map should have (3, 3) from successful insert");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
 
                 // try_extend doesn't collect items in the error
                 assert_eq!(parts.collected.len(), 0, "collected should be empty");
@@ -138,7 +138,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 assert_eq!(map.get(&3), Some(&3), "map should have (3, 3)");
                 assert_eq!(map.get(&4), Some(&4), "map should have (4, 4)");
 
-                let parts = err.into_parts();
+                let parts = err.into_data();
 
                 // try_extend doesn't collect items in the error
                 assert_eq!(parts.collected.len(), 0, "collected should be empty");

@@ -5,7 +5,7 @@ use crate::test_macros::{getter, into_iterator, test_format};
 
 type Collection = HashSet<u32>;
 
-fn create_collision() -> CollectionCollision<u32, std::vec::IntoIter<u32>, Collection> {
+fn create_collision() -> CollectionCollision<std::vec::IntoIter<u32>, Collection> {
     let collected = HashSet::from([1, 2]);
     let item = 4; // Collides with item in collected
     let iterator = vec![3].into_iter(); // Remaining items
@@ -22,7 +22,7 @@ test_format!(display_format, create_collision(), "{}", EXPECTED_DISPLAY);
 #[test]
 fn into_parts() {
     let error = create_collision();
-    let parts = error.into_parts();
+    let parts = error.into_data();
 
     assert_eq!(parts.item, 4);
     assert_eq!(parts.collected, HashSet::from([1, 2]));
