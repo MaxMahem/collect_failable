@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
- - **Breaking:** Moved generic iterator parameter `I` from method level to trait level in `TryFromIterator`. The trait signature changed from `TryFromIterator<T>` to `TryFromIterator<T, I>`. This allows the error type to see the iterator type, which is useful for error recovery. Most user code remains compatible due to type inference.
+ - **Breaking:** Moved generic iterator parameter `I` from method level to trait level in `TryFromIterator`. The trait signature changed from `TryFromIterator<T>` to `TryFromIterator<I>`. This allows the error type to see the iterator type, which is useful for error recovery. Most user code remains compatible due to type inference.
 
 Change the error types of most implementations to allow recovering the consumed data on an error.
 
