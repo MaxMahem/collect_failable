@@ -1,8 +1,11 @@
+mod collection_tests;
+use collection_tests::{try_extend, try_extend_one, try_extend_safe};
+
 use std::collections::{BTreeMap, HashMap};
 
 use hashbrown::HashMap as HashBrownMap;
 
-use collect_failable::{TryExtend, TryExtendSafe, TryFromIterator};
+use collect_failable::{ItemCollision, TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 const UNIQUE_KEYS: [(i32, i32); 2] = [(1, 2), (2, 3)];
 const COLLIDE_WITH_SELF: [(i32, i32); 3] = [(3, 3), (4, 4), (3, 5)];
@@ -96,14 +99,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 assert_eq!(remaining.len(), 0, "remaining should be empty");
             }
 
-            #[test]
-            fn try_extend_safe_no_collision() {
-                let mut map = <$map_type>::new();
-
-                map.try_extend_safe(UNIQUE_KEYS).expect("should be ok");
-
-                assert_eq!(map, <$map_type>::from(UNIQUE_KEYS), "should match data");
-            }
+            try_extend_safe!(try_extend_safe_no_collision, <$map_type>::new(), UNIQUE_KEYS, Ok(<$map_type>::from(UNIQUE_KEYS)));
 
             #[test]
             fn try_extend_collision_with_map() {
@@ -150,13 +146,13 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 assert_eq!(remaining.len(), 0, "remaining should be empty");
             }
 
-            #[test]
-            fn try_extend_no_collision() {
-                let mut map = <$map_type>::new();
+            try_extend!(try_extend_no_collision, <$map_type>::new(), UNIQUE_KEYS, Ok(<$map_type>::from(UNIQUE_KEYS)));
 
-                map.try_extend(UNIQUE_KEYS).expect("should be ok");
+            mod try_extend_one {
+                use super::*;
 
-                assert_eq!(map, <$map_type>::from(UNIQUE_KEYS), "should match data");
+                try_extend_one!(valid, <$map_type>::new(), (1, 1), Ok(<$map_type>::from([(1, 1)])));
+                try_extend_one!(collision, <$map_type>::from([(1, 1), (2, 2)]), (1, 2), Err(ItemCollision::new((1, 2))));
             }
         }
     };

@@ -74,3 +74,17 @@ where
         .map_err(|(set, value)| CollectionCollision::new(iter, set, value))
     }
 }
+
+impl<T: Ord> crate::TryExtendOne<T> for BTreeSet<T> {
+    type Error = crate::ItemCollision<T>;
+
+    fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error> {
+        match self.contains(&item) {
+            true => Err(crate::ItemCollision::new(item)),
+            false => {
+                self.insert(item);
+                Ok(())
+            }
+        }
+    }
+}

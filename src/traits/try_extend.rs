@@ -77,3 +77,39 @@ pub trait TryExtendSafe<I: IntoIterator>: TryExtend<I> {
     /// ```
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error>;
 }
+
+/// Extension trait providing convenience method for extending a collection with a single item.
+///
+/// Unlike [`TryExtend`], this trait works with individual items rather than iterators, it always
+/// should provide a strong error guarantee, guaranteeing that the collection remains unchanged on error.
+pub trait TryExtendOne<T> {
+    /// Error type returned by [`try_extend_one`](TryExtendOne::try_extend_one).
+    type Error;
+
+    /// Tries to extend the collection with a single item.
+    ///
+    /// This method provides a **strong error guarantee**: on failure, the collection
+    /// remains unchanged.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the extension fails (e.g., due to capacity limits or
+    /// key collisions).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use collect_failable::TryExtendOne;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut map = HashMap::from([(1, 2)]);
+    /// map.try_extend_one((2, 3)).expect("should succeed");
+    /// assert_eq!(map.get(&2), Some(&3));
+    ///
+    /// // Collision error
+    /// let err = map.try_extend_one((1, 5)).expect_err("should collide");
+    /// assert_eq!(err.item, (1, 5));
+    /// assert_eq!(map.get(&1), Some(&2)); // Original value unchanged
+    /// ```
+    fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error>;
+}

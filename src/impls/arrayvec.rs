@@ -1,4 +1,4 @@
-use arrayvec::ArrayVec;
+use arrayvec::{ArrayVec, CapacityError};
 use fluent_result::into::IntoResult;
 
 use crate::{CapacityMismatch, CollectionError, TryExtend, TryExtendSafe, TryFromIterator};
@@ -87,5 +87,13 @@ where
                 .try_for_each(|item| self.try_push(item))
                 .map_err(|err| CollectionError::overflow(iter, self.drain(len..).collect(), err.element(), 0..=remaining)),
         }
+    }
+}
+
+impl<T, const N: usize> crate::TryExtendOne<T> for ArrayVec<T, N> {
+    type Error = CapacityError<T>;
+
+    fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error> {
+        self.try_push(item)
     }
 }

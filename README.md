@@ -15,6 +15,7 @@ This crate provides several complementary traits for failable collection:
 - `TryFromIterator` – build a new container from an iterator, returning an error when invariants can't be satisfied.
 - `TryCollectEx` – ergonomic `collect`-style extension for iterator consumers, forwarding a call to `TryFromIterator`.
 - `TryExtend` – fallible extend operations with strong and basic error guarantees variants.
+- `TryExtendOne` – extend with a single item, providing cleaner error types and strong guarantees.
 - `TryUnzip` – `unzip` an iterator of pairs into two fallible containers.
 - `FoldMut` – `fold`-style extension building a collection via mutation rather than move.
 
@@ -66,6 +67,26 @@ assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 map.try_extend_safe([(1, 3)]).expect_err("should be Err");
 assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 ```
+
+### `TryExtendOne`
+
+Extend a collection with a single item. This trait always provides a **strong guarantee**: on failure, the collection remains unchanged.
+
+```rust
+use std::collections::HashMap;
+use collect_failable::TryExtendOne;
+
+let mut map = HashMap::new();
+map.try_extend_one((1, 2)).expect("should be Ok");
+map.try_extend_one((2, 3)).expect("should be Ok");
+
+// Error type just contains the rejected item
+let err = map.try_extend_one((1, 5)).expect_err("should collide");
+assert_eq!(err.item, (1, 5)); // Simple ItemCollision error
+assert_eq!(map.get(&1), Some(&2)); // Original value unchanged
+```
+
+**Note**: Tuples do not implement `TryExtendOne` because they cannot provide atomic single-item guarantees. Use `try_extend(std::iter::once(item))` instead.
 
 ### `TryUnzip`
 

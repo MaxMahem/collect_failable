@@ -78,3 +78,18 @@ where
         .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
     }
 }
+
+impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne<(K, V)> for IndexMap<K, V, S> {
+    type Error = crate::ItemCollision<(K, V)>;
+
+    fn try_extend_one(&mut self, item: (K, V)) -> Result<(), Self::Error> {
+        let (key, value) = item;
+        match self.contains_key(&key) {
+            true => Err(crate::ItemCollision::new((key, value))),
+            false => {
+                self.insert(key, value);
+                Ok(())
+            }
+        }
+    }
+}

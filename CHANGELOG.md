@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+ - Added `TryExtendOne` trait for extending collections with a single item, providing cleaner error types and strong error guarantees.
+ - Added `ItemCollision<T>` error type for single-item collection collisions (maps and sets).
  - Added `ReadOnlyPartialIterErr` and `PartialIterErr` for returning errors from failable collection methods.
  - Added `CollectionCollision` for returning errors when a collision occurs during a collection operation.
  - Added `TupleCollectionError` and `TupleExtensionError` for returning errors when a tuple collection operation fails.

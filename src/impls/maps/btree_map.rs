@@ -71,3 +71,18 @@ where
         .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
     }
 }
+
+impl<K: Ord, V> crate::TryExtendOne<(K, V)> for BTreeMap<K, V> {
+    type Error = crate::ItemCollision<(K, V)>;
+
+    fn try_extend_one(&mut self, item: (K, V)) -> Result<(), Self::Error> {
+        let (key, value) = item;
+        match self.contains_key(&key) {
+            true => Err(crate::ItemCollision::new((key, value))),
+            false => {
+                self.insert(key, value).expect_none("should not be occupied");
+                Ok(())
+            }
+        }
+    }
+}

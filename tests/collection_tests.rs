@@ -75,9 +75,40 @@ macro_rules! try_extend {
     };
 }
 
+/// Macro for try_extend_one tests
+///
+/// Supports:
+/// - `try_extend_one!(name, initial_collection, item, Ok(expected))`
+/// - `try_extend_one!(name, initial_collection, item, Err(expected_item))`
+/// - `try_extend_one!(name, initial_collection, item, Err(expected_item) with |err| { custom assertions })`
+#[allow(unused_macros)]
+macro_rules! try_extend_one {
+    ($name:ident, $initial:expr, $item:expr, Ok($expected:expr)) => {
+        #[test]
+        fn $name() {
+            let mut collection = $initial;
+            collection.try_extend_one($item).expect("should extend successfully");
+            assert_eq!(collection, $expected, "should match expected value");
+        }
+    };
+
+    ($name:ident, $initial:expr, $item:expr, Err($expected:expr)) => {
+        #[test]
+        fn $name() {
+            let mut collection = $initial;
+            let initial_clone = collection.clone();
+            let err = collection.try_extend_one($item).expect_err("should fail to extend");
+            assert_eq!(err, $expected, "should return rejected item");
+            assert_eq!(collection, initial_clone, "should be unchanged on error");
+        }
+    };
+}
+
 #[allow(unused_imports)]
 pub(crate) use try_collect;
 #[allow(unused_imports)]
 pub(crate) use try_extend;
+#[allow(unused_imports)]
+pub(crate) use try_extend_one;
 #[allow(unused_imports)]
 pub(crate) use try_extend_safe;
