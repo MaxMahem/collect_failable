@@ -1,6 +1,6 @@
 use super::collection_tests::try_collect;
 
-use collect_failable::utils::FixedSizeHint;
+use crate::utils::FixedSizeHint;
 use collect_failable::{CapacityMismatch, TryFromIterator};
 
 const TOO_SHORT_HINT_ERR: CapacityMismatch = CapacityMismatch::bounds(2..=2, (1, Some(1)));

@@ -112,8 +112,6 @@ assert_eq!(chars, HashSet::from(['a', 'b', 'c']));
 
 Also included a series of utility functions, including:
 * `fold_mut` and `try_fold_mut` for folding an iterator into a mutable accumulator. Useful for implementing `TryFromIterator`.
-* `FixedSizeHint` and `FixedSizeHintEx` for hiding the size hint of an iterator in tests.
-* `Identifiable` for a value who's identity can differ from its `Eq` identity, useful for telling if an equal value has been overwritten dor testing.
 
 ## Implementations
 

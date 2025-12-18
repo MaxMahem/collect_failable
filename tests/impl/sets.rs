@@ -4,7 +4,7 @@ use std::collections::{BTreeSet, HashSet};
 
 use hashbrown::HashSet as HashBrownSet;
 
-use collect_failable::utils::Identifiable;
+use crate::utils::Identifiable;
 use collect_failable::{ItemCollision, TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 macro_rules! try_from_iter_and_extend_iter {

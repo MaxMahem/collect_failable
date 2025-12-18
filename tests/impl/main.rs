@@ -8,3 +8,6 @@ mod result_iterator_recovery;
 mod sets;
 mod try_unzip;
 mod tuples;
+
+#[path = "../utils/mod.rs"]
+mod utils;

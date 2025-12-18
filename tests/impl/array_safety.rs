@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::panic::{self, AssertUnwindSafe};
 use std::rc::Rc;
 
-use collect_failable::utils::FixedSizeHintEx;
+use crate::utils::FixedSizeHintEx;
 use collect_failable::TryFromIterator;
 
 #[derive(Debug, Clone, Default)]
