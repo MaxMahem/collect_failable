@@ -16,8 +16,5 @@ mod traits;
 #[cfg(feature = "utils")]
 pub mod utils;
 
-#[cfg(not(feature = "utils"))]
-mod utils;
-
 pub use errors::*;
 pub use traits::*;
