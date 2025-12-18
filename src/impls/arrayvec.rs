@@ -1,7 +1,7 @@
-use arrayvec::ArrayVec;
-use fluent_result::bool::Then;
+use arrayvec::{ArrayVec, CapacityError};
+use fluent_result::into::IntoResult;
 
-use crate::{CollectionError, ExceedsCapacity, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::{CapacityMismatch, CollectionError, TryExtend, TryExtendSafe, TryFromIterator};
 
 /// Tries to create an [`ArrayVec`] from an iterator.
 ///
@@ -12,41 +12,35 @@ use crate::{CollectionError, ExceedsCapacity, TryExtend, TryExtendSafe, TryFromI
 /// ```rust
 #[doc = include_doc::function_body!("tests/doc/arrayvec.rs", try_from_iter_arrayvec_example, [])]
 /// ```
-impl<T, I, const N: usize> TryFromIterator<T, I> for ArrayVec<T, N>
+impl<T, I, const N: usize> TryFromIterator<I> for ArrayVec<T, N>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionError<T, I::IntoIter, ArrayVec<T, N>, ExceedsCapacity>;
+    type Error = CollectionError<I::IntoIter, Self, CapacityMismatch>;
 
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut iter = into_iter.into_iter();
 
         match iter.size_hint() {
-            (min, _) if min > N => {
-                let err = ExceedsCapacity::new(N, min);
-                return Err(CollectionError::new(iter, ArrayVec::new(), None, err));
-            }
-            (_, Some(max)) if max <= N => return Ok(iter.collect()),
-            _ => (),
+            (min, _) if min > N => CollectionError::bounds(iter, 0..=N).into_err(),
+            (_, Some(max)) if max <= N => iter.collect::<Self>().into_ok(),
+            _ => iter
+                .try_fold(Self::new(), |mut array, item| match array.try_push(item) {
+                    Ok(()) => Ok(array),
+                    Err(capacity_err) => Err((array, capacity_err.element())),
+                })
+                .map_err(|(array, reject)| CollectionError::overflow(iter, array, reject, 0..=N)),
         }
-
-        iter.try_fold(ArrayVec::new(), |mut array, item| match array.try_push(item) {
-            Ok(()) => Ok(array),
-            Err(capacity_err) => Err((array, capacity_err.element())),
-        })
-        .map_err(|(array, rejected_item)| {
-            CollectionError::new(iter, array, Some(rejected_item), ExceedsCapacity::new(N, N + 1))
-        })
     }
 }
 
 /// Extends an [`ArrayVec`] with an iterator, failing if the iterator produces more items than the [`ArrayVec`]'s
 /// remaining capacity.
-impl<T, const N: usize, I> TryExtend<T, I> for ArrayVec<T, N>
+impl<T, const N: usize, I> TryExtend<I> for ArrayVec<T, N>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = ExceedsCapacity;
+    type Error = CollectionError<I::IntoIter, Vec<T>, CapacityMismatch>;
 
     /// Appends an iterator to the [`ArrayVec`], failing if the iterator produces more items than the [`ArrayVec`]'s
     /// remaining capacity.
@@ -61,15 +55,17 @@ where
     /// ```
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
-        let size_guess = iter.size_hint().0;
-        (size_guess > self.remaining_capacity()).then_err(ExceedsCapacity::new(N, self.len() + size_guess))?;
-
-        iter.try_for_each(|item| self.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1)))
+        match (iter.size_hint(), self.remaining_capacity()) {
+            ((min, _), remain) if min > remain => CollectionError::bounds(iter, 0..=remain).into_err(),
+            (_, remaining) => iter
+                .try_for_each(|item| self.try_push(item))
+                .map_err(|err| CollectionError::overflow(iter, Vec::new(), err.element(), 0..=remaining)),
+        }
     }
 }
 
 /// Extends an [`ArrayVec`] with strong error guarantee.
-impl<T, const N: usize, I> TryExtendSafe<T, I> for ArrayVec<T, N>
+impl<T, const N: usize, I> TryExtendSafe<I> for ArrayVec<T, N>
 where
     I: IntoIterator<Item = T>,
 {
@@ -85,14 +81,19 @@ where
     /// ```
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
+        match (iter.size_hint(), self.remaining_capacity(), self.len()) {
+            ((min, _), remain, _) if min > remain => CollectionError::bounds(iter, 0..=remain).into_err(),
+            (_, remaining, len) => iter
+                .try_for_each(|item| self.try_push(item))
+                .map_err(|err| CollectionError::overflow(iter, self.drain(len..).collect(), err.element(), 0..=remaining)),
+        }
+    }
+}
 
-        let size_guess = iter.size_hint().0;
-        (size_guess > self.remaining_capacity()).then_err(ExceedsCapacity::new(N, self.len() + size_guess))?;
+impl<T, const N: usize> crate::TryExtendOne<T> for ArrayVec<T, N> {
+    type Error = CapacityError<T>;
 
-        let len = self.len();
-
-        iter.try_for_each(|item| self.try_push(item).map_err(|_| ExceedsCapacity::new(N, N + 1))).inspect_err(|_| {
-            self.truncate(len);
-        })
+    fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error> {
+        self.try_push(item)
     }
 }

@@ -17,10 +17,7 @@ use std::collections::HashMap;
 /// elements in the iterator in order to optimize their implementations. An iterator that violates
 /// the bounds returned by [`Iterator::size_hint`] may cause panics, produce incorrect results, or
 /// produce a result that violates container constraints, but must not result in undefined behavior.
-pub trait TryExtend<T, I>
-where
-    I: IntoIterator<Item = T>,
-{
+pub trait TryExtend<I: IntoIterator> {
     /// Error type returned by the fallible extension methods.
     type Error;
 
@@ -40,7 +37,7 @@ where
     /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try-extend.rs", try_extend_basic_guarantee_example, [])]
+    #[doc = include_doc::function_body!("tests/doc/try_extend.rs", try_extend_basic_guarantee_example, [])]
     /// ```
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error>;
 }
@@ -59,10 +56,7 @@ where
 /// An iterator that violates the bounds returned by [`Iterator::size_hint`] may cause panics,
 /// produce incorrect results, or produce a result that violates container constraints, but must
 /// not result in undefined behavior.
-pub trait TryExtendSafe<T, I>: TryExtend<T, I>
-where
-    I: IntoIterator<Item = T>,
-{
+pub trait TryExtendSafe<I: IntoIterator>: TryExtend<I> {
     /// Tries to extends the collection providing a **strong error guarantee**.
     ///
     /// On failure, the collection must remain unchanged. Implementors may need to buffer
@@ -79,7 +73,43 @@ where
     /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try-extend.rs", try_extend_safe_map_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/doc/try_extend.rs", try_extend_safe_map_collision_example, [])]
     /// ```
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error>;
+}
+
+/// Extension trait providing convenience method for extending a collection with a single item.
+///
+/// Unlike [`TryExtend`], this trait works with individual items rather than iterators, it always
+/// should provide a strong error guarantee, guaranteeing that the collection remains unchanged on error.
+pub trait TryExtendOne<T> {
+    /// Error type returned by [`try_extend_one`](TryExtendOne::try_extend_one).
+    type Error;
+
+    /// Tries to extend the collection with a single item.
+    ///
+    /// This method provides a **strong error guarantee**: on failure, the collection
+    /// remains unchanged.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the extension fails (e.g., due to capacity limits or
+    /// key collisions).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use collect_failable::TryExtendOne;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut map = HashMap::from([(1, 2)]);
+    /// map.try_extend_one((2, 3)).expect("should succeed");
+    /// assert_eq!(map.get(&2), Some(&3));
+    ///
+    /// // Collision error
+    /// let err = map.try_extend_one((1, 5)).expect_err("should collide");
+    /// assert_eq!(err.item, (1, 5));
+    /// assert_eq!(map.get(&1), Some(&2)); // Original value unchanged
+    /// ```
+    fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error>;
 }

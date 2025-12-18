@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use collect_failable::{OneOf2, TryExtend, TryFromIterator};
+use collect_failable::{TryExtend, TryFromIterator};
 
 type HashSetTuple<T> = (HashSet<T>, HashSet<T>);
 
@@ -14,13 +14,13 @@ macro_rules! test_tuple_impl {
         fn $name() {
             let err = HashSetTuple::try_from_iter($data).expect_err("should be err");
 
-            // Extract the colliding value from the CollectionCollision
+            // Extract the colliding value from the TupleCollectionError
             match err {
-                OneOf2::A(coll) => {
-                    assert_eq!(coll.item, $expected_value, "left collision value should match");
+                collect_failable::TupleCollectionError::A(side) => {
+                    assert_eq!(side.error.item, $expected_value, "left collision value should match");
                 }
-                OneOf2::B(coll) => {
-                    assert_eq!(coll.item, $expected_value, "right collision value should match");
+                collect_failable::TupleCollectionError::B(side) => {
+                    assert_eq!(side.error.item, $expected_value, "right collision value should match");
                 }
             }
         }
@@ -36,11 +36,11 @@ macro_rules! test_try_extend_collision {
             let err = valid.try_extend($data).expect_err("should be err");
 
             match err {
-                collect_failable::OneOf2::A(coll) if stringify!($side) == "A" => {
-                    assert_eq!(coll.item, $expected_value, "left collision value should match");
+                collect_failable::TupleExtensionError::A(side) if stringify!($side) == "A" => {
+                    assert_eq!(side.error.item, $expected_value, "left collision value should match");
                 }
-                collect_failable::OneOf2::B(coll) if stringify!($side) == "B" => {
-                    assert_eq!(coll.item, $expected_value, "right collision value should match");
+                collect_failable::TupleExtensionError::B(side) if stringify!($side) == "B" => {
+                    assert_eq!(side.error.item, $expected_value, "right collision value should match");
                 }
                 _ => panic!("Error on wrong side"),
             }

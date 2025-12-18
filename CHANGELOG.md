@@ -6,20 +6,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2025-12-17
+
+Major rework, aiming to make iter information recoverable on all errors.
+
 ### Added
 
+ - Added `TryExtendOne` trait for extending collections with a single item, providing cleaner error types and strong error guarantees.
+ - Added `ItemCollision<T>` error type for single-item collection collisions (maps and sets).
  - Added `ReadOnlyPartialIterErr` and `PartialIterErr` for returning errors from failable collection methods.
  - Added `CollectionCollision` for returning errors when a collision occurs during a collection operation.
+ - Added `TupleCollectionError` and `TupleExtensionError` for returning errors when a tuple collection operation fails.
+ - Added `CapacityMismatch` error type to replace `ExceedsCapacity`, providing more semantic information about capacity violations.
 
 ### Changed
 
- - **Breaking:** Moved generic iterator parameter `I` from method level to trait level in `TryFromIterator`. The trait signature changed from `TryFromIterator<T>` to `TryFromIterator<T, I>`. Most user code remains compatible due to type inference.
+ - **Breaking:** Moved generic iterator parameter `I` from method level to trait level in `TryFromIterator`. The trait signature changed from `TryFromIterator<T>` to `TryFromIterator<I>`. This allows the error type to see the iterator type, which is useful for error recovery. Most user code remains compatible due to type inference.
+
+Change the error types of most implementations to allow recovering the consumed data on an error.
+
  - **Breaking:** Changed the implementation of `TryFromIterator` for all set and map types to use `CollectionCollision` instead of `KeyCollision` and `ValueCollision`.
- - **Breaking:** Changed `try_unzip` error type to `UnzipError<A, B, FromA, FromB, I>` which now contains `ZipErrorSide`. This provides enhanced error recovery by preserving the incomplete collection from the successful side, the unevaluated item from the opposite side, and the remaining iterator.
+ - **Breaking:** Changed `try_unzip` error type to `UnzipError<A, B, FromA, FromB, I>`.
+ - **Breaking:** Changed `try_extend` error type to `TupleExtensionError<A, B, FromA, FromB, I>`.
+ - **Breaking:** Changed `ArrayVec` implementations to use `CollectionError<T, I::IntoIter, Vec<T>, CapacityMismatch>` instead of `ExceedsCapacity`.
+ - **Breaking:** Changed `TryFromIterator` for `Result<C, C::Error>` to return `ResultCollectionError<E, C, C::Error>` instead of `E`. This preserves both the iterator error and the partial collection result, allowing full recovery of all information when an error occurs.
+ - **Breaking:** Changed `TryFromIterator` for arrays (`[T; N]`) to return `CollectionError<T, I::IntoIter, Vec<T>, CountMismatch>` instead of `ItemCountMismatch`. This allows recovery of collected items and the remaining iterator when array collection fails due to length mismatch.
+ - **Breaking:** Renamed `ItemCountMismatch` to `CountMismatch`.
 
 ### Removed
 
  - **Breaking:** Removed `KeyCollision` and `ValueCollision` error types. Use `CollectionCollision` instead, which provides a unified error type for all collection collision scenarios.
+ - **Breaking:** Removed `OneOf2` error type. Use `TupleCollectionError` or `TupleExtensionError` instead.
+ - **Breaking:** Removed `ExceedsCapacity` error type. Use `CapacityMismatch` instead.
+
+### Migration Guide
+
+ - Use the new error types. In most cases, the original error types can be recovered via the `NewErrorType.error` field.
+ - Migrate implementations to use the new interface shape.
 
 ## [0.11.1] - 2025-12-02
 

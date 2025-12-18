@@ -5,11 +5,11 @@ use indexmap::IndexMap;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for IndexMap<K, V>
+impl<K: Eq + Hash, V, I> TryFromIterator<I> for IndexMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, IndexMap<K, V>>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Converts `iter` into a [`IndexMap`], failing if a key would collide.
     ///
@@ -21,7 +21,7 @@ where
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_hint().0;
 
-        iter.try_fold(IndexMap::with_capacity(size_guess), |mut map, (k, v)| match map.contains_key(&k) {
+        iter.try_fold(Self::with_capacity(size_guess), |mut map, (k, v)| match map.contains_key(&k) {
             true => Err((map, (k, v))),
             false => {
                 map.insert(k, v).expect_none("should not be occupied");
@@ -32,11 +32,11 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtend<(K, V), I> for IndexMap<K, V, S>
+impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtend<I> for IndexMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, IndexMap<K, V>>;
+    type Error = CollectionCollision<I::IntoIter, IndexMap<K, V>>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtendSafe<(K, V), I> for IndexMap<K, V, S>
+impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtendSafe<I> for IndexMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {
@@ -76,5 +76,20 @@ where
         })
         .map(|map| self.extend(map))
         .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne<(K, V)> for IndexMap<K, V, S> {
+    type Error = crate::ItemCollision<(K, V)>;
+
+    fn try_extend_one(&mut self, item: (K, V)) -> Result<(), Self::Error> {
+        let (key, value) = item;
+        match self.contains_key(&key) {
+            true => Err(crate::ItemCollision::new((key, value))),
+            false => {
+                self.insert(key, value);
+                Ok(())
+            }
+        }
     }
 }

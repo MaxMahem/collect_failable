@@ -9,13 +9,13 @@ use std::collections::HashMap;
 /// [`TryCollectEx::try_collect_ex`].
 ///
 /// Implementations may rely on [`Iterator::size_hint`] providing reliable bounds for the
-/// number of elements in the iterator in order to optimize their implementations. An incorrect
-/// size hint may cause panics, produce incorrect results, or produce a result that violates
-/// container constraints, but must not result in undefined behavior.
-pub trait TryFromIterator<T, I>: Sized
-where
-    I: IntoIterator<Item = T>,
-{
+/// number of elements in the iterator in order to optimize their implementations. A size hint
+/// that provides incorrect bounds may cause panics, produce incorrect results, or produce a
+/// result that violates container constraints, but must not result in undefined behavior.
+///
+/// Implementations are encouraged to return all the data consumed by the iterator, as well
+/// as the partially consumed iterator on an error, but are not required to do so.
+pub trait TryFromIterator<I: IntoIterator>: Sized {
     /// The error that may occur when converting the iterator into the container.
     type Error;
 
@@ -33,7 +33,7 @@ where
     /// Provided [`HashMap`] implementations error if a key would collide.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try-from-iterator.rs", try_from_iter_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/doc/try_from_iterator.rs", try_from_iter_collision_example, [])]
     /// ```    
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>;
 }
@@ -50,10 +50,8 @@ pub trait TryCollectEx: Iterator {
     /// container fails.
     ///
     /// Exact behavior of this method depends on the container implementation, but generally it
-    /// should be expected to short-circuit on the first error.
-    ///
-    /// On success, this method should behave similarly to [`Iterator::collect`], except returning
-    /// a [`Result`].
+    /// should be expected to short-circuit on the first error. On success, this method should
+    /// behave similarly to [`Iterator::collect`], except returning a [`Result`].
     ///
     /// Note: Ideally this would be called `try_collect` but there is a method with that name in nightly.
     ///
@@ -66,11 +64,11 @@ pub trait TryCollectEx: Iterator {
     /// Collecting into a [`HashMap`] that fails if a key would collide.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try-collect-ex.rs", try_collect_ex_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/doc/try_collect_ex.rs", try_collect_ex_collision_example, [])]
     /// ```
     fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where
-        C: TryFromIterator<Self::Item, Self>,
+        C: TryFromIterator<Self>,
         Self: Sized;
 }
 
@@ -82,7 +80,7 @@ where
 {
     fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where
-        C: TryFromIterator<Self::Item, Self>,
+        C: TryFromIterator<Self>,
     {
         C::try_from_iter(self)
     }

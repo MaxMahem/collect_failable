@@ -17,7 +17,7 @@ fn try_from_iter_result_example() {
     let Err(err) = result else {
         panic!("should be err");
     };
-    assert_eq!(err, "oops");
+    assert_eq!(err.iteration_error, "oops");
 
     // Construction of a container can also fail
     let data: Vec<Result<i32, &str>> = vec![Ok(1), Ok(1), Ok(3)];
@@ -37,11 +37,15 @@ fn try_from_iter_result_example() {
 fn double_question_mark_example() {
     use collect_failable::TryCollectEx;
     use std::collections::HashSet;
+    use std::error::Error;
+
+    // Define a simple error type that implements Error
+    #[derive(Debug, thiserror::Error)]
+    #[error("parse error")]
+    struct ParseError;
 
     // Most errors can be converted to Box<dyn std::error::Error> using From
-    fn process_data(
-        data: Vec<Result<i32, &'static str>>,
-    ) -> Result<HashSet<i32>, Box<dyn std::error::Error + 'static>> {
+    fn process_data(data: Vec<Result<i32, ParseError>>) -> Result<HashSet<i32>, Box<dyn Error + 'static>> {
         let set = data.into_iter().try_collect_ex::<Result<HashSet<i32>, _>>()??;
         Ok(set)
     }
@@ -50,13 +54,51 @@ fn double_question_mark_example() {
     let result = process_data(vec![Ok(1), Ok(2), Ok(3)]).expect("should be ok");
     assert_eq!(result, HashSet::from([1, 2, 3]));
 
-    // Outer error (element error)
-    let err = process_data(vec![Ok(1), Err("parse error"), Ok(3)]).expect_err("should be err");
-    assert_eq!(err.to_string(), "parse error");
+    // Outer error (element error wrapped in ResultCollectionError)
+    let err = process_data(vec![Ok(1), Err(ParseError), Ok(3)]).expect_err("should be err");
+    assert_eq!(err.to_string(), "Iterator error: parse error");
 
     // Inner error (container error)
     let err = process_data(vec![Ok(1), Ok(1), Ok(3)]).expect_err("should be err");
     assert_eq!(err.to_string(), "Collection collision");
+}
+
+/// Example showing how to recover partial data when an error occurs.
+///
+/// `ResultCollectionError` preserves both the iterator error and any partial collection
+/// work, allowing you to recover what was successfully processed before the error.
+#[test]
+fn error_recovery_example() {
+    use collect_failable::TryCollectEx;
+    use std::collections::HashSet;
+
+    // Collect items until an error is encountered
+    let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
+    let result: Result<Result<HashSet<_>, _>, _> = data.into_iter().try_collect_ex();
+
+    match result {
+        Ok(Ok(set)) => panic!("Expected error, got success: {:?}", set),
+        Ok(Err(coll_err)) => panic!("Expected iterator error, got collection error: {}", coll_err),
+        Err(err) => {
+            // Use into_parts() to consume the error and extract all components
+            let parts = err.into_data();
+
+            // Check the iterator error
+            assert_eq!(parts.iteration_error, "invalid");
+
+            // Recover the partial collection that was successfully built
+            match parts.collection_result {
+                Ok(partial_set) => {
+                    // The partial set contains items collected before the error
+                    assert_eq!(partial_set.len(), 3);
+                    assert!(partial_set.contains(&1));
+                    assert!(partial_set.contains(&2));
+                    assert!(partial_set.contains(&3));
+                }
+                Err(_) => panic!("Expected Ok with partial collection"),
+            }
+        }
+    }
 }
 
 // TODO: Example showing the use of `flatten_err` for handling nested Result types.

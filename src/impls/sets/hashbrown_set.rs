@@ -5,11 +5,11 @@ use hashbrown::HashSet;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-impl<T: Eq + Hash, I> TryFromIterator<T, I> for HashSet<T>
+impl<T: Eq + Hash, I> TryFromIterator<I> for HashSet<T>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<T, I::IntoIter, HashSet<T>>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Converts `iter` into a [`HashSet`], failing if a value would collide.
     ///
@@ -21,7 +21,7 @@ where
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_hint().0;
 
-        iter.try_fold(HashSet::with_capacity(size_guess), |mut set, value| match set.contains(&value) {
+        iter.try_fold(Self::with_capacity(size_guess), |mut set, value| match set.contains(&value) {
             true => Err((set, value)),
             false => {
                 set.insert(value).expect_true("should not be occupied");
@@ -32,11 +32,11 @@ where
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher, I> TryExtend<T, I> for HashSet<T, S>
+impl<T: Eq + Hash, S: BuildHasher, I> TryExtend<I> for HashSet<T, S>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<T, I::IntoIter, HashSet<T>>;
+    type Error = CollectionCollision<I::IntoIter, HashSet<T>>;
 
     /// Extends the set with `iter`, failing if a value would collide, with a basic error guarantee.
     ///
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher, I> TryExtendSafe<T, I> for HashSet<T, S>
+impl<T: Eq + Hash, S: BuildHasher, I> TryExtendSafe<I> for HashSet<T, S>
 where
     I: IntoIterator<Item = T>,
 {
@@ -76,5 +76,19 @@ where
         })
         .map(|set| self.extend(set))
         .map_err(|(set, value)| CollectionCollision::new(iter, set, value))
+    }
+}
+
+impl<T: Eq + Hash, S: BuildHasher> crate::TryExtendOne<T> for HashSet<T, S> {
+    type Error = crate::ItemCollision<T>;
+
+    fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error> {
+        match self.contains(&item) {
+            true => Err(crate::ItemCollision::new(item)),
+            false => {
+                self.insert(item);
+                Ok(())
+            }
+        }
     }
 }

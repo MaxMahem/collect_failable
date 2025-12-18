@@ -5,11 +5,11 @@ use hashbrown::HashMap;
 
 use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
 
-impl<K: Eq + Hash, V, I> TryFromIterator<(K, V), I> for HashMap<K, V>
+impl<K: Eq + Hash, V, I> TryFromIterator<I> for HashMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, HashMap<K, V>>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Converts `iter` into a [`HashMap`], failing if a key would collide.
     ///
@@ -18,7 +18,7 @@ where
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_hint().0;
 
-        iter.try_fold(HashMap::with_capacity(size_guess), |mut map, (key, value)| {
+        iter.try_fold(Self::with_capacity(size_guess), |mut map, (key, value)| {
             let hash = map.hasher().hash_one(&key);
             match map.raw_entry_mut().from_hash(hash, |k| k == &key) {
                 RawEntryMut::Occupied(_) => Err((map, (key, value))),
@@ -32,11 +32,11 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtend<(K, V), I> for HashMap<K, V, S>
+impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtend<I> for HashMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<(K, V), I::IntoIter, HashMap<K, V, S>>;
+    type Error = CollectionCollision<I::IntoIter, Self>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -49,11 +49,11 @@ where
             true => Err((key, value)),
             false => Ok(_ = self.insert(key, value)),
         })
-        .map_err(|kvp| CollectionCollision::new(iter, HashMap::with_hasher(self.hasher().clone()), kvp))
+        .map_err(|kvp| CollectionCollision::new(iter, Self::with_hasher(self.hasher().clone()), kvp))
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtendSafe<(K, V), I> for HashMap<K, V, S>
+impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtendSafe<I> for HashMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {
@@ -64,7 +64,7 @@ where
         let mut iter = iter.into_iter();
 
         // uses the same hasher as the main map in order to allow the has only have to be computed once
-        let staging_map = HashMap::with_capacity_and_hasher(iter.size_hint().0, self.hasher().clone());
+        let staging_map = Self::with_capacity_and_hasher(iter.size_hint().0, self.hasher().clone());
 
         iter.try_fold(staging_map, |mut staging_map, (key, value)| {
             let shared_hash = staging_map.hasher().hash_one(&key);
@@ -85,5 +85,20 @@ where
         })
         .map(|staging_map| self.extend(staging_map))
         .map_err(|(staging_map, kvp)| CollectionCollision::new(iter, staging_map, kvp))
+    }
+}
+
+impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne<(K, V)> for HashMap<K, V, S> {
+    type Error = crate::ItemCollision<(K, V)>;
+
+    fn try_extend_one(&mut self, item: (K, V)) -> Result<(), Self::Error> {
+        let hash = self.hasher().hash_one(&item.0);
+        match self.raw_entry_mut().from_hash(hash, |k| k == &item.0) {
+            RawEntryMut::Occupied(_) => Err(crate::ItemCollision::new(item)),
+            RawEntryMut::Vacant(entry) => {
+                entry.insert_hashed_nocheck(hash, item.0, item.1);
+                Ok(())
+            }
+        }
     }
 }

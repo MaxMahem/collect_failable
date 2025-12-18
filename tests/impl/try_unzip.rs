@@ -6,8 +6,7 @@ fn try_unzip_fail_a() {
     use collect_failable::TryUnzip;
     use std::collections::HashSet;
 
-    let err_a =
-        INVALID_DATA_A.into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>().expect_err("Should be Err").unwrap_a();
+    let err_a = INVALID_DATA_A.into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>().expect_err("Should be Err").unwrap_a();
     assert_eq!(err_a.error.item, 1, "Should be colliding value");
 }
 
@@ -16,8 +15,7 @@ fn try_unzip_fail_b() {
     use collect_failable::TryUnzip;
     use std::collections::HashSet;
 
-    let err_b =
-        INVALID_DATA_B.into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>().expect_err("Should be Err").unwrap_b();
+    let err_b = INVALID_DATA_B.into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>().expect_err("Should be Err").unwrap_b();
     assert_eq!(err_b.error.item, 2, "Should be colliding value");
 }
 
@@ -30,7 +28,8 @@ fn try_unzip_recover_partial_b_on_a_failure() {
     let data = vec![(1, 10), (2, 20), (1, 30), (3, 40)]; // Collision on first element (A)
     let err_a = data.into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>().expect_err("Should fail").unwrap_a();
     assert_eq!(err_a.error.item, 1);
-    assert_eq!(err_a.incomplete, HashSet::from([10, 20]));
+    assert_eq!(err_a.failed, HashSet::from([1, 2])); // Failed collection A
+    assert_eq!(err_a.successful, HashSet::from([10, 20])); // Successful collection B
     assert_eq!(err_a.remaining.len(), 1);
 }
 
@@ -44,6 +43,7 @@ fn try_unzip_recover_partial_a_on_b_failure() {
     let err_b = data.into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>().expect_err("Should fail").unwrap_b();
 
     assert_eq!(err_b.error.item, 2);
-    assert_eq!(err_b.incomplete, HashSet::from([10, 20, 30]));
+    assert_eq!(err_b.failed, HashSet::from([1, 2])); // Failed collection B
+    assert_eq!(err_b.successful, HashSet::from([10, 20, 30])); // Successful collection A
     assert_eq!(err_b.remaining.len(), 1);
 }
