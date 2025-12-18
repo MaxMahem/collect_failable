@@ -1,7 +1,7 @@
 use collect_failable::CollectionCollision;
 use std::collections::HashSet;
 
-use crate::test_macros::{getter, into_iterator, test_format};
+use crate::error_tests::{getter, into_iterator, test_format};
 
 type Collection = HashSet<u32>;
 

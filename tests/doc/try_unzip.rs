@@ -19,15 +19,11 @@ fn try_unzip_collision_example() {
 
     match vec![(1, "a"), (2, "b"), (1, "c"), (3, "d")].into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>() {
         Err(UnzipError::A(err_a)) => {
-            let err_a = err_a.into_data(); // take ownership of the error data
+            let err_a = err_a.into_data();
             assert_eq!(err_a.error.item, 1);
-
-            // The incomplete collection from the non-failing side
-            assert_eq!(err_a.incomplete, HashSet::from(["a", "b"]));
-            // A possible unevaluated item from the non-failing side.
-            // This is the other element of the iterator that was yielded when the collection failed
+            assert_eq!(err_a.failed, HashSet::from([1, 2]));
+            assert_eq!(err_a.successful, HashSet::from(["a", "b"]));
             assert_eq!(err_a.unevaluated, Some("c"));
-            // The remaining iterator contains the rest of the unevaluated iterator
             assert_eq!(err_a.remaining.collect::<Vec<_>>(), [(3, "d")]);
         }
         Err(UnzipError::B(_)) => panic!("Should be Err A"),

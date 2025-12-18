@@ -1,5 +1,4 @@
-mod collection_tests;
-use collection_tests::try_collect;
+use super::collection_tests::try_collect;
 
 use collect_failable::utils::FixedSizeHint;
 use collect_failable::{CapacityMismatch, TryFromIterator};

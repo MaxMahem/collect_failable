@@ -1,7 +1,7 @@
 use collect_failable::CollectionError;
 use std::collections::HashSet;
 
-use crate::test_macros::{getter, into_iterator, test_format, TestError};
+use crate::error_tests::{getter, into_iterator, test_format, test_source, TestError};
 
 type Collection = HashSet<u32>;
 
@@ -80,11 +80,4 @@ into_iterator!(into_iterator_with_rejected, create_with_rejected(), expected_len
 // Should contain: collected (1, 2 in some order) + remaining (3, 4)
 into_iterator!(into_iterator_without_rejected, create_without_rejected(), expected_len = 4, contains = [1, 2, 3, 4]);
 
-#[test]
-fn error_trait_source() {
-    use std::error::Error;
-
-    let error = create_with_rejected();
-    let source = error.source().expect("Should have error source");
-    assert!(source.is::<TestError>());
-}
+test_source!(error_trait_source, create_with_rejected(), TestError);

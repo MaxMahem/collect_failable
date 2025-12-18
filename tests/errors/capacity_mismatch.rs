@@ -1,6 +1,6 @@
 use collect_failable::CapacityMismatch;
 
-use crate::test_macros::identity;
+use crate::error_tests::identity;
 
 const BOUNDS_ERROR: CapacityMismatch = CapacityMismatch::bounds(5..=10, (11, Some(15)));
 const OVERFLOW_ERROR: CapacityMismatch = CapacityMismatch::overflow(5..=10);

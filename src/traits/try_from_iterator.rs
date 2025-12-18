@@ -33,7 +33,7 @@ pub trait TryFromIterator<I: IntoIterator>: Sized {
     /// Provided [`HashMap`] implementations error if a key would collide.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try-from-iterator.rs", try_from_iter_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/doc/try_from_iterator.rs", try_from_iter_collision_example, [])]
     /// ```    
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>;
 }
@@ -50,10 +50,8 @@ pub trait TryCollectEx: Iterator {
     /// container fails.
     ///
     /// Exact behavior of this method depends on the container implementation, but generally it
-    /// should be expected to short-circuit on the first error.
-    ///
-    /// On success, this method should behave similarly to [`Iterator::collect`], except returning
-    /// a [`Result`].
+    /// should be expected to short-circuit on the first error. On success, this method should
+    /// behave similarly to [`Iterator::collect`], except returning a [`Result`].
     ///
     /// Note: Ideally this would be called `try_collect` but there is a method with that name in nightly.
     ///
@@ -66,7 +64,7 @@ pub trait TryCollectEx: Iterator {
     /// Collecting into a [`HashMap`] that fails if a key would collide.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try-collect-ex.rs", try_collect_ex_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/doc/try_collect_ex.rs", try_collect_ex_collision_example, [])]
     /// ```
     fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where

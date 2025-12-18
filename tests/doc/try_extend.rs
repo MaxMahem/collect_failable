@@ -1,51 +1,3 @@
-#[derive(Debug, PartialEq, Eq)]
-struct Collection {
-    called: bool,
-}
-
-const DEFAULT: Collection = Collection { called: false };
-const CALLED: Collection = Collection { called: true };
-
-impl<I> collect_failable::TryExtend<I> for Collection
-where
-    I: IntoIterator<Item = i32>,
-{
-    type Error = ();
-
-    fn try_extend(&mut self, _iter: I) -> Result<(), Self::Error> {
-        self.called = true;
-        Ok(())
-    }
-}
-
-impl<I> collect_failable::TryExtendSafe<I> for Collection
-where
-    I: IntoIterator<Item = i32>,
-{
-    fn try_extend_safe(&mut self, _iter: I) -> Result<(), Self::Error> {
-        self.called = true;
-        Ok(())
-    }
-}
-
-impl collect_failable::TryExtendOne<i32> for Collection {
-    type Error = ();
-
-    fn try_extend_one(&mut self, _item: i32) -> Result<(), Self::Error> {
-        self.called = true;
-        Ok(())
-    }
-}
-
-#[test]
-fn test_try_extend_calls_try_extend_safe_by_default() {
-    use collect_failable::TryExtend;
-
-    let mut test = DEFAULT;
-    test.try_extend(vec![1, 2, 3]).expect("Should be ok");
-    assert_eq!(test, CALLED);
-}
-
 #[test]
 fn try_extend_safe_map_collision_example() {
     use collect_failable::TryExtendSafe;
@@ -74,7 +26,6 @@ fn try_extend_safe_internal_iterator_collision() {
     let err = map.try_extend_safe([(2, 4), (3, 5), (2, 6)]).expect_err("should collide within iterator");
 
     assert_eq!(err.item, (2, 6), "should detect the colliding key");
-
     assert_eq!(map, HashMap::from([(1, 2)]), "map should be unchanged");
 }
 
@@ -83,11 +34,9 @@ fn try_extend_safe_success_example() {
     use collect_failable::TryExtendSafe;
     use std::collections::HashMap;
 
-    // works like `extend` if there are no collisions
     let mut map = HashMap::from([(1, 2)]);
-    let result = map.try_extend_safe([(2, 3)]);
+    map.try_extend_safe([(2, 3)]).expect("should be ok");
 
-    assert!(result.is_ok());
     assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 }
 
@@ -114,9 +63,8 @@ fn try_extend_success_example() {
 
     // works like `extend` if there are no collisions
     let mut map = HashMap::from([(1, 2)]);
-    let result = map.try_extend([(2, 3)]);
+    map.try_extend([(2, 3)]).expect("should be ok");
 
-    assert!(result.is_ok());
     assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 }
 
@@ -126,9 +74,8 @@ fn try_extend_one_success_example() {
     use std::collections::HashMap;
 
     let mut map = HashMap::from([(1, 2)]);
-    let result = map.try_extend_one((2, 3));
+    map.try_extend_one((2, 3)).expect("should be ok");
 
-    assert!(result.is_ok());
     assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 }
 
@@ -143,13 +90,4 @@ fn try_extend_one_collision_example() {
     assert_eq!(err.item, (1, 5));
     // Original value should be unchanged
     assert_eq!(map.get(&1), Some(&2));
-}
-
-#[test]
-fn try_extend_one_calls_try_extend() {
-    use collect_failable::TryExtendOne;
-
-    let mut test = DEFAULT;
-    test.try_extend_one(1).expect("Should be ok");
-    assert_eq!(test, CALLED);
 }

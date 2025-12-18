@@ -81,8 +81,25 @@ macro_rules! identity {
     };
 }
 
+/// Test that an error's source() method returns the expected error type
+///
+/// - `test_source!(test_name, create_error(), ExpectedSourceType);`
+macro_rules! test_source {
+    ($name:ident, $setup:expr, $source_type:ty) => {
+        #[test]
+        fn $name() {
+            use std::error::Error;
+
+            let error = $setup;
+            let source = error.source().expect("Should have error source");
+            assert!(source.is::<$source_type>());
+        }
+    };
+}
+
 pub(crate) use expect_panic;
 pub(crate) use getter;
 pub(crate) use identity;
 pub(crate) use into_iterator;
 pub(crate) use test_format;
+pub(crate) use test_source;

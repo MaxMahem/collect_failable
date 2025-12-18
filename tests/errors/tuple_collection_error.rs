@@ -1,7 +1,6 @@
 use collect_failable::TupleCollectionError;
-use fluent_result::bool::dbg::Expect;
 
-use crate::test_macros::{expect_panic, test_format, TestError};
+use crate::error_tests::{expect_panic, test_format, test_source, TestError};
 
 fn create_a_error() -> TupleCollectionError<TestError, TestError, Vec<u32>, Vec<u32>> {
     TupleCollectionError::new_a(TestError::new("A side failed"), vec![1, 2, 3])
@@ -56,20 +55,5 @@ fn error_side_into_parts() {
     assert_eq!(parts.from, vec![1, 2, 3]);
 }
 
-#[test]
-fn error_trait_source_a() {
-    use std::error::Error;
-
-    let err = create_a_error();
-    let source = err.source().expect("Should have error source");
-    source.is::<TestError>().expect_true("Should have TestError source");
-}
-
-#[test]
-fn error_trait_source_b() {
-    use std::error::Error;
-
-    let err = create_b_error();
-    let source = err.source().expect("Should have error source");
-    source.is::<TestError>().expect_true("Should have TestError source");
-}
+test_source!(error_trait_source_a, create_a_error(), TestError);
+test_source!(error_trait_source_b, create_b_error(), TestError);

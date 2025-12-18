@@ -28,7 +28,7 @@ pub trait FoldMut<T>: Iterator<Item = T> {
     /// # Examples
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/fold-mut.rs", fold_mut_success_aggregate_hashmap_example, [])]
+    #[doc = include_doc::function_body!("tests/doc/fold_mut.rs", fold_mut_success_aggregate_hashmap_example, [])]
     /// ```
     fn fold_mut<A, F>(&mut self, mut init: A, mut fold: F) -> A
     where
@@ -63,7 +63,7 @@ pub trait FoldMut<T>: Iterator<Item = T> {
     /// Building a [`HashMap`] terminating on colliding keys.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/fold-mut.rs", try_fold_mut_failure_example, [])]
+    #[doc = include_doc::function_body!("tests/doc/fold_mut.rs", try_fold_mut_failure_example, [])]
     /// ```
     fn try_fold_mut<A, E, F>(&mut self, mut init: A, mut fold: F) -> Result<A, E>
     where

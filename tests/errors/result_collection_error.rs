@@ -1,7 +1,7 @@
 use collect_failable::ResultCollectionError;
 use std::collections::HashSet;
 
-use crate::test_macros::{test_format, TestError};
+use crate::error_tests::{test_format, test_source, TestError};
 
 type Collection = HashSet<u32>;
 
@@ -55,14 +55,7 @@ fn into_parts_err() {
     assert_eq!(parts.collection_result, Err(TestError::new("collection error")));
 }
 
-#[test]
-fn error_trait_source() {
-    use std::error::Error;
-
-    let error = create_err();
-    let source = error.source().expect("Should have error source");
-    assert!(source.is::<TestError>());
-}
+test_source!(error_trait_source, create_err(), TestError);
 
 // Helper functions for into_iter tests (require both C and CErr to implement IntoIterator)
 fn create_err_iterable_ok() -> ResultCollectionError<TestError, Vec<u32>, Vec<u32>, std::iter::Empty<u32>> {

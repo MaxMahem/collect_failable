@@ -1,9 +1,7 @@
-use std::iter::Once;
-
 use fluent_result::into::IntoResult;
 use no_drop::dbg::IntoNoDrop;
 
-use crate::{TryExtend, UnzipError};
+use crate::{TryExtendOne, UnzipError};
 
 /// The Result of a [`TryUnzip::try_unzip`] operation.
 type TryUnzipResult<A, B, FromA, FromB, I> = Result<(FromA, FromB), UnzipError<A, B, FromA, FromB, I>>;
@@ -42,8 +40,8 @@ pub trait TryUnzip {
     /// ```
     fn try_unzip<A, B, FromA, FromB>(self) -> TryUnzipResult<A, B, FromA, FromB, Self>
     where
-        FromA: Default + TryExtend<Once<A>> + IntoIterator<Item = A>,
-        FromB: Default + TryExtend<Once<B>> + IntoIterator<Item = B>,
+        FromA: Default + TryExtendOne<A> + IntoIterator<Item = A>,
+        FromB: Default + TryExtendOne<B> + IntoIterator<Item = B>,
         Self: Iterator<Item = (A, B)> + Sized;
 }
 
@@ -51,22 +49,20 @@ pub trait TryUnzip {
 impl<I: Iterator> TryUnzip for I {
     fn try_unzip<A, B, FromA, FromB>(self) -> TryUnzipResult<A, B, FromA, FromB, Self>
     where
-        FromA: Default + TryExtend<Once<A>> + IntoIterator<Item = A>,
-        FromB: Default + TryExtend<Once<B>> + IntoIterator<Item = B>,
+        FromA: Default + TryExtendOne<A> + IntoIterator<Item = A>,
+        FromB: Default + TryExtendOne<B> + IntoIterator<Item = B>,
         Self: Iterator<Item = (A, B)> + Sized,
     {
         let mut from = (FromA::default().no_drop(), FromB::default().no_drop());
         let mut this = self.no_drop();
 
         for (a, b) in this.by_ref().map(|(a, b)| (a.no_drop(), b.no_drop())) {
-            if let Err(error_a) = from.0.try_extend(std::iter::once(a.unwrap())) {
-                from.0.forget(); // Side A failed, forget it
-                return UnzipError::new_a(error_a, from.1.unwrap(), Some(b.unwrap()), this.unwrap()).into_err();
+            if let Err(error_a) = from.0.try_extend_one(a.unwrap()) {
+                return UnzipError::new_a(error_a, from.0.unwrap(), from.1.unwrap(), Some(b.unwrap()), this.unwrap()).into_err();
             }
 
-            if let Err(error_b) = from.1.try_extend(std::iter::once(b.unwrap())) {
-                from.1.forget(); // Side B failed, forget it
-                return UnzipError::new_b(error_b, from.0.unwrap(), None, this.unwrap()).into_err();
+            if let Err(error_b) = from.1.try_extend_one(b.unwrap()) {
+                return UnzipError::new_b(error_b, from.1.unwrap(), from.0.unwrap(), None, this.unwrap()).into_err();
             }
         }
 

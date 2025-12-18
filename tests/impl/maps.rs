@@ -1,5 +1,4 @@
-mod collection_tests;
-use collection_tests::{try_extend, try_extend_one, try_extend_safe};
+use super::collection_tests::{try_extend, try_extend_one, try_extend_safe};
 
 use std::collections::{BTreeMap, HashMap};
 

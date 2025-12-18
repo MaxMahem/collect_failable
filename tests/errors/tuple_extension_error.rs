@@ -1,7 +1,6 @@
 use collect_failable::TupleExtensionError;
-use fluent_result::bool::dbg::Expect;
 
-use super::test_macros::{expect_panic, test_format};
+use super::error_tests::{expect_panic, test_format, test_source};
 
 /// Simple error type for testing
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,20 +97,5 @@ fn error_side_into_parts_without_unevaluated() {
     assert_eq!(parts.remaining.collect::<Vec<_>>(), vec![(3, 30), (4, 40), (5, 50)]);
 }
 
-#[test]
-fn error_trait_source_a() {
-    use std::error::Error;
-
-    let err = create_a_error_with_unevaluated();
-    let source = err.source().expect("Should have error source");
-    source.is::<TestError>().expect_true("Should have TestError source");
-}
-
-#[test]
-fn error_trait_source_b() {
-    use std::error::Error;
-
-    let err = create_b_error_with_unevaluated();
-    let source = err.source().expect("Should have error source");
-    source.is::<TestError>().expect_true("Should have TestError source");
-}
+test_source!(error_trait_source_a, create_a_error_with_unevaluated(), TestError);
+test_source!(error_trait_source_b, create_b_error_with_unevaluated(), TestError);

@@ -1,4 +1,4 @@
-mod test_macros;
+mod error_tests;
 
 mod capacity_mismatch;
 mod collection_collision;

@@ -37,7 +37,7 @@ pub trait TryExtend<I: IntoIterator> {
     /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try-extend.rs", try_extend_basic_guarantee_example, [])]
+    #[doc = include_doc::function_body!("tests/doc/try_extend.rs", try_extend_basic_guarantee_example, [])]
     /// ```
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error>;
 }
@@ -73,7 +73,7 @@ pub trait TryExtendSafe<I: IntoIterator>: TryExtend<I> {
     /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/try-extend.rs", try_extend_safe_map_collision_example, [])]
+    #[doc = include_doc::function_body!("tests/doc/try_extend.rs", try_extend_safe_map_collision_example, [])]
     /// ```
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error>;
 }

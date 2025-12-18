@@ -1,5 +1,3 @@
-mod collection_tests;
-
 use arrayvec::ArrayVec;
 
 use collect_failable::utils::FixedSizeHintEx;
@@ -8,9 +6,9 @@ use collect_failable::CapacityMismatch;
 type TestArray = ArrayVec<u32, 2>;
 
 mod try_from_iter {
+    use super::super::collection_tests::try_collect;
     use super::*;
     use collect_failable::TryFromIterator;
-    use collection_tests::try_collect;
 
     try_collect!(valid, TestArray, 1..=2, Ok(ArrayVec::from_iter(1..=2)));
     try_collect!(bounds, TestArray, 1..=3, Err(CapacityMismatch::bounds(0..=2, (3, Some(3)))));
@@ -31,9 +29,9 @@ fn try_from_iter_reconstruct() {
 }
 
 mod try_extend_safe {
+    use super::super::collection_tests::try_extend_safe;
     use super::*;
     use collect_failable::TryExtendSafe;
-    use collection_tests::try_extend_safe;
 
     try_extend_safe!(valid, TestArray::from_iter(3..=3), 3..=3, Ok(TestArray::from_iter([3, 3])));
     try_extend_safe!(bound_fail, TestArray::from_iter(3..=3), 1..=3, Err(CapacityMismatch::bounds(0..=1, (1..=3).size_hint())));
@@ -41,9 +39,9 @@ mod try_extend_safe {
 }
 
 mod try_extend {
+    use super::super::collection_tests::try_extend;
     use super::*;
     use collect_failable::TryExtend;
-    use collection_tests::try_extend;
 
     try_extend!(valid, TestArray::from_iter(3..=3), 3..=3, Ok(ArrayVec::from_iter([3, 3])));
     try_extend!(bounds_fail, TestArray::from_iter(3..=3), 1..=3, Err(CapacityMismatch::bounds(0..=1, (3, Some(3)))));
@@ -51,9 +49,9 @@ mod try_extend {
 }
 
 mod try_extend_one {
+    use super::super::collection_tests::try_extend_one;
     use arrayvec::CapacityError;
     use collect_failable::TryExtendOne;
-    use collection_tests::try_extend_one;
 
     use super::*;
 
