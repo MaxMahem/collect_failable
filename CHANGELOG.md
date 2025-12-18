@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2025-12-18
+
+### Fixed
+
+ - Removed internal `utils` dependency.
+ - Updated dependencies to use crates.io instead of git.
+
 ## [0.12.0] - 2025-12-17
 
 Major rework, aiming to make iter information recoverable on all errors.
