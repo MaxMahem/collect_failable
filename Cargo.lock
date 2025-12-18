@@ -140,7 +140,8 @@ dependencies = [
 [[package]]
 name = "display_as_debug"
 version = "0.2.0"
-source = "git+https://github.com/MaxMahem/display_as_debug.git#98ce97871055b6cfe890a9de78bb2aa45d417fff"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86133a5deb2398636d0901ce53a0dc6ec383bce76bbefc4de29339fbb4ebe564"
 
 [[package]]
 name = "drop_bomb"
@@ -163,7 +164,8 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "fluent_result"
 version = "0.9.0"
-source = "git+https://github.com/MaxMahem/fluent_result.git#2408193ac243e4028cf6530b0c7daeb637e4cd8b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28cf51bd8910d54daa3519d977e64efec6559ad5543376365e9ed17fb47a73a0"
 dependencies = [
  "derive_more",
  "sealed",
@@ -304,8 +306,9 @@ dependencies = [
 
 [[package]]
 name = "no_drop"
-version = "0.2.2"
-source = "git+https://github.com/MaxMahem/no_drop.git#9529dfae4fdd4bae14b776f660ef0a35b75e76e9"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d829f7facb901fc17b998c9469855e4aad9efa3bc82ac75278120a80fc517853"
 dependencies = [
  "derive_more",
  "sealed",

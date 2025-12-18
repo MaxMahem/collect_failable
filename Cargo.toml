@@ -19,7 +19,6 @@ arrayvec = [ "dep:arrayvec" ]
 
 [dependencies]
 tap = { version = "1.0.1" }
-fluent_result = { git = "https://github.com/MaxMahem/fluent_result.git", version = "0.9.0" }
 thiserror = { version = "2.0.17" }
 hashbrown = { version = "0.16.0", optional = true }
 derive_more = { version = "2.1.0", features = ["constructor", "from", "is_variant", "try_unwrap", "unwrap", "deref"] }
@@ -27,10 +26,11 @@ indexmap = { version = "2.12.0", optional = true }
 arrayvec = { version = "0.7.6", optional = true }
 include-doc = "0.2.2"
 sealed = "0.6.0"
-no_drop = { git = "https://github.com/MaxMahem/no_drop.git", version = "0.2.2" }
 subdef = "0.1.2"
 itertools = "0.14.0"
-display_as_debug = { git = "https://github.com/MaxMahem/display_as_debug.git", version = "0.2.0" }
+fluent_result = "0.9.0"
+no_drop = "0.2.3"
+display_as_debug = "0.2.0"
 
 [dev-dependencies]
 collect_failable = { path = ".", features = ["hashbrown", "indexmap", "arrayvec", "utils"] }
