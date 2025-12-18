@@ -1,6 +1,6 @@
 [package]
 name = "collect_failable"
-version = "0.11.1"
+version = "0.12.0"
 edition = "2021"
 description = "A trait for collecting values into a container which has an invariant to uphold and whose construction may fail"
 repository = "https://github.com/MaxMahem/collect_failable"
