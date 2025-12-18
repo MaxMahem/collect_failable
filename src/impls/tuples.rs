@@ -19,7 +19,7 @@ where
 
     /// Converts an iterator of `(A, B)` into a `(TryFromA, TryFromB)`.
     ///
-    /// This implementation is suboptimal. If possible, prefer [`TryUnzip::unzip`] or
+    /// This implementation is suboptimal. If possible, prefer [`TryUnzip::try_unzip`] or
     /// [`TryExtend::try_extend`] instead.
     ///
     /// # Examples

@@ -116,7 +116,7 @@ where
 /// - `Ok(Err(_))`: The iterator completed successfully, but the container construction failed.
 /// - `Err(_)`: The iterator encountered an error before completion.
 ///
-/// The outer [`Result`] error type is [`ResultIterError`]. In the event of an error during iteration
+/// The outer [`Result`] error type is [`ResultCollectionError`]. In the event of an error during iteration
 /// (the last case above), this type will contain the error encountered, the remaining iterator, and the
 /// result of the container construction over the values successfully collected (which could succeed or
 /// fail, depending on the container type).

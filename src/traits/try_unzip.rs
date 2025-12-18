@@ -9,7 +9,7 @@ type TryUnzipResult<A, B, FromA, FromB, I> = Result<(FromA, FromB), UnzipError<A
 /// Extends [`Iterator`] with a failable unzip method.
 ///
 /// This is similar to [`Iterator::unzip`], but allows for failable construction. The created
-/// containers may be of different types, but both must implement [`Default`] and [`TryExtend`].
+/// containers may be of different types, but both must implement [`Default`] and [`TryExtendOne`].
 #[sealed::sealed]
 pub trait TryUnzip {
     /// Tries to unzip the iterator into two collections.

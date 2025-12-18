@@ -29,7 +29,7 @@ where
             /// The incomplete collections from a failed [`TryUnzip::try_unzip`] operation.
             pub struct UnzipErrorSide<Err, Failed, Successful, T, I>(
                 [Box<UnzipErrorSideData<Err, Failed, Successful, T, I>>; {
-                    /// The internal data of a [`ZipErrorSide`].
+                    /// The internal data of a [`UnzipErrorSideData`].
                     pub struct UnzipErrorSideData<Err, Failed, Successful, T, I> {
                         /// The error caused during extension
                         pub error: Err,

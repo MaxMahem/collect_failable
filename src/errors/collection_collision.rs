@@ -45,7 +45,7 @@ impl<I: Iterator, C> CollectionCollision<I, C> {
         self.0.item
     }
 
-    /// Consumes the error, returning a [`ReadOnlyCollectionCollision`] containing the `iterator`,
+    /// Consumes the error, returning a [`CollectionCollisionData`] containing the `iterator`,
     /// `collected` values, and colliding `item`.
     #[must_use]
     pub fn into_data(self) -> CollectionCollisionData<I, C> {
