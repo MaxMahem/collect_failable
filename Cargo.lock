@@ -55,6 +55,7 @@ dependencies = [
  "indexmap",
  "itertools 0.14.0",
  "no_drop",
+ "readonly",
  "sealed",
  "subdef",
  "tap",
@@ -135,6 +136,7 @@ dependencies = [
  "quote",
  "rustc_version",
  "syn",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -457,6 +459,17 @@ checksum = "9ffef6cb3676f5027e47489edea9c052791c6c0c1739656c303e9e054cdcad4e"
 dependencies = [
  "itertools 0.10.5",
  "text-size",
+]
+
+[[package]]
+name = "readonly"
+version = "0.2.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2a62d85ed81ca5305dc544bd42c8804c5060b78ffa5ad3c64b0fb6a8c13d062"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+ - Made `CapacityMismatch` fields readonly. (This was considered a non-breaking change because there should be no reason to mutate the error.)
+
 ## [0.12.3] - 2025-12-19
 
 ### Fixed
