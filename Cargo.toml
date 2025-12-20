@@ -9,7 +9,7 @@ documentation = "https://maxmahem.github.io/collect_failable/"
 keywords = ["iterator", "collect", "container"]
 authors = ["Austin Stanley <maxtmahem@gmail>"]
 license = "MIT OR Apache-2.0"
-categories = ["data-structures", "rust-patterns", "error-handling"]
+categories = ["data-structures", "rust-patterns"]
 
 [features]
 default = ["unsafe"]
