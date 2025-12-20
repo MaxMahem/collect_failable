@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 /// Simple error type for testing with identity
-#[derive(Debug, Clone, PartialEq, Eq, Error, derive_more::Constructor)]
+#[derive(Debug, PartialEq, Eq, Error, derive_more::Constructor)]
 #[error("Test error: {identity}")]
 pub(crate) struct TestError {
     pub identity: &'static str,

@@ -1,5 +1,6 @@
 [![Build](https://github.com/MaxMahem/collect_failable/actions/workflows/build.yml/badge.svg)](https://github.com/MaxMahem/collect_failable/actions/workflows/build.yml)
 [![Docs](https://github.com/MaxMahem/collect_failable/actions/workflows/docs.yml/badge.svg)](https://maxmahem.github.io/collect_failable/collect_failable/index.html)
+[![Crates.io](https://img.shields.io/crates/v/collect_failable)](https://crates.io/crates/collect_failable)
 [![dependency status](https://deps.rs/repo/github/maxmahem/collect_failable/status.svg)](https://deps.rs/repo/github/maxmahem/collect_failable)
 [![codecov](https://codecov.io/github/MaxMahem/collect_failable/graph/badge.svg?token=6JJF59BIO3)](https://codecov.io/github/MaxMahem/collect_failable)
 ![GitHub License](https://img.shields.io/github/license/maxmahem/collect_failable)
@@ -20,6 +21,12 @@ This crate provides several complementary traits for failable collection:
 - `FoldMut` – `fold`-style extension building a collection via mutation rather than move.
 
 Additionally, several implementations are provided for common and popular containers. See the [implementations](#implementations) section for more details.
+
+## Installation
+
+It's on [crates.io](https://crates.io/crates/collect_failable).
+
+## Usage
 
 ### `TryFromIterator` and `TryCollectEx`
 
@@ -70,23 +77,7 @@ assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 
 ### `TryExtendOne`
 
-Extend a collection with a single item. This trait always provides a **strong guarantee**: on failure, the collection remains unchanged.
-
-```rust
-use std::collections::HashMap;
-use collect_failable::TryExtendOne;
-
-let mut map = HashMap::new();
-map.try_extend_one((1, 2)).expect("should be Ok");
-map.try_extend_one((2, 3)).expect("should be Ok");
-
-// Error type just contains the rejected item
-let err = map.try_extend_one((1, 5)).expect_err("should collide");
-assert_eq!(err.item, (1, 5)); // Simple ItemCollision error
-assert_eq!(map.get(&1), Some(&2)); // Original value unchanged
-```
-
-**Note**: Tuples do not implement `TryExtendOne` because they cannot provide atomic single-item guarantees. Use `try_extend(std::iter::once(item))` instead.
+Extend a collection with a single item. This trait always provides a **strong guarantee**: on failure, the collection remains unchanged. Implemented as a seperate trait with no default implementation due to limitations imposed by the trait definition.
 
 ### `TryUnzip`
 
@@ -94,7 +85,7 @@ Fallible equivalent of [`Iterator::unzip`](https://doc.rust-lang.org/std/iter/tr
 
 Allows unzipping an iterator of pairs into two collections that implement `Default` and `TryExtend`.
 
-This is analogous to [`Zip`](https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.zip), except allows for failable construction.
+This is analogous to [`Iterator::unzip`](https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.unzip), except allows for failable construction.
 
 ```rust
 use std::collections::{BTreeSet, HashSet};
@@ -108,17 +99,11 @@ assert_eq!(nums, BTreeSet::from([1, 2, 3]));
 assert_eq!(chars, HashSet::from(['a', 'b', 'c']));
 ```
 
-### Utils
-
-Also included a series of utility functions, including:
-* `fold_mut` and `try_fold_mut` for folding an iterator into a mutable accumulator. Useful for implementing `TryFromIterator`.
-
 ## Implementations
 
 Implementations for various containers are provided.
 * [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html), [HashSet](https://doc.rust-lang.org/std/collections/struct.HashSet.html)
 * [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html), [BTreeSet](https://doc.rust-lang.org/std/collections/struct.BTreeSet.html)
-* [Tuple of size 2](https://doc.rust-lang.org/std/primitive.tuple.html)
 * [Array](https://doc.rust-lang.org/std/primitive.array.html) (feature `unsafe`)
 * [ArrayVec](https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html) (feature `arrayvec`)
 * [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html), [hashbrown::HashSet](https://docs.rs/hashbrown/latest/hashbrown/struct.HashSet.html) (feature `hashbrown`)
@@ -126,7 +111,7 @@ Implementations for various containers are provided.
 
 ### Tuple Implementations
 
-Tuples of size 2 implement both `TryFromIterator` and `TryExtend` when their inner types do. Errors respect the guarantee of each component, mirroring the behavior of the `std` tuple implementations—but with fallibility.
+Tuples of size 2 implement both `TryFromIterator` and `TryExtend` when their inner types do. Errors respect the guarantee of each component, mirroring the behavior of the `std` tuple implementations—but with fallibility. Implementing `TryExtendSafe` or `TryExtendOne` is not possible since they cannot provide atomic single-item guarantees within the trait definition.
 
 ### Array Implementation
 

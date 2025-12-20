@@ -1,39 +1,30 @@
 use collect_failable::TupleExtensionError;
 
-use super::error_tests::{expect_panic, test_format, test_source};
+use super::error_tests::{expect_panic, test_format, test_source, TestError};
 
-/// Simple error type for testing
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct TestError(String);
-
-impl std::fmt::Display for TestError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Test error: {}", self.0)
-    }
-}
-
-impl std::error::Error for TestError {}
+const SIDE_A_ERROR: TestError = TestError::new("A side failed");
+const SIDE_B_ERROR: TestError = TestError::new("B side failed");
 
 fn create_a_error_with_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtensionError::new_a(TestError("A side failed".to_string()), Some(20), remaining.into_iter())
+    TupleExtensionError::new_a(SIDE_A_ERROR, Some(20), remaining.into_iter())
 }
 
 fn create_a_error_without_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>>
 {
     let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtensionError::new_a(TestError("A side failed".to_string()), None, remaining.into_iter())
+    TupleExtensionError::new_a(SIDE_A_ERROR, None, remaining.into_iter())
 }
 
 fn create_b_error_with_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtensionError::new_b(TestError("B side failed".to_string()), Some(10), remaining.into_iter())
+    TupleExtensionError::new_b(SIDE_B_ERROR, Some(10), remaining.into_iter())
 }
 
 fn create_b_error_without_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>>
 {
     let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtensionError::new_b(TestError("B side failed".to_string()), None, remaining.into_iter())
+    TupleExtensionError::new_b(SIDE_B_ERROR, None, remaining.into_iter())
 }
 
 const EXPECTED_DEBUG_A_WITH: &str = r#"TupleExtensionError::A(TupleExtensionErrorSide { error: TestError("A side failed"), unevaluated: Some(..), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
@@ -57,14 +48,14 @@ expect_panic!(expect_b_panic, create_a_error_with_unevaluated(), expect_b, "Shou
 fn unwrap_a() {
     let error = create_a_error_with_unevaluated();
     let side = error.unwrap_a();
-    assert_eq!(side.error, TestError("A side failed".to_string()));
+    assert_eq!(side.error, SIDE_A_ERROR);
 }
 
 #[test]
 fn unwrap_b() {
     let error = create_b_error_with_unevaluated();
     let side = error.unwrap_b();
-    assert_eq!(side.error, TestError("B side failed".to_string()));
+    assert_eq!(side.error, SIDE_B_ERROR);
 }
 
 #[test]
@@ -72,7 +63,7 @@ fn error_side_into_error() {
     let error = create_a_error_with_unevaluated();
     let side = error.unwrap_a();
     let inner = side.into_error();
-    assert_eq!(inner, TestError("A side failed".to_string()));
+    assert_eq!(inner, SIDE_A_ERROR);
 }
 
 #[test]
@@ -81,7 +72,7 @@ fn error_side_into_parts_with_unevaluated() {
     let side = error.unwrap_a();
     let parts = side.into_data();
 
-    assert_eq!(parts.error, TestError("A side failed".to_string()));
+    assert_eq!(parts.error, SIDE_A_ERROR);
     assert_eq!(parts.unevaluated, Some(20));
     assert_eq!(parts.remaining.collect::<Vec<_>>(), vec![(3, 30), (4, 40), (5, 50)]);
 }
@@ -92,7 +83,7 @@ fn error_side_into_parts_without_unevaluated() {
     let side = error.unwrap_a();
     let parts = side.into_data();
 
-    assert_eq!(parts.error, TestError("A side failed".to_string()));
+    assert_eq!(parts.error, SIDE_A_ERROR);
     assert_eq!(parts.unevaluated, None);
     assert_eq!(parts.remaining.collect::<Vec<_>>(), vec![(3, 30), (4, 40), (5, 50)]);
 }
