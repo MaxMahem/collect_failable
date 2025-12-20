@@ -27,10 +27,10 @@ fn create_b_error_without_unevaluated() -> TupleExtensionError<TestError, TestEr
     TupleExtensionError::new_b(SIDE_B_ERROR, None, remaining.into_iter())
 }
 
-const EXPECTED_DEBUG_A_WITH: &str = r#"TupleExtensionError::A(TupleExtensionErrorSide { error: TestError("A side failed"), unevaluated: Some(..), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
-const EXPECTED_DEBUG_A_WITHOUT: &str = r#"TupleExtensionError::A(TupleExtensionErrorSide { error: TestError("A side failed"), unevaluated: None, remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
-const EXPECTED_DEBUG_B_WITH: &str = r#"TupleExtensionError::B(TupleExtensionErrorSide { error: TestError("B side failed"), unevaluated: Some(..), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
-const EXPECTED_DEBUG_B_WITHOUT: &str = r#"TupleExtensionError::B(TupleExtensionErrorSide { error: TestError("B side failed"), unevaluated: None, remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
+const EXPECTED_DEBUG_A_WITH: &str = r#"TupleExtensionError::A(TupleExtensionErrorSide { error: TestError { identity: "A side failed" }, unevaluated: Some(..), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
+const EXPECTED_DEBUG_A_WITHOUT: &str = r#"TupleExtensionError::A(TupleExtensionErrorSide { error: TestError { identity: "A side failed" }, unevaluated: None, remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
+const EXPECTED_DEBUG_B_WITH: &str = r#"TupleExtensionError::B(TupleExtensionErrorSide { error: TestError { identity: "B side failed" }, unevaluated: Some(..), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
+const EXPECTED_DEBUG_B_WITHOUT: &str = r#"TupleExtensionError::B(TupleExtensionErrorSide { error: TestError { identity: "B side failed" }, unevaluated: None, remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
 const EXPECTED_DISPLAY_A: &str = "Failed while extending first collection: Test error: A side failed";
 const EXPECTED_DISPLAY_B: &str = "Failed while extending second collection: Test error: B side failed";
 

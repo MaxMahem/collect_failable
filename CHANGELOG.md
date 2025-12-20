@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.3] - 2025-12-19
+
+### Fixed
+
+ - Fixed debug format assertions in `tuple_extension_error` tests to match actual `TestError` struct format.
+
 ## [0.12.1] - 2025-12-18
 
 ### Fixed
