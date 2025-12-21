@@ -47,6 +47,7 @@ pub struct TupleExtensionError<CollA: TryExtendOne, CollB: TryExtendOne, I> {
         {
             /// Which side failed: `Left(side_a)` when first collection fails,
             /// `Right(side_b)` when second collection fails
+            #[allow(clippy::type_complexity)]
             pub side:
                 [Either<TupleExtensionErrorSide<CollA::Error, CollB::Item>, TupleExtensionErrorSide<CollB::Error, CollA::Item>>;
                     {
