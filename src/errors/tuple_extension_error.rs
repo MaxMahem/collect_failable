@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use std::marker::PhantomData;
 use std::ops::Deref;
 
 use display_as_debug::option::OpaqueOptionDbg;
@@ -8,6 +9,7 @@ use tap::Pipe;
 
 #[cfg(doc)]
 use crate::TryExtend;
+use crate::TryExtendOne;
 
 /// An error that occurs when extending a tuple of collections fails.
 ///
@@ -20,70 +22,76 @@ use crate::TryExtend;
 ///
 /// # Type Parameters
 ///
-/// - `ErrA`: The error type of the first collection.
-/// - `ErrB`: The error type of the second collection.
-/// - `A`: The type of the first collection.
-/// - `B`: The type of the second collection.
+/// - `CollA`: The type of the first collection implementing [`TryExtendOne`].
+/// - `CollB`: The type of the second collection implementing [`TryExtendOne`].
 /// - `I`: The type of the remaining iterator.
 #[subdef::subdef]
-pub struct TupleExtensionError<ErrA, ErrB, A, B, I> {
+pub struct TupleExtensionError<CollA: TryExtendOne, CollB: TryExtendOne, I> {
     #[cfg(doc)]
     /// Which side failed: `Left(side_a)` when first collection fails,
     /// `Right(side_b)` when second collection fails
-    pub side: Either<TupleExtensionErrorSide<ErrA, B>, TupleExtensionErrorSide<ErrB, A>>,
+    pub side: Either<TupleExtensionErrorSide<CollA::Error, CollB::Item>, TupleExtensionErrorSide<CollB::Error, CollA::Item>>,
     #[cfg(doc)]
     /// The remaining iterator after the error occurred
     pub remaining: I,
 
     #[cfg(not(doc))]
-    data: [Box<TupleExtensionErrorData<ErrA, ErrB, A, B, I>>; {
+    data: [Box<TupleExtensionErrorData<CollA, CollB, I>>; {
         /// The internal data of a [`TupleExtensionError`].
         #[doc(hidden)]
         #[derive(Debug)]
-        pub struct TupleExtensionErrorData<ErrA, ErrB, A, B, I> {
+        pub struct TupleExtensionErrorData<CollA, CollB, I>
+        where
+            CollA: TryExtendOne,
+            CollB: TryExtendOne,
+        {
             /// Which side failed: `Left(side_a)` when first collection fails,
             /// `Right(side_b)` when second collection fails
-            pub side: [Either<TupleExtensionErrorSide<ErrA, B>, TupleExtensionErrorSide<ErrB, A>>; {
-                /// Information about which side of a tuple extension failed.
-                pub struct TupleExtensionErrorSide<Err, Unevaluated> {
-                    /// The error that occurred during extension.
-                    pub error: Err,
-                    /// The unevaluated item from the other side, if any.
-                    pub unevaluated: Option<Unevaluated>,
-                }
-            }],
+            pub side:
+                [Either<TupleExtensionErrorSide<CollA::Error, CollB::Item>, TupleExtensionErrorSide<CollB::Error, CollA::Item>>;
+                    {
+                        /// Information about which side of a tuple extension failed.
+                        pub struct TupleExtensionErrorSide<Err, Unevaluated> {
+                            /// The error that occurred during extension.
+                            pub error: Err,
+                            /// The unevaluated item from the other side, if any.
+                            pub unevaluated: Option<Unevaluated>,
+                        }
+                    }],
             /// The remaining iterator after the error occurred
             pub remaining: I,
         }
     }],
+    #[cfg(not(doc))]
+    _phantom: PhantomData<(CollA, CollB)>,
 }
 
-impl<ErrA, ErrB, A, B, I> TupleExtensionError<ErrA, ErrB, A, B, I> {
+impl<CollA: TryExtendOne, CollB: TryExtendOne, I> TupleExtensionError<CollA, CollB, I> {
     /// Creates a new [`TupleExtensionError`] with the A side (first collection) having failed.
-    pub fn new_a(error: ErrA, unevaluated: Option<B>, remaining: I) -> Self {
+    pub fn new_a(error: CollA::Error, unevaluated: Option<CollB::Item>, remaining: I) -> Self {
         TupleExtensionErrorData { side: Either::Left(TupleExtensionErrorSide { error, unevaluated }), remaining }
             .pipe(Box::new)
-            .pipe(|data| Self { data })
+            .pipe(|data| Self { data, _phantom: PhantomData })
     }
 
     /// Creates a new [`TupleExtensionError`] with the B side (second collection) having failed.
-    pub fn new_b(error: ErrB, unevaluated: Option<A>, remaining: I) -> Self {
+    pub fn new_b(error: CollB::Error, unevaluated: Option<CollA::Item>, remaining: I) -> Self {
         TupleExtensionErrorData { side: Either::Right(TupleExtensionErrorSide { error, unevaluated }), remaining }
             .pipe(Box::new)
-            .pipe(|data| Self { data })
+            .pipe(|data| Self { data, _phantom: PhantomData })
     }
 
     /// Consumes the error, returning the data containing the [`TupleExtensionError::side`]
     /// and the remaining [`TupleExtensionError::remaining`] iterator.
     #[must_use]
-    pub fn into_data(self) -> TupleExtensionErrorData<ErrA, ErrB, A, B, I> {
+    pub fn into_data(self) -> TupleExtensionErrorData<CollA, CollB, I> {
         *self.data
     }
 }
 
 #[doc(hidden)]
-impl<ErrA, ErrB, A, B, I> Deref for TupleExtensionError<ErrA, ErrB, A, B, I> {
-    type Target = TupleExtensionErrorData<ErrA, ErrB, A, B, I>;
+impl<CollA: TryExtendOne, CollB: TryExtendOne, I> Deref for TupleExtensionError<CollA, CollB, I> {
+    type Target = TupleExtensionErrorData<CollA, CollB, I>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
@@ -96,10 +104,10 @@ impl<Err: std::fmt::Debug, Unevaluated> std::fmt::Debug for TupleExtensionErrorS
     }
 }
 
-impl<ErrA, ErrB, A, B, I> Debug for TupleExtensionError<ErrA, ErrB, A, B, I>
+impl<CollA: TryExtendOne, CollB: TryExtendOne, I> Debug for TupleExtensionError<CollA, CollB, I>
 where
-    ErrA: Debug,
-    ErrB: Debug,
+    CollA::Error: Debug,
+    CollB::Error: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TupleExtensionError")
@@ -109,10 +117,10 @@ where
     }
 }
 
-impl<ErrA, ErrB, A, B, I> Display for TupleExtensionError<ErrA, ErrB, A, B, I>
+impl<CollA: TryExtendOne, CollB: TryExtendOne, I> Display for TupleExtensionError<CollA, CollB, I>
 where
-    ErrA: Display,
-    ErrB: Display,
+    CollA::Error: Display,
+    CollB::Error: Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self.data.side {
@@ -122,10 +130,10 @@ where
     }
 }
 
-impl<ErrA, ErrB, A, B, I> Error for TupleExtensionError<ErrA, ErrB, A, B, I>
+impl<CollA: TryExtendOne, CollB: TryExtendOne, I> Error for TupleExtensionError<CollA, CollB, I>
 where
-    ErrA: Error + 'static,
-    ErrB: Error + 'static,
+    CollA::Error: Error + 'static,
+    CollB::Error: Error + 'static,
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match &self.data.side {

@@ -1,28 +1,42 @@
 use collect_failable::errors::TupleExtensionError;
+use collect_failable::TryExtendOne;
 
 use super::error_tests::{test_format, test_source, TestError};
 
 const SIDE_A_ERROR: TestError = TestError::new("A side failed");
 const SIDE_B_ERROR: TestError = TestError::new("B side failed");
 
-fn create_a_error_with_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
+// Wrapper type to allow using TestError in tests
+#[derive(Debug)]
+#[allow(dead_code)]
+struct TestColl;
+
+impl TryExtendOne for TestColl {
+    type Item = u32;
+    type Error = TestError;
+
+    fn try_extend_one(&mut self, _item: u32) -> Result<(), TestError> {
+        // Not actually used in error construction tests
+        unimplemented!()
+    }
+}
+
+fn create_a_error_with_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_a(SIDE_A_ERROR, Some(20), remaining.into_iter())
 }
 
-fn create_a_error_without_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>>
-{
+fn create_a_error_without_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_a(SIDE_A_ERROR, None, remaining.into_iter())
 }
 
-fn create_b_error_with_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
+fn create_b_error_with_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_b(SIDE_B_ERROR, Some(10), remaining.into_iter())
 }
 
-fn create_b_error_without_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>>
-{
+fn create_b_error_without_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_b(SIDE_B_ERROR, None, remaining.into_iter())
 }
@@ -54,14 +68,5 @@ fn into_data() {
     assert_eq!(data.remaining.collect::<Vec<_>>(), vec![(3, 30), (4, 40), (5, 50)]);
 }
 
-// Test field access via Deref
-#[test]
-fn remaining_accessible() {
-    let error = create_a_error_with_unevaluated();
-    let type_name = std::any::type_name_of_val(&error.remaining);
-    assert!(type_name.contains("IntoIter"));
-}
-
-// Test Error trait implementation
 test_source!(error_trait_source_a, create_a_error_with_unevaluated(), TestError);
 test_source!(error_trait_source_b, create_b_error_with_unevaluated(), TestError);

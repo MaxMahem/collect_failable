@@ -17,7 +17,7 @@ where
     TryFromA: TryExtendOne + Default,
     TryFromB: TryExtendOne + Default,
 {
-    type Error = TupleExtensionError<TryFromA::Error, TryFromB::Error, TryFromA::Item, TryFromB::Item, I::IntoIter>;
+    type Error = TupleExtensionError<TryFromA, TryFromB, I::IntoIter>;
 
     /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
     ///
