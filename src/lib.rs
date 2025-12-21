@@ -9,8 +9,6 @@
 #![allow(clippy::multiple_crate_versions)]
 
 /// Error types returned by failable collection operations.
-///
-/// error types that can be returned when collection operations fail.
 pub mod errors;
 mod impls;
 mod traits;

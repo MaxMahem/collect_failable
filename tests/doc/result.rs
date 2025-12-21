@@ -75,30 +75,25 @@ fn error_recovery_example() {
     // Collect items until an error is encountered
     let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
     let result: Result<Result<HashSet<_>, _>, _> = data.into_iter().try_collect_ex();
+    let err = result.expect_err("should be err");
 
-    match result {
-        Ok(Ok(set)) => panic!("Expected error, got success: {:?}", set),
-        Ok(Err(coll_err)) => panic!("Expected iterator error, got collection error: {}", coll_err),
-        Err(err) => {
-            // Use into_parts() to consume the error and extract all components
-            let parts = err.into_data();
+    // The `ResultIterationError` contains the iterator error
+    assert_eq!(err.iteration_error, "invalid");
 
-            // Check the iterator error
-            assert_eq!(parts.iteration_error, "invalid");
+    // The remaining iterator
+    assert_eq!(err.result_iter.size_hint(), (1, Some(1)));
 
-            // Recover the partial collection that was successfully built
-            match parts.collection_result {
-                Ok(partial_set) => {
-                    // The partial set contains items collected before the error
-                    assert_eq!(partial_set.len(), 3);
-                    assert!(partial_set.contains(&1));
-                    assert!(partial_set.contains(&2));
-                    assert!(partial_set.contains(&3));
-                }
-                Err(_) => panic!("Expected Ok with partial collection"),
-            }
-        }
-    }
+    // The the result of the partial collection
+    let collected = err.collection_result.as_ref().expect("should be ok");
+    assert_eq!(collected, &HashSet::from([1, 2, 3]));
+
+    // For supported types, the data can be recovered as an iterator.
+    // and this works regardless of if the collection was successful
+    let iter_data = err.into_iter().collect::<Vec<_>>();
+    assert_eq!(iter_data.len(), 3);
+    assert!(iter_data.contains(&1)); // since the collection is a hashset
+    assert!(iter_data.contains(&2)); // order is not guranteed
+    assert!(iter_data.contains(&3));
 }
 
 // TODO: Example showing the use of `flatten_err` for handling nested Result types.

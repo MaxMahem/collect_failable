@@ -24,13 +24,13 @@ use tap::Pipe;
 #[subdef::subdef]
 pub struct ResultCollectionError<E, C, CErr, I> {
     #[cfg(doc)]
-    /// The error from the Result iterator (first Err encountered)
+    /// The first [`Err`] encountered from the [`Result`] [`Iterator`]
     pub iteration_error: E,
     #[cfg(doc)]
-    /// The partial collection result (Ok with partial data, or Err with collection error)
+    /// The partial collection result ([`Ok`] with partial collection, or [`Err`] with collection error)
     pub collection_result: Result<C, CErr>,
     #[cfg(doc)]
-    /// The remaining iterator (items not yet consumed when the error occurred)
+    /// The remaining [`Iterator`] (items not yet consumed when the error occurred)
     pub result_iter: I,
 
     #[cfg(not(doc))]
@@ -38,11 +38,11 @@ pub struct ResultCollectionError<E, C, CErr, I> {
         /// The internal data of a [`ResultCollectionError`].
         #[doc(hidden)]
         pub struct ResultCollectionErrorData<E, C, CErr, I> {
-            /// The error from the Result iterator (first Err encountered)
+            /// The first [`Err`] encountered from the [`Result`] [`Iterator`]
             pub iteration_error: E,
-            /// The partial collection result (Ok with partial data, or Err with collection error)
+            /// The partial collection result ([`Ok`] with partial collection, or [`Err`] with collection error)
             pub collection_result: Result<C, CErr>,
-            /// The remaining iterator (items not yet consumed when the error occurred)
+            /// The remaining [`Iterator`] (items not yet consumed when the error occurred)
             pub result_iter: I,
         }
     }],
