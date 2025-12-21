@@ -8,7 +8,7 @@
 // Allow multiple crate versions from transitive dependencies (include-doc)
 #![allow(clippy::multiple_crate_versions)]
 
-/// Error types returned by failable collection operations.
+/// Error types returned by provided failable collection operation implementations.
 pub mod errors;
 mod impls;
 mod traits;

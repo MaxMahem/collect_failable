@@ -17,42 +17,17 @@ fn create_err_collection() -> ResultCollectionError<TestError, Collection, TestE
 const EXPECTED_DISPLAY_OK: &str = "Iterator error: Test error: iter error";
 const EXPECTED_DISPLAY_ERR: &str = "Iterator error: Test error: iter error; Collection error: Test error: collection error";
 const EXPECTED_DEBUG: &str =
-    "ResultIterError { iteration_error: TestError { identity: \"iter error\" }, collection_result: Ok(...), result_iter: \"core::iter::sources::empty::Empty<u32>\" }";
+    "ResultCollectionError { error: TestError { identity: \"iter error\" }, result: Ok(...), iter: \"core::iter::sources::empty::Empty<u32>\" }";
 
 test_format!(display_format_ok, create_err(), "{}", EXPECTED_DISPLAY_OK);
 test_format!(display_format_err, create_err_collection(), "{}", EXPECTED_DISPLAY_ERR);
 test_format!(debug_format_ok, create_err(), "{:?}", EXPECTED_DEBUG);
 
 #[test]
-fn into_iteration_error() {
-    let error = create_err().into_iteration_error();
-    assert_eq!(error, TestError::new("iter error"));
-}
-
-#[test]
-fn into_collection_result_ok() {
-    let result = create_err().into_collection_result();
-    assert_eq!(result, Ok(HashSet::from([1, 2, 3])));
-}
-
-#[test]
-fn into_collection_result_err() {
-    let result = create_err_collection().into_collection_result();
-    assert_eq!(result, Err(TestError::new("collection error")));
-}
-
-#[test]
-fn into_parts_ok() {
-    let parts = create_err().into_data();
-    assert_eq!(parts.iteration_error, TestError::new("iter error"));
-    assert_eq!(parts.collection_result, Ok(HashSet::from([1, 2, 3])));
-}
-
-#[test]
-fn into_parts_err() {
-    let parts = create_err_collection().into_data();
-    assert_eq!(parts.iteration_error, TestError::new("iter error"));
-    assert_eq!(parts.collection_result, Err(TestError::new("collection error")));
+fn into_data() {
+    let data = create_err().into_data();
+    assert_eq!(data.error, TestError::new("iter error"));
+    assert_eq!(data.result, Ok(HashSet::from([1, 2, 3])));
 }
 
 test_source!(error_trait_source, create_err(), TestError);

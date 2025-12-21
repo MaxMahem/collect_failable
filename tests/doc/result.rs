@@ -17,7 +17,7 @@ fn try_from_iter_result_example() {
     let Err(err) = result else {
         panic!("should be err");
     };
-    assert_eq!(err.iteration_error, "oops");
+    assert_eq!(err.error, "oops");
 
     // Construction of a container can also fail
     let data: Vec<Result<i32, &str>> = vec![Ok(1), Ok(1), Ok(3)];
@@ -77,14 +77,14 @@ fn error_recovery_example() {
     let result: Result<Result<HashSet<_>, _>, _> = data.into_iter().try_collect_ex();
     let err = result.expect_err("should be err");
 
-    // The `ResultIterationError` contains the iterator error
-    assert_eq!(err.iteration_error, "invalid");
+    // The `ResultCollectionError` contains the iterator error
+    assert_eq!(err.error, "invalid");
 
     // The remaining iterator
-    assert_eq!(err.result_iter.size_hint(), (1, Some(1)));
+    assert_eq!(err.iter.size_hint(), (1, Some(1)));
 
     // The the result of the partial collection
-    let collected = err.collection_result.as_ref().expect("should be ok");
+    let collected = err.result.as_ref().expect("should be ok");
     assert_eq!(collected, &HashSet::from([1, 2, 3]));
 
     // For supported types, the data can be recovered as an iterator.
