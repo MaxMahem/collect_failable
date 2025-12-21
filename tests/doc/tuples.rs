@@ -1,16 +1,4 @@
 #[test]
-fn try_from_iter_tuple_example() {
-    use collect_failable::TryFromIterator;
-    use std::collections::HashSet;
-
-    let data = vec![(1, 2), (2, 3), (3, 4)];
-    let (a, b): (HashSet<i32>, HashSet<i32>) = TryFromIterator::try_from_iter(data).unwrap();
-
-    assert_eq!(a, HashSet::from([1, 2, 3]));
-    assert_eq!(b, HashSet::from([2, 3, 4]));
-}
-
-#[test]
 fn try_extend_tuple_example() {
     use collect_failable::TryExtend;
     use std::collections::HashSet;

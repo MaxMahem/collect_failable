@@ -2,48 +2,10 @@ use std::iter::Once;
 
 use no_drop::dbg::IntoNoDrop;
 
-use crate::{TryExtend, TryFromIterator, TupleCollectionError, TupleExtensionError};
+use crate::{TryExtend, TupleExtensionError};
 
 #[cfg(doc)]
 use crate::TryUnzip;
-
-/// Converts an iterator of `(A, B)` into a `(TryFromA, TryFromB)`, upholding the
-/// [`TryFromIterator`] contract of both types.
-impl<A, B, TryFromA, TryFromB, I> TryFromIterator<I> for (TryFromA, TryFromB)
-where
-    I: IntoIterator<Item = (A, B)>,
-    TryFromA: TryFromIterator<Vec<A>>,
-    TryFromB: TryFromIterator<Vec<B>>,
-{
-    type Error = TupleCollectionError<TryFromA::Error, TryFromB::Error, TryFromA, Vec<B>>;
-
-    /// Converts an iterator of `(A, B)` into a `(TryFromA, TryFromB)`.
-    ///
-    /// This implementation is suboptimal. If possible, prefer [`TryUnzip::try_unzip`] or
-    /// [`TryExtend::try_extend`] instead.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    #[doc = include_doc::function_body!("tests/doc/tuples.rs", try_from_iter_tuple_example, [])]
-    /// ```
-    fn try_from_iter(iter: I) -> Result<Self, Self::Error> {
-        let (vec_a, vec_b): (Vec<A>, Vec<B>) = iter.into_iter().unzip();
-        let (vec_a, vec_b) = (vec_a.no_drop(), vec_b.no_drop());
-
-        let collection_a = match TryFromA::try_from_iter(vec_a.unwrap()) {
-            Ok(coll) => coll.no_drop(),
-            Err(error) => return Err(TupleCollectionError::new_a(error, vec_b.unwrap())),
-        };
-
-        let collection_b = match TryFromB::try_from_iter(vec_b.unwrap()) {
-            Ok(coll) => coll.no_drop(),
-            Err(error) => return Err(TupleCollectionError::new_b(error, collection_a.unwrap())),
-        };
-
-        Ok((collection_a.unwrap(), collection_b.unwrap()))
-    }
-}
 
 /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
 ///

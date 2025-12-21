@@ -6,9 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+ - Removed `TupleCollectionError` error type. Tuple collections should use `TryUnzip` or `TryExtend` instead of `TryFromIterator`.
+ - Removed `TryFromIterator` implementation for tuples. Use `TryUnzip::try_unzip` or `TryExtend::try_extend` instead.
+
 ### Changed
 
  - Made `CapacityMismatch` fields readonly. (This was considered a non-breaking change because there should be no reason to mutate the error.)
+ - Improved documentation for error types (`CollectionCollision`, `CollectionError`, `UnzipErrorSide`, `TupleExtensionErrorSide`) by hiding internal data structs and documenting readonly fields directly on parent types.
 
 ## [0.12.3] - 2025-12-19
 

@@ -1,31 +1,12 @@
 use std::collections::HashSet;
 
-use collect_failable::{TryExtend, TryFromIterator};
+use collect_failable::TryExtend;
 
 type HashSetTuple<T> = (HashSet<T>, HashSet<T>);
 
 const VALID_DATA: [(u32, u32); 2] = [(1, 2), (2, 3)];
 const INVALID_DATA_LEFT: [(u32, u32); 2] = [(1, 3), (1, 4)];
 const INVALID_DATA_RIGHT: [(u32, u32); 2] = [(4, 2), (5, 2)];
-
-macro_rules! test_tuple_impl {
-    ($name:ident, $data:expr, $expected_value:expr) => {
-        #[test]
-        fn $name() {
-            let err = HashSetTuple::try_from_iter($data).expect_err("should be err");
-
-            // Extract the colliding value from the TupleCollectionError
-            match err {
-                collect_failable::TupleCollectionError::A(side) => {
-                    assert_eq!(side.error.item, $expected_value, "left collision value should match");
-                }
-                collect_failable::TupleCollectionError::B(side) => {
-                    assert_eq!(side.error.item, $expected_value, "right collision value should match");
-                }
-            }
-        }
-    };
-}
 
 macro_rules! test_try_extend_collision {
     ($name:ident, $data:expr, $expected_value:expr, $side:ident) => {
@@ -59,18 +40,6 @@ macro_rules! test_try_extend_success {
         }
     };
 }
-
-// TryFromIterator tests
-#[test]
-fn try_from_iter_valid_data() {
-    let found = HashSetTuple::try_from_iter(VALID_DATA).expect("should be ok");
-    let expected: HashSetTuple<_> = VALID_DATA.into_iter().collect();
-
-    assert_eq!(found, expected, "should match data");
-}
-
-test_tuple_impl!(try_from_iter_collision_left, INVALID_DATA_LEFT, 1);
-test_tuple_impl!(try_from_iter_collision_right, INVALID_DATA_RIGHT, 2);
 
 // try_extend tests
 test_try_extend_success!(try_extend_valid_data, try_extend);

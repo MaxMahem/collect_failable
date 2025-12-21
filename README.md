@@ -111,7 +111,7 @@ Implementations for various containers are provided.
 
 ### Tuple Implementations
 
-Tuples of size 2 implement both `TryFromIterator` and `TryExtend` when their inner types do. Errors respect the guarantee of each component, mirroring the behavior of the `std` tuple implementations—but with fallibility. Implementing `TryExtendSafe` or `TryExtendOne` is not possible since they cannot provide atomic single-item guarantees within the trait definition.
+Tuples of size 2 implement `TryExtend` when their inner types do. For constructing tuple collections from iterators, use `TryUnzip` instead, which provides better ergonomics and error handling. Implementing `TryExtendSafe` or `TryExtendOne` is not possible since tuples cannot provide atomic single-item guarantees within the trait definition.
 
 ### Array Implementation
 
