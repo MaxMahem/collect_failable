@@ -5,7 +5,8 @@ use std::collections::{BTreeSet, HashSet};
 use hashbrown::HashSet as HashBrownSet;
 
 use crate::utils::Identifiable;
-use collect_failable::{ItemCollision, TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
+use collect_failable::errors::ItemCollision;
+use collect_failable::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 macro_rules! try_from_iter_and_extend_iter {
     ($module:ident, $set_type:ty) => {

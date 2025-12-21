@@ -3,7 +3,8 @@ use std::hash::{BuildHasher, Hash};
 use hashbrown::hash_map::RawEntryMut;
 use hashbrown::HashMap;
 
-use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::errors::{CollectionCollision, ItemCollision};
+use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 impl<K: Eq + Hash, V, I> TryFromIterator<I> for HashMap<K, V>
 where
@@ -88,13 +89,14 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne<(K, V)> for HashMap<K, V, S> {
-    type Error = crate::ItemCollision<(K, V)>;
+impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne for HashMap<K, V, S> {
+    type Item = (K, V);
+    type Error = ItemCollision<(K, V)>;
 
-    fn try_extend_one(&mut self, item: (K, V)) -> Result<(), Self::Error> {
+    fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error> {
         let hash = self.hasher().hash_one(&item.0);
         match self.raw_entry_mut().from_hash(hash, |k| k == &item.0) {
-            RawEntryMut::Occupied(_) => Err(crate::ItemCollision::new(item)),
+            RawEntryMut::Occupied(_) => Err(ItemCollision::new(item)),
             RawEntryMut::Vacant(entry) => {
                 entry.insert_hashed_nocheck(hash, item.0, item.1);
                 Ok(())

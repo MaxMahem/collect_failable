@@ -82,7 +82,10 @@ pub trait TryExtendSafe<I: IntoIterator>: TryExtend<I> {
 ///
 /// Unlike [`TryExtend`], this trait works with individual items rather than iterators, it always
 /// should provide a strong error guarantee, guaranteeing that the collection remains unchanged on error.
-pub trait TryExtendOne<T> {
+pub trait TryExtendOne {
+    /// The type of item that can be extended into the collection.
+    type Item;
+
     /// Error type returned by [`try_extend_one`](TryExtendOne::try_extend_one).
     type Error;
 
@@ -111,5 +114,5 @@ pub trait TryExtendOne<T> {
     /// assert_eq!(err.item, (1, 5));
     /// assert_eq!(map.get(&1), Some(&2)); // Original value unchanged
     /// ```
-    fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error>;
+    fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error>;
 }

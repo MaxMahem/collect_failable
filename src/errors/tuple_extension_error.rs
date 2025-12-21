@@ -17,12 +17,20 @@ use crate::TryExtend;
 /// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`](std::ops::Deref)
 /// implementation into a hidden `TupleExtensionErrorData` type, with identical fields. If necessary,
 /// you can consume an instance of this type via [`TupleExtensionError::into_data`] to get owned data.
+///
+/// # Type Parameters
+///
+/// - `ErrA`: The error type of the first collection.
+/// - `ErrB`: The error type of the second collection.
+/// - `A`: The type of the first collection.
+/// - `B`: The type of the second collection.
+/// - `I`: The type of the remaining iterator.
 #[subdef::subdef]
 pub struct TupleExtensionError<ErrA, ErrB, A, B, I> {
     #[cfg(doc)]
     /// Which side failed: `Left(side_a)` when first collection fails,
     /// `Right(side_b)` when second collection fails
-    pub side: Either<Side<ErrA, B>, Side<ErrB, A>>,
+    pub side: Either<TupleExtensionErrorSide<ErrA, B>, TupleExtensionErrorSide<ErrB, A>>,
     #[cfg(doc)]
     /// The remaining iterator after the error occurred
     pub remaining: I,
@@ -35,9 +43,9 @@ pub struct TupleExtensionError<ErrA, ErrB, A, B, I> {
         pub struct TupleExtensionErrorData<ErrA, ErrB, A, B, I> {
             /// Which side failed: `Left(side_a)` when first collection fails,
             /// `Right(side_b)` when second collection fails
-            pub side: [Either<Side<ErrA, B>, Side<ErrB, A>>; {
+            pub side: [Either<TupleExtensionErrorSide<ErrA, B>, TupleExtensionErrorSide<ErrB, A>>; {
                 /// Information about which side of a tuple extension failed.
-                pub struct Side<Err, Unevaluated> {
+                pub struct TupleExtensionErrorSide<Err, Unevaluated> {
                     /// The error that occurred during extension.
                     pub error: Err,
                     /// The unevaluated item from the other side, if any.
@@ -53,14 +61,14 @@ pub struct TupleExtensionError<ErrA, ErrB, A, B, I> {
 impl<ErrA, ErrB, A, B, I> TupleExtensionError<ErrA, ErrB, A, B, I> {
     /// Creates a new [`TupleExtensionError`] with the A side (first collection) having failed.
     pub fn new_a(error: ErrA, unevaluated: Option<B>, remaining: I) -> Self {
-        TupleExtensionErrorData { side: Either::Left(Side { error, unevaluated }), remaining }
+        TupleExtensionErrorData { side: Either::Left(TupleExtensionErrorSide { error, unevaluated }), remaining }
             .pipe(Box::new)
             .pipe(|data| Self { data })
     }
 
     /// Creates a new [`TupleExtensionError`] with the B side (second collection) having failed.
     pub fn new_b(error: ErrB, unevaluated: Option<A>, remaining: I) -> Self {
-        TupleExtensionErrorData { side: Either::Right(Side { error, unevaluated }), remaining }
+        TupleExtensionErrorData { side: Either::Right(TupleExtensionErrorSide { error, unevaluated }), remaining }
             .pipe(Box::new)
             .pipe(|data| Self { data })
     }
@@ -82,7 +90,7 @@ impl<ErrA, ErrB, A, B, I> Deref for TupleExtensionError<ErrA, ErrB, A, B, I> {
     }
 }
 
-impl<Err: std::fmt::Debug, Unevaluated> std::fmt::Debug for Side<Err, Unevaluated> {
+impl<Err: std::fmt::Debug, Unevaluated> std::fmt::Debug for TupleExtensionErrorSide<Err, Unevaluated> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Side").field("error", &self.error).field("unevaluated", &OpaqueOptionDbg(&self.unevaluated)).finish()
     }

@@ -4,7 +4,8 @@ use std::collections::{BTreeMap, HashMap};
 
 use hashbrown::HashMap as HashBrownMap;
 
-use collect_failable::{ItemCollision, TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
+use collect_failable::errors::ItemCollision;
+use collect_failable::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 const UNIQUE_KEYS: [(i32, i32); 2] = [(1, 2), (2, 3)];
 const COLLIDE_WITH_SELF: [(i32, i32); 3] = [(3, 3), (4, 4), (3, 5)];

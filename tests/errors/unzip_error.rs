@@ -1,7 +1,8 @@
 use std::array::IntoIter;
 use std::collections::HashSet;
 
-use collect_failable::{ItemCollision, TryUnzip, UnzipError};
+use collect_failable::errors::{ItemCollision, UnzipError};
+use collect_failable::TryUnzip;
 
 use crate::error_tests::{test_format, test_source};
 
@@ -18,12 +19,12 @@ const EXPECTED_DISPLAY_UNZIP_ERROR_B: &str = "Failed while unzipping into second
 
 type Collection = HashSet<u32>;
 
-fn create_a_error() -> UnzipError<u32, u32, Collection, Collection, IntoIter<(u32, u32), 4>> {
-    COLLISION_DATA_A.into_iter().try_unzip::<_, _, Collection, Collection>().expect_err("Should fail on A side")
+fn create_a_error() -> UnzipError<Collection, Collection, IntoIter<(u32, u32), 4>> {
+    COLLISION_DATA_A.into_iter().try_unzip::<Collection, Collection>().expect_err("Should fail on A side")
 }
 
-fn create_b_error() -> UnzipError<u32, u32, Collection, Collection, IntoIter<(u32, u32), 4>> {
-    COLLISION_DATA_B.into_iter().try_unzip::<_, _, Collection, Collection>().expect_err("Should fail on B side")
+fn create_b_error() -> UnzipError<Collection, Collection, IntoIter<(u32, u32), 4>> {
+    COLLISION_DATA_B.into_iter().try_unzip::<Collection, Collection>().expect_err("Should fail on B side")
 }
 
 #[test]

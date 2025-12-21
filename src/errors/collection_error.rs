@@ -6,7 +6,7 @@ use std::ops::{Deref, RangeInclusive};
 use display_as_debug::option::OpaqueOptionDbg;
 use tap::{Conv, Pipe};
 
-use crate::CapacityMismatch;
+use super::CapacityMismatch;
 
 /// An error that occurs when an collecting an iterator fails during it's collection.
 ///

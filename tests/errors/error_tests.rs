@@ -17,19 +17,6 @@ macro_rules! test_format {
     };
 }
 
-/// Test that an expect method panics with the expected message on wrong variant
-///
-/// - `expect_panic!(test_name, ctor(), method, "panic message");`
-macro_rules! expect_panic {
-    ($name:ident, $setup:expr, $method:ident, $msg:expr) => {
-        #[test]
-        #[should_panic(expected = $msg)]
-        fn $name() {
-            _ = $setup.$method($msg);
-        }
-    };
-}
-
 /// Test any getter (method call or field access) against an expected value
 ///
 /// - `getter!(len, create_error(), len(), 5);`
@@ -97,7 +84,6 @@ macro_rules! test_source {
     };
 }
 
-pub(crate) use expect_panic;
 pub(crate) use getter;
 pub(crate) use identity;
 pub(crate) use into_iterator;

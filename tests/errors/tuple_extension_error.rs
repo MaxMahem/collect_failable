@@ -1,4 +1,4 @@
-use collect_failable::TupleExtensionError;
+use collect_failable::errors::TupleExtensionError;
 
 use super::error_tests::{test_format, test_source, TestError};
 

@@ -3,7 +3,8 @@ use std::hash::{BuildHasher, Hash};
 use fluent_result::bool::dbg::Expect;
 use hashbrown::HashSet;
 
-use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::errors::{CollectionCollision, ItemCollision};
+use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 impl<T: Eq + Hash, I> TryFromIterator<I> for HashSet<T>
 where
@@ -79,12 +80,13 @@ where
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher> crate::TryExtendOne<T> for HashSet<T, S> {
-    type Error = crate::ItemCollision<T>;
+impl<T: Eq + Hash, S: BuildHasher> crate::TryExtendOne for HashSet<T, S> {
+    type Item = T;
+    type Error = ItemCollision<T>;
 
     fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error> {
         match self.contains(&item) {
-            true => Err(crate::ItemCollision::new(item)),
+            true => Err(ItemCollision::new(item)),
             false => {
                 self.insert(item);
                 Ok(())

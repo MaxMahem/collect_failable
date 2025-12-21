@@ -1,4 +1,5 @@
-use collect_failable::{ResultCollectionError, TryFromIterator};
+use collect_failable::errors::ResultCollectionError;
+use collect_failable::TryFromIterator;
 
 #[test]
 fn can_recover_iterator_from_result_iter_error() {

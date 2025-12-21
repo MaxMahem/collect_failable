@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+ - **Breaking:** Moved all error types into the `errors` submodule. Error types are no longer re-exported at the crate root.
+   - Migration: change `use collect_failable::ErrorType;` to `use collect_failable::errors::ErrorType;` or add `use collect_failable::errors::*;` to import all error types.
+
+ - **Breaking:** Refactored `TryExtendOne` to use an associated type `Item` instead of a generic type parameter. This significantly simplifies type signatures throughout the codebase, particularly reducing `UnzipError` from 5 to 3 type parameters and `UnzipSide` from 4 to 2 type parameters. 
+   - Migration: change `impl TryExtendOne<T>` to `impl TryExtendOne { type Item = T; }` and update bounds from `where C: TryExtendOne<T>` to `where C: TryExtendOne<Item = T>`.
  - Made `CapacityMismatch` fields readonly. (This was considered a non-breaking change because there should be no reason to mutate the error.)
  - Improved documentation for error types (`CollectionCollision`, `CollectionError`, `UnzipErrorSide`, `TupleExtensionErrorSide`) by hiding internal data structs and documenting readonly fields directly on parent types.
  - Converted `TupleExtensionError` and `UnzipError` from enum to struct type for improved API consistency. `either::Either` is used to hold the error sides, with a custom inner type. 

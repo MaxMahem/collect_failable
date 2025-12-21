@@ -1,6 +1,7 @@
 use no_drop::dbg::IntoNoDrop;
 
-use crate::{TryExtend, TryExtendOne, TupleExtensionError};
+use crate::errors::TupleExtensionError;
+use crate::{TryExtend, TryExtendOne};
 
 #[cfg(doc)]
 use crate::TryUnzip;
@@ -10,13 +11,13 @@ use crate::TryUnzip;
 /// Note: Tuples do not implement [`TryExtendSafe`](crate::TryExtendSafe) because they cannot
 /// provide a strong error guarantee. Extension has to proceed element by element and if the
 /// second collection fails to extend, the first may have already been modified.
-impl<A, B, TryFromA, TryFromB, I> TryExtend<I> for (TryFromA, TryFromB)
+impl<TryFromA, TryFromB, I> TryExtend<I> for (TryFromA, TryFromB)
 where
-    I: IntoIterator<Item = (A, B)>,
-    TryFromA: TryExtendOne<A> + Default,
-    TryFromB: TryExtendOne<B> + Default,
+    I: IntoIterator<Item = (TryFromA::Item, TryFromB::Item)>,
+    TryFromA: TryExtendOne + Default,
+    TryFromB: TryExtendOne + Default,
 {
-    type Error = TupleExtensionError<TryFromA::Error, TryFromB::Error, A, B, I::IntoIter>;
+    type Error = TupleExtensionError<TryFromA::Error, TryFromB::Error, TryFromA::Item, TryFromB::Item, I::IntoIter>;
 
     /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
     ///

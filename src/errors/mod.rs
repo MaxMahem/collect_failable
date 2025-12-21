@@ -1,3 +1,4 @@
+/// Error types returned by failable collection operations.
 mod capacity_mismatch;
 mod collection_collision;
 mod collection_error;

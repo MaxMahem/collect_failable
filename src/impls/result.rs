@@ -5,7 +5,8 @@ use fluent_result::bool::Then;
 use itertools::Either;
 use tap::Pipe;
 
-use crate::{ResultCollectionError, TryFromIterator};
+use crate::errors::ResultCollectionError;
+use crate::TryFromIterator;
 
 type ArcMutex<T> = Arc<Mutex<T>>;
 type IterOrEmpty<I, T> = Either<I, iter::Empty<T>>;

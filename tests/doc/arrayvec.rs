@@ -1,7 +1,8 @@
 #[test]
 fn try_from_iter_arrayvec_example() {
     use arrayvec::ArrayVec;
-    use collect_failable::{CapacityMismatch, TryFromIterator};
+    use collect_failable::errors::CapacityMismatch;
+    use collect_failable::TryFromIterator;
 
     let array: ArrayVec<i32, 4> = ArrayVec::try_from_iter(1..=3).expect("Should be ok");
     assert_eq!(array.as_slice(), &[1, 2, 3]);
@@ -13,7 +14,8 @@ fn try_from_iter_arrayvec_example() {
 #[test]
 fn try_extend_safe_arrayvec_example() {
     use arrayvec::ArrayVec;
-    use collect_failable::{CapacityMismatch, TryCollectEx, TryExtendSafe};
+    use collect_failable::errors::CapacityMismatch;
+    use collect_failable::{TryCollectEx, TryExtendSafe};
 
     let mut array: ArrayVec<i32, 4> = (1..=2).try_collect_ex().expect("Should be ok");
 
@@ -30,7 +32,8 @@ fn try_extend_safe_arrayvec_example() {
 #[test]
 fn try_extend_arrayvec_example() {
     use arrayvec::ArrayVec;
-    use collect_failable::{CapacityMismatch, TryCollectEx, TryExtend};
+    use collect_failable::errors::CapacityMismatch;
+    use collect_failable::{TryCollectEx, TryExtend};
 
     let mut array: ArrayVec<i32, 4> = (1..=2).try_collect_ex().expect("Should be ok");
 

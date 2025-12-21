@@ -19,26 +19,32 @@ use crate::TryUnzip;
 /// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`](std::ops::Deref)
 /// implementation into a hidden `UnzipErrorData` type, with identical fields. If necessary,
 /// you can consume an instance of this type via [`UnzipError::into_data`] to get owned data.
+///
+/// # Type Parameters
+///
+/// - `FromA`: The type of the first collection.
+/// - `FromB`: The type of the second collection.
+/// - `I`: The type of the remaining iterator.
 #[subdef::subdef]
-pub struct UnzipError<A, B, FromA, FromB, I>
+pub struct UnzipError<FromA, FromB, I>
 where
-    FromA: TryExtendOne<A>,
-    FromB: TryExtendOne<B>,
+    FromA: TryExtendOne,
+    FromB: TryExtendOne,
 {
     #[cfg(doc)]
     /// Which side failed: `Left(side_a)` when first collection fails,
     /// `Right(side_b)` when second collection fails
-    pub side: [Either<UnzipSide<FromA::Error, FromA, FromB, B>, UnzipSide<FromB::Error, FromB, FromA, A>>; {
+    pub side: [Either<UnzipErrorSide<FromA, FromB>, UnzipErrorSide<FromB, FromA>>; {
         /// Information about which side of an unzip operation failed.
-        pub struct UnzipSide<Err, Failed, Successful, Unevaluated> {
+        pub struct UnzipErrorSide<Failed: TryExtendOne, Successful: TryExtendOne> {
             /// The error that occurred during extension.
-            pub error: Err,
+            pub error: Failed::Error,
             /// The partial collection from the failed side.
             pub failed: Failed,
             /// The incomplete collection from the successful side.
             pub successful: Successful,
             /// The unevaluated item from the successful side, if any.
-            pub unevaluated: Option<Unevaluated>,
+            pub unevaluated: Option<Successful::Item>,
         }
     }],
     #[cfg(doc)]
@@ -46,38 +52,38 @@ where
     pub remaining: I,
 
     #[cfg(not(doc))]
-    data: [Box<UnzipErrorData<A, B, FromA, FromB, I>>; {
+    data: [Box<UnzipErrorData<FromA, FromB, I>>; {
         /// The internal data of an [`UnzipError`].
         #[doc(hidden)]
-        pub struct UnzipErrorData<A, B, FromA, FromB, I>
+        pub struct UnzipErrorData<FromA, FromB, I>
         where
-            FromA: TryExtendOne<A>,
-            FromB: TryExtendOne<B>,
+            FromA: TryExtendOne,
+            FromB: TryExtendOne,
         {
             /// Which side failed: `Left(side_a)` when first collection fails,
             /// `Right(side_b)` when second collection fails
-            pub side: Either<UnzipSide<FromA::Error, FromA, FromB, B>, UnzipSide<FromB::Error, FromB, FromA, A>>,
+            pub side: Either<UnzipErrorSide<FromA, FromB>, UnzipErrorSide<FromB, FromA>>,
             /// The remaining iterator after the error occurred
             pub remaining: I,
         }
     }],
 }
 
-impl<A, B, FromA, FromB, I> UnzipError<A, B, FromA, FromB, I>
+impl<FromA, FromB, I> UnzipError<FromA, FromB, I>
 where
-    FromA: TryExtendOne<A>,
-    FromB: TryExtendOne<B>,
+    FromA: TryExtendOne,
+    FromB: TryExtendOne,
 {
     /// Creates a new [`UnzipError`] with the A side (first collection) having failed.
-    pub fn new_a(error: FromA::Error, failed: FromA, successful: FromB, unevaluated: Option<B>, remaining: I) -> Self {
-        UnzipErrorData { side: Either::Left(UnzipSide { error, failed, successful, unevaluated }), remaining }
+    pub fn new_a(error: FromA::Error, failed: FromA, successful: FromB, unevaluated: Option<FromB::Item>, remaining: I) -> Self {
+        UnzipErrorData { side: Either::Left(UnzipErrorSide { error, failed, successful, unevaluated }), remaining }
             .pipe(Box::new)
             .pipe(|data| Self { data })
     }
 
     /// Creates a new [`UnzipError`] with the B side (second collection) having failed.
-    pub fn new_b(error: FromB::Error, failed: FromB, successful: FromA, unevaluated: Option<A>, remaining: I) -> Self {
-        UnzipErrorData { side: Either::Right(UnzipSide { error, failed, successful, unevaluated }), remaining }
+    pub fn new_b(error: FromB::Error, failed: FromB, successful: FromA, unevaluated: Option<FromA::Item>, remaining: I) -> Self {
+        UnzipErrorData { side: Either::Right(UnzipErrorSide { error, failed, successful, unevaluated }), remaining }
             .pipe(Box::new)
             .pipe(|data| Self { data })
     }
@@ -85,25 +91,28 @@ where
     /// Consumes the error, returning the data containing the [`UnzipError::side`]
     /// and the remaining [`UnzipError::remaining`] iterator.
     #[must_use]
-    pub fn into_data(self) -> UnzipErrorData<A, B, FromA, FromB, I> {
+    pub fn into_data(self) -> UnzipErrorData<FromA, FromB, I> {
         *self.data
     }
 }
 
 #[doc(hidden)]
-impl<A, B, FromA, FromB, I> Deref for UnzipError<A, B, FromA, FromB, I>
+impl<FromA, FromB, I> Deref for UnzipError<FromA, FromB, I>
 where
-    FromA: TryExtendOne<A>,
-    FromB: TryExtendOne<B>,
+    FromA: TryExtendOne,
+    FromB: TryExtendOne,
 {
-    type Target = UnzipErrorData<A, B, FromA, FromB, I>;
+    type Target = UnzipErrorData<FromA, FromB, I>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
 
-impl<Err: Debug, Failed, Successful, Unevaluated> Debug for UnzipSide<Err, Failed, Successful, Unevaluated> {
+impl<Failed: TryExtendOne, Successful: TryExtendOne> Debug for UnzipErrorSide<Failed, Successful>
+where
+    Failed::Error: Debug,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UnzipSide")
             .field("error", &self.error)
@@ -114,10 +123,10 @@ impl<Err: Debug, Failed, Successful, Unevaluated> Debug for UnzipSide<Err, Faile
     }
 }
 
-impl<A, B, FromA, FromB, I> Debug for UnzipError<A, B, FromA, FromB, I>
+impl<FromA, FromB, I> Debug for UnzipError<FromA, FromB, I>
 where
-    FromA: TryExtendOne<A>,
-    FromB: TryExtendOne<B>,
+    FromA: TryExtendOne,
+    FromB: TryExtendOne,
     FromA::Error: Debug,
     FromB::Error: Debug,
 {
@@ -126,10 +135,10 @@ where
     }
 }
 
-impl<A, B, FromA, FromB, I> Display for UnzipError<A, B, FromA, FromB, I>
+impl<FromA, FromB, I> Display for UnzipError<FromA, FromB, I>
 where
-    FromA: TryExtendOne<A>,
-    FromB: TryExtendOne<B>,
+    FromA: TryExtendOne,
+    FromB: TryExtendOne,
     FromA::Error: Display,
     FromB::Error: Display,
 {
@@ -141,10 +150,10 @@ where
     }
 }
 
-impl<A, B, FromA, FromB, I> Error for UnzipError<A, B, FromA, FromB, I>
+impl<FromA, FromB, I> Error for UnzipError<FromA, FromB, I>
 where
-    FromA: TryExtendOne<A>,
-    FromB: TryExtendOne<B>,
+    FromA: TryExtendOne,
+    FromB: TryExtendOne,
     FromA::Error: Error + 'static,
     FromB::Error: Error + 'static,
 {

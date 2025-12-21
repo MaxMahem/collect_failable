@@ -1,4 +1,4 @@
-use collect_failable::CollectionError;
+use collect_failable::errors::CollectionError;
 use std::collections::HashSet;
 
 use crate::error_tests::{getter, into_iterator, test_format, test_source, TestError};

@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 
 use fluent_result::expect::dbg::ExpectNone;
 
-use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::errors::{CollectionCollision, ItemCollision};
+use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 impl<K: Ord, V, I> TryFromIterator<I> for BTreeMap<K, V>
 where
@@ -72,13 +73,13 @@ where
     }
 }
 
-impl<K: Ord, V> crate::TryExtendOne<(K, V)> for BTreeMap<K, V> {
-    type Error = crate::ItemCollision<(K, V)>;
+impl<K: Ord, V> crate::TryExtendOne for BTreeMap<K, V> {
+    type Item = (K, V);
+    type Error = ItemCollision<(K, V)>;
 
-    fn try_extend_one(&mut self, item: (K, V)) -> Result<(), Self::Error> {
-        let (key, value) = item;
+    fn try_extend_one(&mut self, (key, value): (K, V)) -> Result<(), Self::Error> {
         match self.contains_key(&key) {
-            true => Err(crate::ItemCollision::new((key, value))),
+            true => Err(ItemCollision::new((key, value))),
             false => {
                 self.insert(key, value).expect_none("should not be occupied");
                 Ok(())

@@ -2,7 +2,9 @@ use std::mem::MaybeUninit;
 
 use fluent_result::into::IntoResult;
 
-use crate::{impls::r#unsafe::DisarmError, CapacityMismatch, CollectionError, TryFromIterator};
+use crate::errors::{CapacityMismatch, CollectionError};
+use crate::impls::r#unsafe::DisarmError;
+use crate::TryFromIterator;
 
 /// Create an array of size `N` from an iterator, failing if the iterator produces fewer or more items than `N`.
 impl<const N: usize, T, I> TryFromIterator<I> for [T; N]
