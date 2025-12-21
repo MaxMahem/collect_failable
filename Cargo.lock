@@ -49,6 +49,7 @@ dependencies = [
  "collect_failable",
  "derive_more",
  "display_as_debug",
+ "either",
  "fluent_result",
  "hashbrown 0.16.1",
  "include-doc",

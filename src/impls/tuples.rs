@@ -1,8 +1,6 @@
-use std::iter::Once;
-
 use no_drop::dbg::IntoNoDrop;
 
-use crate::{TryExtend, TupleExtensionError};
+use crate::{TryExtend, TryExtendOne, TupleExtensionError};
 
 #[cfg(doc)]
 use crate::TryUnzip;
@@ -15,8 +13,8 @@ use crate::TryUnzip;
 impl<A, B, TryFromA, TryFromB, I> TryExtend<I> for (TryFromA, TryFromB)
 where
     I: IntoIterator<Item = (A, B)>,
-    TryFromA: TryExtend<Once<A>> + Default,
-    TryFromB: TryExtend<Once<B>> + Default,
+    TryFromA: TryExtendOne<A> + Default,
+    TryFromB: TryExtendOne<B> + Default,
 {
     type Error = TupleExtensionError<TryFromA::Error, TryFromB::Error, A, B, I::IntoIter>;
 
@@ -33,10 +31,10 @@ where
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
         for (a, b) in iter.by_ref().map(|(a, b)| (a.no_drop(), b.no_drop())) {
-            if let Err(error) = self.0.try_extend(std::iter::once(a.unwrap())) {
+            if let Err(error) = self.0.try_extend_one(a.unwrap()) {
                 return Err(TupleExtensionError::new_a(error, Some(b.unwrap()), iter));
             }
-            if let Err(error) = self.1.try_extend(std::iter::once(b.unwrap())) {
+            if let Err(error) = self.1.try_extend_one(b.unwrap()) {
                 return Err(TupleExtensionError::new_b(error, None, iter));
             }
         }

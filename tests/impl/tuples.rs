@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
 use collect_failable::TryExtend;
+use either::Either;
+
+use crate::collection_tests::try_extend;
 
 type HashSetTuple<T> = (HashSet<T>, HashSet<T>);
 
@@ -16,11 +19,11 @@ macro_rules! test_try_extend_collision {
 
             let err = valid.try_extend($data).expect_err("should be err");
 
-            match err {
-                collect_failable::TupleExtensionError::A(side) if stringify!($side) == "A" => {
+            match (&err.side, stringify!($side)) {
+                (Either::Left(side), "A") => {
                     assert_eq!(side.error.item, $expected_value, "left collision value should match");
                 }
-                collect_failable::TupleExtensionError::B(side) if stringify!($side) == "B" => {
+                (Either::Right(side), "B") => {
                     assert_eq!(side.error.item, $expected_value, "right collision value should match");
                 }
                 _ => panic!("Error on wrong side"),
@@ -29,19 +32,7 @@ macro_rules! test_try_extend_collision {
     };
 }
 
-macro_rules! test_try_extend_success {
-    ($name:ident, $method:ident) => {
-        #[test]
-        fn $name() {
-            let mut empty = HashSetTuple::default();
-            empty.$method(VALID_DATA).expect("should be ok");
-
-            assert_eq!(empty, HashSetTuple::from_iter(VALID_DATA), "should match data");
-        }
-    };
-}
-
 // try_extend tests
-test_try_extend_success!(try_extend_valid_data, try_extend);
+try_extend!(try_extend_valid_data, HashSetTuple::default(), VALID_DATA, Ok(HashSetTuple::from_iter(VALID_DATA)));
 test_try_extend_collision!(try_extend_collision_left, INVALID_DATA_LEFT, 1, A);
 test_try_extend_collision!(try_extend_collision_right, INVALID_DATA_RIGHT, 2, B);
