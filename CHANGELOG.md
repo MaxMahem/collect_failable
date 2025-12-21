@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+ - **Breaking:** Removed the `utils` module and `utils` feature. The `FoldMut` trait has been extracted into its own standalone crate: [`fold_mut`](https://github.com/MaxMahem/fold_mut).
+   - Migration: Add `fold_mut` as a dependency and change `use collect_failable::utils::FoldMut;` to `use fold_mut::FoldMut;`.
  - Removed `TupleCollectionError` error type. Tuple collections should use `TryUnzip` or `TryExtend` instead of `TryFromIterator`.
  - Removed `TryFromIterator` implementation for tuples. Use `TryUnzip::try_unzip` or `TryExtend::try_extend` instead.
 

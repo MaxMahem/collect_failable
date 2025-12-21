@@ -18,7 +18,6 @@ This crate provides several complementary traits for failable collection:
 - `TryExtend` – fallible extend operations with strong and basic error guarantees variants.
 - `TryExtendOne` – extend with a single item, providing cleaner error types and strong guarantees.
 - `TryUnzip` – `unzip` an iterator of pairs into two fallible containers.
-- `FoldMut` – `fold`-style extension building a collection via mutation rather than move.
 
 Additionally, several implementations are provided for common and popular containers. See the [implementations](#implementations) section for more details.
 

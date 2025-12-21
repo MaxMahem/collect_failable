@@ -15,8 +15,4 @@ pub mod errors;
 mod impls;
 mod traits;
 
-/// Helper utilities for testing and authoring failable collection implementations.
-#[cfg(feature = "utils")]
-pub mod utils;
-
 pub use traits::*;
