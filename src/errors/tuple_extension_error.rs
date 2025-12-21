@@ -14,11 +14,25 @@ pub enum TupleExtensionError<ErrA, ErrB, A, B, I> {
     A(
         [TupleExtensionErrorSide<ErrA, B, I>; {
             /// Container for the data of a failed extension.
-            #[derive(derive_more::Deref)]
-            #[deref(forward)]
-            pub struct TupleExtensionErrorSide<Err, T, I>(
-                [Box<TupleExtensionErrorSideData<Err, T, I>>; {
+            ///
+            /// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`](std::ops::Deref)
+            /// implementation into a hidden `TupleExtensionErrorSideData` type, with identical fields. If necessary,
+            /// you can consume an instance of this type via [`TupleExtensionErrorSide::into_data`] to get an owned version.
+            pub struct TupleExtensionErrorSide<Err, T, I> {
+                #[cfg(doc)]
+                /// The error caused during extension
+                pub error: Err,
+                #[cfg(doc)]
+                /// A possible unevaluated item from the other side
+                pub unevaluated: Option<T>,
+                #[cfg(doc)]
+                /// The remaining iterator
+                pub remaining: I,
+
+                #[cfg(not(doc))]
+                data: [Box<TupleExtensionErrorSideData<Err, T, I>>; {
                     /// The internal data of a [`TupleExtensionErrorSide`].
+                    #[doc(hidden)]
                     #[derive(Debug)]
                     pub struct TupleExtensionErrorSideData<Err, T, I> {
                         /// The error caused during extension
@@ -29,7 +43,7 @@ pub enum TupleExtensionError<ErrA, ErrB, A, B, I> {
                         pub remaining: I,
                     }
                 }],
-            );
+            }
         }],
     ),
     /// Failed to extend the `FromB` collection.
@@ -39,12 +53,18 @@ pub enum TupleExtensionError<ErrA, ErrB, A, B, I> {
 impl<ErrA, ErrB, A, B, I> TupleExtensionError<ErrA, ErrB, A, B, I> {
     /// Creates a new [`TupleExtensionError::A`] variant.
     pub fn new_a(error: ErrA, unevaluated: Option<B>, remaining: I) -> Self {
-        TupleExtensionErrorSideData { error, unevaluated, remaining }.pipe(Box::new).pipe(TupleExtensionErrorSide).pipe(Self::A)
+        TupleExtensionErrorSideData { error, unevaluated, remaining }
+            .pipe(Box::new)
+            .pipe(|data| TupleExtensionErrorSide { data })
+            .pipe(Self::A)
     }
 
     /// Creates a new [`TupleExtensionError::B`] variant.
     pub fn new_b(error: ErrB, unevaluated: Option<A>, remaining: I) -> Self {
-        TupleExtensionErrorSideData { error, unevaluated, remaining }.pipe(Box::new).pipe(TupleExtensionErrorSide).pipe(Self::B)
+        TupleExtensionErrorSideData { error, unevaluated, remaining }
+            .pipe(Box::new)
+            .pipe(|data| TupleExtensionErrorSide { data })
+            .pipe(Self::B)
     }
 
     /// Unwraps the [`TupleExtensionError::A`] variant, or panics with `msg`.
@@ -80,14 +100,23 @@ impl<Err, T, I> TupleExtensionErrorSide<Err, T, I> {
     /// Consumes the error, returning the nested error.
     #[must_use]
     pub fn into_error(self) -> Err {
-        self.0.error
+        self.data.error
     }
 
-    /// Consumes the error, returning a [`TupleExtensionErrorSideData`] containing the `error`,
-    /// the optional `unevaluated` item, and the remaining `iterator`.
+    /// Consumes the error, returning a `TupleExtensionErrorSideData` containing the [`TupleExtensionErrorSide::error`],
+    /// the optional [`TupleExtensionErrorSide::unevaluated`] item, and the remaining [`TupleExtensionErrorSide::remaining`] iterator.
     #[must_use]
     pub fn into_data(self) -> TupleExtensionErrorSideData<Err, T, I> {
-        *self.0
+        *self.data
+    }
+}
+
+#[doc(hidden)]
+impl<Err, T, I> std::ops::Deref for TupleExtensionErrorSide<Err, T, I> {
+    type Target = TupleExtensionErrorSideData<Err, T, I>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
     }
 }
 
@@ -97,8 +126,8 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TupleExtensionErrorSide")
-            .field("error", &self.error)
-            .field("unevaluated", &OpaqueOptionDbg(&self.unevaluated))
+            .field("error", &self.data.error)
+            .field("unevaluated", &OpaqueOptionDbg(&self.data.unevaluated))
             .field("remaining", &std::any::type_name::<I>())
             .finish()
     }
@@ -124,8 +153,8 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::A(side) => write!(f, "Failed while extending first collection: {}", side.error),
-            Self::B(side) => write!(f, "Failed while extending second collection: {}", side.error),
+            Self::A(side) => write!(f, "Failed while extending first collection: {}", side.data.error),
+            Self::B(side) => write!(f, "Failed while extending second collection: {}", side.data.error),
         }
     }
 }
@@ -137,8 +166,8 @@ where
 {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::A(side) => Some(&side.error),
-            Self::B(side) => Some(&side.error),
+            Self::A(side) => Some(&side.data.error),
+            Self::B(side) => Some(&side.data.error),
         }
     }
 }

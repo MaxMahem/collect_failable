@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::Chain;
-use std::ops::RangeInclusive;
+use std::ops::{Deref, RangeInclusive};
 
 use display_as_debug::option::OpaqueOptionDbg;
 use tap::{Conv, Pipe};
@@ -10,17 +10,36 @@ use crate::CapacityMismatch;
 
 /// An error that occurs when an collecting an iterator fails during it's collection.
 ///
+/// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`](std::ops::Deref).
+/// implementation into a hidden `CollectionErrorData` type, with identical fields. If necessary,
+/// you can consume an instance of this type via [`CollectionError::into_data`] to get owned data.
+///
 /// # Type Parameters
 ///
 /// - `I`: The type of the iterator.
 /// - `C`: The type of the collection.
 /// - `E`: The type of the nested error.
 #[subdef::subdef]
-#[derive(derive_more::Deref)]
-#[deref(forward)]
-pub struct CollectionError<I: Iterator, C, E>(
-    [Box<CollectionErrorData<I, C, E>>; {
+//#[derive(derive_more::Deref)]
+pub struct CollectionError<I: Iterator, C, E> {
+    #[cfg(doc)]
+    /// The iterator that was partially iterated
+    pub iterator: I,
+    #[cfg(doc)]
+    /// The values that were collected
+    pub collected: C,
+    #[cfg(doc)]
+    /// An optional item that was rejected (consumed but couldn't be added)
+    pub rejected: Option<I::Item>,
+    #[cfg(doc)]
+    /// The error that occurred
+    pub error: E,
+
+    #[cfg(not(doc))]
+    //#[deref(forward)]
+    data: [Box<CollectionErrorData<I, C, E>>; {
         /// The internal data of a [`CollectionError`].
+        #[doc(hidden)]
         pub struct CollectionErrorData<I: Iterator, C, E> {
             /// The iterator that was partially iterated
             pub iterator: I,
@@ -32,25 +51,26 @@ pub struct CollectionError<I: Iterator, C, E>(
             pub error: E,
         }
     }],
-);
+}
 
 impl<I: Iterator, C, E> CollectionError<I, C, E> {
     /// Creates a new [`CollectionError`] from an `iterator`, `collected` values, optional `rejected` item, and a nested `error`.
     pub fn new(iterator: I, collected: C, rejected: Option<I::Item>, error: E) -> Self {
-        CollectionErrorData { iterator, collected, rejected, error }.pipe(Box::new).pipe(CollectionError)
+        CollectionErrorData { iterator, collected, rejected, error }.pipe(Box::new).pipe(|data| Self { data })
     }
 
     /// Consumes the error, returning the nested error.
     #[must_use]
     pub fn into_error(self) -> E {
-        self.0.error
+        self.data.error
     }
 
-    /// Consumes the error, returning a [`CollectionErrorData`] containing the `iterator`,
-    /// `collected` values, the optional `rejected` item, and nested `error`.
+    /// Consumes the error, returning a `CollectionErrorData` containing the [`CollectionError::iterator`],
+    /// [`CollectionError::collected`] values, the optional [`CollectionError::rejected`] item, and nested
+    /// [`CollectionError::error`].
     #[must_use]
     pub fn into_data(self) -> CollectionErrorData<I, C, E> {
-        *self.0
+        *self.data
     }
 
     /// Returns the number of elements in the `iterator`, `collected` values, and `rejected` item.
@@ -60,7 +80,7 @@ impl<I: Iterator, C, E> CollectionError<I, C, E> {
         I: ExactSizeIterator,
         for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
     {
-        (&self.0.collected).into_iter().len() + self.0.iterator.len() + self.0.rejected.is_some().conv::<usize>()
+        (&self.data.collected).into_iter().len() + self.data.iterator.len() + self.data.rejected.is_some().conv::<usize>()
     }
 
     /// Returns `true` if the iterator and collected values are empty.
@@ -71,6 +91,15 @@ impl<I: Iterator, C, E> CollectionError<I, C, E> {
         for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
     {
         self.len() == 0
+    }
+}
+
+#[doc(hidden)]
+impl<I: Iterator, C, E> Deref for CollectionError<I, C, E> {
+    type Target = CollectionErrorData<I, C, E>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
     }
 }
 
@@ -125,7 +154,7 @@ impl<I: Iterator, C: IntoIterator<Item = I::Item>, E> IntoIterator for Collectio
     /// Consumes the error, and reconstructs the iterator it was created from. This will include
     /// the `rejected` item, `collected` values, and the remaining `iterator`, in that order.
     fn into_iter(self) -> Self::IntoIter {
-        self.0.rejected.into_iter().chain(self.0.collected).chain(self.0.iterator)
+        self.data.rejected.into_iter().chain(self.data.collected).chain(self.data.iterator)
     }
 }
 

@@ -1,6 +1,8 @@
 use std::ops::{Range, RangeInclusive};
 
 /// An error indicating that the a collection was not created because the capacity was violated.
+///
+/// This type is *read-only*.
 #[subdef::subdef(derive(Debug, PartialEq, Eq))]
 #[derive(thiserror::Error)]
 #[error("Collected items outside allowed range ({min}..{max}): {kind}", min = self.capacity.start, max = self.capacity.end)]

@@ -24,12 +24,32 @@ where
     /// Failed to extend the first collection (`FromA`).
     A(
         [UnzipErrorSide<FromA::Error, FromA, FromB, B, I>; {
-            #[derive(derive_more::Deref)]
-            #[deref(forward)]
             /// The incomplete collections from a failed [`TryUnzip::try_unzip`] operation.
-            pub struct UnzipErrorSide<Err, Failed, Successful, T, I>(
-                [Box<UnzipErrorSideData<Err, Failed, Successful, T, I>>; {
+            ///
+            /// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`](std::ops::Deref)
+            /// implementation into a hidden `UnzipErrorSideData` type, with identical fields. If necessary,
+            /// you can consume an instance of this type via [`UnzipErrorSide::into_data`] to get owned data.
+            pub struct UnzipErrorSide<Err, Failed, Successful, T, I> {
+                #[cfg(doc)]
+                /// The error caused during extension
+                pub error: Err,
+                #[cfg(doc)]
+                /// The partial collection from the failed side
+                pub failed: Failed,
+                #[cfg(doc)]
+                /// The incomplete collection from the successful side
+                pub successful: Successful,
+                #[cfg(doc)]
+                /// The unevaluated item from the successful side
+                pub unevaluated: Option<T>,
+                #[cfg(doc)]
+                /// The remaining iterator
+                pub remaining: I,
+
+                #[cfg(not(doc))]
+                data: [Box<UnzipErrorSideData<Err, Failed, Successful, T, I>>; {
                     /// The internal data of a [`UnzipErrorSideData`].
+                    #[doc(hidden)]
                     pub struct UnzipErrorSideData<Err, Failed, Successful, T, I> {
                         /// The error caused during extension
                         pub error: Err,
@@ -43,7 +63,7 @@ where
                         pub remaining: I,
                     }
                 }],
-            );
+            }
         }],
     ),
     /// Failed to extend the second collection (`FromB`).
@@ -54,14 +74,24 @@ impl<Err, Failed, Successful, T, I> UnzipErrorSide<Err, Failed, Successful, T, I
     /// Consumes the error, returning the nested error.
     #[must_use]
     pub fn into_error(self) -> Err {
-        self.0.error
+        self.data.error
     }
 
-    /// Consumes the error, returning a [`UnzipErrorSideData`] containing the `error`,
-    /// `failed` and `successful` collections, the optional `unevaluated` item, and the remaining `iterator`.
+    /// Consumes the error, returning a `UnzipErrorSideData` containing the [`UnzipErrorSide::error`],
+    /// [`UnzipErrorSide::failed`] and [`UnzipErrorSide::successful`] collections, the optional
+    /// [`UnzipErrorSide::unevaluated`] item, and the remaining [`UnzipErrorSide::remaining`] iterator.
     #[must_use]
     pub fn into_data(self) -> UnzipErrorSideData<Err, Failed, Successful, T, I> {
-        *self.0
+        *self.data
+    }
+}
+
+#[doc(hidden)]
+impl<Err, Failed, Successful, T, I> std::ops::Deref for UnzipErrorSide<Err, Failed, Successful, T, I> {
+    type Target = UnzipErrorSideData<Err, Failed, Successful, T, I>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
     }
 }
 
@@ -71,10 +101,10 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ZipErrorSide")
-            .field("error", &self.error)
+            .field("error", &self.data.error)
             .field("failed", &"..".as_debug())
             .field("successful", &"..".as_debug())
-            .field("unevaluated", &OpaqueOptionDbg(&self.unevaluated))
+            .field("unevaluated", &OpaqueOptionDbg(&self.data.unevaluated))
             .field("remaining", &std::any::type_name::<I>())
             .finish()
     }
@@ -87,12 +117,18 @@ where
 {
     /// Creates a new [`UnzipError::A`] variant.
     pub fn new_a(error: FromA::Error, failed: FromA, successful: FromB, unevaluated: Option<B>, remaining: I) -> Self {
-        UnzipErrorSideData { error, failed, successful, unevaluated, remaining }.pipe(Box::new).pipe(UnzipErrorSide).pipe(Self::A)
+        UnzipErrorSideData { error, failed, successful, unevaluated, remaining }
+            .pipe(Box::new)
+            .pipe(|data| UnzipErrorSide { data })
+            .pipe(Self::A)
     }
 
     /// Creates a new [`UnzipError::B`] variant.
     pub fn new_b(error: FromB::Error, failed: FromB, successful: FromA, unevaluated: Option<A>, remaining: I) -> Self {
-        UnzipErrorSideData { error, failed, successful, unevaluated, remaining }.pipe(Box::new).pipe(UnzipErrorSide).pipe(Self::B)
+        UnzipErrorSideData { error, failed, successful, unevaluated, remaining }
+            .pipe(Box::new)
+            .pipe(|data| UnzipErrorSide { data })
+            .pipe(Self::B)
     }
 
     /// Unwraps the [`UnzipError::A`] variant, or panics with `msg`.
@@ -148,8 +184,8 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::A(side) => write!(f, "Failed while extending first collection: {}", side.error),
-            Self::B(side) => write!(f, "Failed while extending second collection: {}", side.error),
+            Self::A(side) => write!(f, "Failed while extending first collection: {}", side.data.error),
+            Self::B(side) => write!(f, "Failed while extending second collection: {}", side.data.error),
         }
     }
 }
@@ -163,8 +199,8 @@ where
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::A(side) => Some(&side.error),
-            Self::B(side) => Some(&side.error),
+            Self::A(side) => Some(&side.data.error),
+            Self::B(side) => Some(&side.data.error),
         }
     }
 }
