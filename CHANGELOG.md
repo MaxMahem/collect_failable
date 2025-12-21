@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - Made `CapacityMismatch` fields readonly. (This was considered a non-breaking change because there should be no reason to mutate the error.)
  - Improved documentation for error types (`CollectionCollision`, `CollectionError`, `UnzipErrorSide`, `TupleExtensionErrorSide`) by hiding internal data structs and documenting readonly fields directly on parent types.
+ - Converted `TupleExtensionError` and `UnzipError` from enum to struct type for improved API consistency. `either::Either` is used to hold the error sides, with a custom inner type. 
 
 ## [0.12.3] - 2025-12-19
 

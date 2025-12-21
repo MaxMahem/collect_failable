@@ -1,5 +1,3 @@
-use collect_failable::UnzipError;
-
 #[test]
 fn try_unzip_success_example() {
     use collect_failable::TryUnzip;
@@ -15,18 +13,20 @@ fn try_unzip_success_example() {
 #[test]
 fn try_unzip_collision_example() {
     use collect_failable::TryUnzip;
+
     use std::collections::HashSet;
 
     match vec![(1, "a"), (2, "b"), (1, "c"), (3, "d")].into_iter().try_unzip::<_, _, HashSet<_>, HashSet<_>>() {
-        Err(UnzipError::A(err_a)) => {
-            let err_a = err_a.into_data();
-            assert_eq!(err_a.error.item, 1);
-            assert_eq!(err_a.failed, HashSet::from([1, 2]));
-            assert_eq!(err_a.successful, HashSet::from(["a", "b"]));
-            assert_eq!(err_a.unevaluated, Some("c"));
-            assert_eq!(err_a.remaining.collect::<Vec<_>>(), [(3, "d")]);
+        Err(err) => {
+            let data = err.into_data();
+            let side = data.side.left().expect("Should be left");
+
+            assert_eq!(side.error.item, 1);
+            assert_eq!(side.failed, HashSet::from([1, 2]));
+            assert_eq!(side.successful, HashSet::from(["a", "b"]));
+            assert_eq!(side.unevaluated, Some("c"));
+            assert_eq!(data.remaining.collect::<Vec<_>>(), [(3, "d")]);
         }
-        Err(UnzipError::B(_)) => panic!("Should be Err A"),
         Ok(_) => panic!("Should be Err"),
     }
 }
