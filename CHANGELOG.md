@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+ - Added `tuples` feature flag (enabled by default) that gates tuple and unzip functionality. `TupleExtensionError` and `UnzipError` require this feature.
+ - Re-exported `either::Either` type in the public API as `collect_failable::Either` when the `tuples` feature is enabled. Users no longer need to directly depend on the `either` crate to use error types that include `Either`.
  - Added `CollectionError::bounds` and `CollectionError::overflow` convenience constructors.
 
 ### Removed
 
+ - **Breaking:** Removed methods that drop data:
+   - Removed `CollectionCollision::into_item()` - use `into_data().item` or direct field access via `Deref` instead.
+   - Removed `CollectionError::into_error()` - use `into_data().error` or direct field access via `Deref` instead.
  - **Breaking:** Removed `len()` and `is_empty()` methods from `CollectionError` and `CollectionCollision`.
  - **Breaking:** Removed `IntoIterator` implementation for `ResultCollectionError`. This was removed because it was potentially misleading, as it only iterated over the collected items and ignored the remaining iterator.
  - Removed `itertools` dependency.

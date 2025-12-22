@@ -17,19 +17,6 @@ macro_rules! test_format {
     };
 }
 
-/// Test any getter (method call or field access) against an expected value
-///
-/// - `getter!(len, create_error(), len(), 5);`
-macro_rules! getter {
-    // Method call with parentheses
-    ($name:ident, $setup:expr, $method:ident(), $expected:expr) => {
-        #[test]
-        fn $name() {
-            assert_eq!($setup.$method(), $expected);
-        }
-    };
-}
-
 /// Test that into_iterator produces the expected items (order-independent for HashSet)
 macro_rules! into_iterator {
     ($name:ident, $setup:expr, expected_len = $len:expr, contains = [$($item:expr),* $(,)?]) => {
@@ -84,7 +71,6 @@ macro_rules! test_source {
     };
 }
 
-pub(crate) use getter;
 pub(crate) use identity;
 pub(crate) use into_iterator;
 pub(crate) use test_format;

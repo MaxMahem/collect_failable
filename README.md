@@ -9,21 +9,31 @@
 
 A set of traits for collecting values into containers that must uphold invariants during construction or extension. These traits let you propagate structured errors instead of panicking or silently discarding data. Examples include preventing duplicate keys in a `HashMap` or respecting capacity limits in types like `ArrayVec`.
 
-## Features
+## Traits
 
 This crate provides several complementary traits for failable collection:
 
-- `TryFromIterator` – build a new container from an iterator, returning an error when invariants can't be satisfied.
-- `TryCollectEx` – ergonomic `collect`-style extension for iterator consumers, forwarding a call to `TryFromIterator`.
-- `TryExtend` – fallible extend operations with strong and basic error guarantees variants.
-- `TryExtendOne` – extend with a single item, providing cleaner error types and strong guarantees.
-- `TryUnzip` – `unzip` an iterator of pairs into two fallible containers.
+- `TryFromIterator` – failably build a container from an `IntoIterator`.
+- `TryCollectEx` – failably collect an `IntoIterator` into a container.
+- `TryExtend` and `TryExtendSafe` – failably extend a container with an `IntoIterator`, with different error guarantees.
+- `TryExtendOne` – failable extend a container with a single item.
+- `TryUnzip` – failably unzip an `IntoIterator` of pairs into two containers (requires feature `tuple`, enabled by default).
 
 Additionally, several implementations are provided for common and popular containers. See the [implementations](#implementations) section for more details.
 
 ## Installation
 
 It's on [crates.io](https://crates.io/crates/collect_failable).
+
+## Features
+
+This crate provides the following optional features:
+
+- `unsafe` (default) – Enables `TryFromIterator` implementations for arrays using unsafe code.
+- `tuple` (default) – Enables tuple extension (`TryExtend` for tuples) and `TryUnzip` trait, requiring a public dependency on the `either` crate (re-exported as `collect_failable::Either`).
+- `arrayvec` – Enables `TryFromIterator` and `TryExtend` implementations for `ArrayVec`.
+- `hashbrown` – Enables `TryFromIterator` and `TryExtend` implementations for `hashbrown::HashMap` and `hashbrown::HashSet`.
+- `indexmap` – Enables `TryFromIterator` and `TryExtend` implementations for `indexmap::IndexMap` and `indexmap::IndexSet`.
 
 ## Usage
 
@@ -103,18 +113,18 @@ assert_eq!(chars, HashSet::from(['a', 'b', 'c']));
 Implementations for various containers are provided.
 * [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html), [HashSet](https://doc.rust-lang.org/std/collections/struct.HashSet.html)
 * [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html), [BTreeSet](https://doc.rust-lang.org/std/collections/struct.BTreeSet.html)
-* [Array](https://doc.rust-lang.org/std/primitive.array.html) (feature `unsafe`)
+* [Array](https://doc.rust-lang.org/std/primitive.array.html) (feature `unsafe`, enabled by default)
 * [ArrayVec](https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html) (feature `arrayvec`)
 * [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html), [hashbrown::HashSet](https://docs.rs/hashbrown/latest/hashbrown/struct.HashSet.html) (feature `hashbrown`)
 * [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/), [indexmap::IndexSet](https://docs.rs/indexmap/latest/indexmap/) (feature `indexmap`)
 
 ### Tuple Implementations
 
-Tuples of size 2 implement `TryExtend` when their inner types do. For constructing tuple collections from iterators, use `TryUnzip` instead, which provides better ergonomics and error handling. Implementing `TryExtendSafe` or `TryExtendOne` is not possible since tuples cannot provide atomic single-item guarantees within the trait definition.
+Tuples of arity 2 implement `TryExtend` when their inner types do (requires feature `tuple`, enabled by default). For constructing tuple collections from `IntoIterator` `TryUnzip` is available.
 
 ### Array Implementation
 
-Arrays implement `TryFromIterator` for iterators that yield exactly the right number of elements. This uses `unsafe` internally and is gated behind the `unsafe` feature (enabled by default).
+Arrays implement `TryFromIterator` for `IntoIterator` that yield exactly the right number of elements. This uses `unsafe` internally and is gated behind the `unsafe` feature (enabled by default).
 
 ### Result Implementation
 

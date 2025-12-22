@@ -54,12 +54,6 @@ impl<I: Iterator, C> CollectionCollision<I, C> {
         CollectionCollisionData { iterator, collected, item }.pipe(Box::new).pipe(|data| Self { data })
     }
 
-    /// Consumes the error, returning the colliding item.
-    #[must_use]
-    pub fn into_item(self) -> I::Item {
-        self.data.item
-    }
-
     /// Consumes the error, returning a `CollectionCollisionData` containing the [`CollectionCollision::iterator`],
     /// [`CollectionCollision::collected`] values, and colliding [`CollectionCollision::item`].
     #[must_use]

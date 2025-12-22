@@ -59,12 +59,6 @@ impl<I: Iterator, C, E> CollectionError<I, C, E> {
         CollectionErrorData { iterator, collected, rejected, error }.pipe(Box::new).pipe(|data| Self { data })
     }
 
-    /// Consumes the error, returning the nested error.
-    #[must_use]
-    pub fn into_error(self) -> E {
-        self.data.error
-    }
-
     /// Consumes the error, returning a `CollectionErrorData` containing the [`CollectionError::iterator`],
     /// [`CollectionError::collected`] values, the optional [`CollectionError::rejected`] item, and nested
     /// [`CollectionError::error`].

@@ -7,4 +7,6 @@ mod arrayvec;
 mod maps;
 mod result;
 mod sets;
+
+#[cfg(feature = "tuple")]
 mod tuples;

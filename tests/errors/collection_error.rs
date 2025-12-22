@@ -34,12 +34,6 @@ test_format!(display_format_with_rejected, create_with_rejected(), "{}", EXPECTE
 test_format!(display_format_without_rejected, create_without_rejected(), "{}", EXPECTED_DISPLAY_WITHOUT_REJECTED);
 
 #[test]
-fn into_err() {
-    let error = create_with_rejected().into_error();
-    assert_eq!(error, TestError::new("with rejected"));
-}
-
-#[test]
 fn into_parts_with_rejected() {
     let parts = create_with_rejected().into_data();
 

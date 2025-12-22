@@ -14,3 +14,10 @@ mod impls;
 mod traits;
 
 pub use traits::*;
+
+#[cfg(feature = "tuple")]
+/// Re-export of the `Either` type from the `either` crate.
+pub mod either {
+    #[doc(inline)]
+    pub use either::Either;
+}

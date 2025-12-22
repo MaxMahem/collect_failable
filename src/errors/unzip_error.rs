@@ -3,9 +3,9 @@ use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 
 use display_as_debug::option::OpaqueOptionDbg;
-use either::Either;
 use tap::Pipe;
 
+use crate::either::Either;
 use crate::TryExtendOne;
 
 #[cfg(doc)]

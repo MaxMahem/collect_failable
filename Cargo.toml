@@ -12,8 +12,9 @@ license = "MIT OR Apache-2.0"
 categories = ["data-structures", "rust-patterns"]
 
 [features]
-default = ["unsafe"]
+default = ["unsafe", "tuple"]
 unsafe = []
+tuple = []
 hashbrown = [ "dep:hashbrown" ]
 indexmap = [ "dep:indexmap" ]
 arrayvec = [ "dep:arrayvec" ]

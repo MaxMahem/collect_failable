@@ -4,11 +4,12 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 
 use display_as_debug::option::OpaqueOptionDbg;
-use either::Either;
 use tap::Pipe;
 
 #[cfg(doc)]
 use crate::TryExtend;
+
+use crate::either::Either;
 use crate::TryExtendOne;
 
 /// An error that occurs when extending a tuple of collections fails.
