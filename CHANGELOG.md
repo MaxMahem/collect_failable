@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2025-12-22
+
 ### Added
 
  - Added `tuples` feature flag (enabled by default) that gates tuple and unzip functionality. `TupleExtensionError` and `UnzipError` require this feature.
@@ -29,10 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - **Breaking:** Moved all error types into the `errors` submodule. Error types are no longer re-exported at the crate root.
    - Migration: change `use collect_failable::ErrorType;` to `use collect_failable::errors::ErrorType;` or add `use collect_failable::errors::*;` to import all error types.
-
  - **Breaking:** Refactored `TryExtendOne` to use an associated type `Item` instead of a generic type parameter. This significantly simplifies type signatures throughout the codebase, particularly reducing `UnzipError` from 5 to 3 type parameters and `UnzipSide` from 4 to 2 type parameters. 
    - Migration: change `impl TryExtendOne<T>` to `impl TryExtendOne { type Item = T; }` and update bounds from `where C: TryExtendOne<T>` to `where C: TryExtendOne<Item = T>`.
-
  - **Breaking:** Simplified `ResultCollectionError` field names for clarity and consistency:
    - `iteration_error` → `error` (the first error encountered from the iterator)
    - `collection_result` → `result` (the partial collection result)

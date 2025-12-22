@@ -1,11 +1,11 @@
 [package]
 name = "collect_failable"
-version = "0.12.3"
+version = "0.13.0"
 edition = "2021"
 description = "A trait for collecting values into a container which has an invariant to uphold and whose construction may fail"
 repository = "https://github.com/MaxMahem/collect_failable"
 homepage = "https://github.com/MaxMahem/collect_failable"
-documentation = "https://maxmahem.github.io/collect_failable/"
+documentation = "https://docs.rs/collect_failable/"
 keywords = ["iterator", "collect", "container"]
 authors = ["Austin Stanley <maxtmahem@gmail>"]
 license = "MIT OR Apache-2.0"
@@ -23,7 +23,7 @@ arrayvec = [ "dep:arrayvec" ]
 tap = { version = "1.0.1" }
 thiserror = { version = "2.0.17" }
 hashbrown = { version = "0.16.0", optional = true }
-derive_more = { version = "2.1.0", features = ["constructor", "from", "is_variant", "try_unwrap", "unwrap", "deref", "display"] }
+derive_more = { version = "2.1.0", features = ["constructor", "deref", "display"] }
 indexmap = { version = "2.12.0", optional = true }
 arrayvec = { version = "0.7.6", optional = true }
 sealed = "0.6.0"
@@ -32,6 +32,8 @@ fluent_result = "0.9.0"
 no_drop = "0.2.3"
 display_as_debug = "0.2.0"
 readonly = "0.2.13"
+
+# Public Dependencies
 either = "1.15.0"
 
 [dev-dependencies]
