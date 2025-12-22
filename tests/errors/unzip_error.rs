@@ -41,6 +41,12 @@ fn into_data() {
 }
 
 #[test]
+fn deref_field_access() {
+    let error = create_a_error();
+    assert!(error.side.is_left());
+}
+
+#[test]
 fn remaining_accessible() {
     let error = create_a_error();
     let type_name = std::any::type_name_of_val(&error.remaining);

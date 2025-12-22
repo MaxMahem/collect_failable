@@ -1,7 +1,7 @@
 use collect_failable::errors::ResultCollectionError;
 use std::collections::HashSet;
 
-use crate::error_tests::{test_format, test_source, TestError};
+use crate::error_tests::{test_deref, test_format, test_source, TestError};
 
 type Collection = HashSet<u32>;
 
@@ -29,5 +29,7 @@ fn into_data() {
     assert_eq!(data.error, TestError::new("iter error"));
     assert_eq!(data.result, Ok(HashSet::from([1, 2, 3])));
 }
+
+test_deref!(deref_error, create_err(), error, TestError::new("iter error"));
 
 test_source!(error_trait_source, create_err(), TestError);

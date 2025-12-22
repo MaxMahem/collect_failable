@@ -1,7 +1,7 @@
 use collect_failable::errors::CollectionError;
 use std::collections::HashSet;
 
-use crate::error_tests::{into_iterator, test_format, test_source, TestError};
+use crate::error_tests::{into_iterator, test_deref, test_format, test_source, TestError};
 
 type Collection = HashSet<u32>;
 
@@ -53,6 +53,8 @@ fn into_parts_without_rejected() {
     assert_eq!(parts.rejected, None);
     assert_eq!(parts.iterator.collect::<Vec<_>>(), vec![3, 4]);
 }
+
+test_deref!(deref_error, create_with_rejected(), error, TestError::new("with rejected"));
 
 // Should contain: rejected (99) + collected (1, 2 in some order) + remaining (3, 4)
 into_iterator!(into_iterator_with_rejected, create_with_rejected(), expected_len = 5, contains = [99, 1, 2, 3, 4]);

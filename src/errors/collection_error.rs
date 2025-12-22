@@ -8,6 +8,9 @@ use tap::Pipe;
 
 use super::CapacityMismatch;
 
+#[cfg(doc)]
+use crate::errors::MismatchKind;
+
 /// An error that occurs when an collecting an iterator fails during it's collection.
 ///
 /// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`](std::ops::Deref).
@@ -78,7 +81,7 @@ impl<I: Iterator, C, E> Deref for CollectionError<I, C, E> {
 }
 
 impl<I: Iterator, C> CollectionError<I, C, CapacityMismatch> {
-    /// Creates a new [`CollectionError`] with a [`CapacityMismatch::Bounds`](crate::CapacityMismatch) error.
+    /// Creates a new [`CollectionError`] with a [`CapacityMismatch`] error of type [`MismatchKind::Bounds`].
     ///
     /// This is a convenience method for creating errors when a pre-check of an iterator's size hint
     /// indicates that it cannot fit within the specified capacity. A [`Default`]ed collection is used for
@@ -103,7 +106,7 @@ impl<I: Iterator, C> CollectionError<I, C, CapacityMismatch> {
         Self::new(iterator, C::default(), None, CapacityMismatch::bounds(capacity, hint))
     }
 
-    /// Creates a new [`CollectionError`] with a [`CapacityMismatch::Overflow`](crate::CapacityMismatch) error.
+    /// Creates a new [`CollectionError`] with a [`CapacityMismatch`] error of type [`MismatchKind::Overflow`].
     ///
     /// This is a convenience method for creating errors when the iterator produced more items
     /// than the maximum allowed capacity during actual collection.

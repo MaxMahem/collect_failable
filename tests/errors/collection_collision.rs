@@ -1,7 +1,7 @@
 use collect_failable::errors::CollectionCollision;
 use std::collections::HashSet;
 
-use crate::error_tests::{into_iterator, test_format};
+use crate::error_tests::{into_iterator, test_deref, test_format};
 
 type Collection = HashSet<u32>;
 
@@ -28,6 +28,8 @@ fn into_data() {
     assert_eq!(parts.collected, HashSet::from([1, 2]));
     assert_eq!(parts.iterator.collect::<Vec<_>>(), vec![3]);
 }
+
+test_deref!(deref_item, create_collision(), item, 4);
 
 // Should contain: item (1) + collected (1, 2 in some order) + remaining (3)
 into_iterator!(into_iterator, create_collision(), expected_len = 4, contains = [1, 2, 3, 4]);

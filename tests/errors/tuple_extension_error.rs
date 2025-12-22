@@ -68,5 +68,11 @@ fn into_data() {
     assert_eq!(data.remaining.collect::<Vec<_>>(), vec![(3, 30), (4, 40), (5, 50)]);
 }
 
+#[test]
+fn deref_field_access() {
+    let error = create_a_error_with_unevaluated();
+    assert!(error.side.is_left());
+}
+
 test_source!(error_trait_source_a, create_a_error_with_unevaluated(), TestError);
 test_source!(error_trait_source_b, create_b_error_with_unevaluated(), TestError);

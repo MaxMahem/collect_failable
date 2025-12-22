@@ -32,6 +32,19 @@ macro_rules! into_iterator {
     };
 }
 
+/// Test that a Deref implementation allows field access
+///
+/// - `test_deref!(test_name, create_error(), field_name, expected_value);`
+macro_rules! test_deref {
+    ($name:ident, $setup:expr, $field:ident, $expected:expr) => {
+        #[test]
+        fn $name() {
+            let error = $setup;
+            assert_eq!(error.$field, $expected);
+        }
+    };
+}
+
 /// Test that a constructor produces the expected value
 ///
 /// - `identity!(test_name, ctor_call(), expected_value);`
@@ -73,5 +86,6 @@ macro_rules! test_source {
 
 pub(crate) use identity;
 pub(crate) use into_iterator;
+pub(crate) use test_deref;
 pub(crate) use test_format;
 pub(crate) use test_source;
