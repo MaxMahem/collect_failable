@@ -66,26 +66,6 @@ impl<I: Iterator, C> CollectionCollision<I, C> {
     pub fn into_data(self) -> CollectionCollisionData<I, C> {
         *self.data
     }
-
-    /// Returns the number of elements in the `iterator` and `collected` values.
-    #[must_use]
-    pub fn len(&self) -> usize
-    where
-        I: ExactSizeIterator,
-        for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
-    {
-        (&self.data.collected).into_iter().len() + self.data.iterator.len() + 1
-    }
-
-    /// Always returns `false` (presence of a colliding item precludes an empty collection).
-    #[must_use]
-    pub const fn is_empty(&self) -> bool
-    where
-        I: ExactSizeIterator,
-        for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
-    {
-        false
-    }
 }
 
 #[doc(hidden)]

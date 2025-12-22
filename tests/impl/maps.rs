@@ -20,7 +20,6 @@ macro_rules! test_try_from_iter_and_extend_iter {
             #[test]
             fn try_collect_key_collision() {
                 let err = <$map_type>::try_from_iter(COLLIDE_WITH_REMAINING).expect_err("should be err");
-                assert_eq!(err.len(), 5, "should have 5 items");
 
                 let parts = err.into_data();
 
@@ -60,7 +59,6 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 let mut map = <$map_type>::from(UNIQUE_KEYS);
 
                 let err = map.try_extend_safe(COLLIDE_WITH_MAP).expect_err("should be err");
-                assert_eq!(err.len(), 2, "should have 2 items");
 
                 assert_eq!(map, <$map_type>::from(UNIQUE_KEYS), "map should be unchanged");
 

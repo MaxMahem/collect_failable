@@ -4,7 +4,7 @@ use std::iter::Chain;
 use std::ops::{Deref, RangeInclusive};
 
 use display_as_debug::option::OpaqueOptionDbg;
-use tap::{Conv, Pipe};
+use tap::Pipe;
 
 use super::CapacityMismatch;
 
@@ -71,26 +71,6 @@ impl<I: Iterator, C, E> CollectionError<I, C, E> {
     #[must_use]
     pub fn into_data(self) -> CollectionErrorData<I, C, E> {
         *self.data
-    }
-
-    /// Returns the number of elements in the `iterator`, `collected` values, and `rejected` item.
-    #[must_use]
-    pub fn len(&self) -> usize
-    where
-        I: ExactSizeIterator,
-        for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
-    {
-        (&self.data.collected).into_iter().len() + self.data.iterator.len() + self.data.rejected.is_some().conv::<usize>()
-    }
-
-    /// Returns `true` if the iterator and collected values are empty.
-    #[must_use]
-    pub fn is_empty(&self) -> bool
-    where
-        I: ExactSizeIterator,
-        for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
-    {
-        self.len() == 0
     }
 }
 

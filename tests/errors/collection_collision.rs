@@ -31,9 +31,5 @@ fn into_parts() {
 
 getter!(item, create_collision(), into_item(), 4);
 
-// 2 in collected + 1 item + 1 remaining = 4
-getter!(len, create_collision(), len(), 4);
-getter!(is_empty, create_collision(), is_empty(), false);
-
 // Should contain: item (1) + collected (1, 2 in some order) + remaining (3)
 into_iterator!(into_iterator, create_collision(), expected_len = 4, contains = [1, 2, 3, 4]);
