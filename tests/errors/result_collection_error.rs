@@ -31,28 +31,3 @@ fn into_data() {
 }
 
 test_source!(error_trait_source, create_err(), TestError);
-
-// Helper functions for into_iter tests (require both C and CErr to implement IntoIterator)
-fn create_err_iterable_ok() -> ResultCollectionError<TestError, Vec<u32>, Vec<u32>, std::iter::Empty<u32>> {
-    let collected = vec![1, 2, 3];
-    ResultCollectionError::new(TestError::new("iter error"), Ok(collected), std::iter::empty())
-}
-
-fn create_err_iterable_err() -> ResultCollectionError<TestError, Vec<u32>, Vec<u32>, std::iter::Empty<u32>> {
-    let rejected = vec![4, 5, 6];
-    ResultCollectionError::new(TestError::new("iter error"), Err(rejected), std::iter::empty())
-}
-
-#[test]
-fn into_iter_ok() {
-    let error = create_err_iterable_ok();
-    let collected: Vec<u32> = error.into_iter().collect();
-    assert_eq!(collected, vec![1, 2, 3]);
-}
-
-#[test]
-fn into_iter_err() {
-    let error = create_err_iterable_err();
-    let collected: Vec<u32> = error.into_iter().collect();
-    assert_eq!(collected, vec![4, 5, 6]);
-}

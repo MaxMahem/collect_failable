@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::iter;
 use std::rc::Rc;
 
+use either::Either;
 use fluent_result::bool::Then;
-use itertools::Either;
 use tap::Pipe;
 
 use crate::errors::ResultCollectionError;
@@ -186,6 +186,8 @@ where
     /// ```rust
     /// use collect_failable::TryCollectEx;
     /// use std::collections::HashSet;
+    /// use either::Either;
+    /// use tap::Conv;
     ///
     /// // Collect items until an error is encountered
     /// let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
@@ -198,13 +200,14 @@ where
     /// let collected = err.result.as_ref().expect("partial collection should succeed");
     /// assert_eq!(collected, &HashSet::from([1, 2, 3]), "partial collection should contain first 3 items");
     ///
-    /// // For supported types, the data can be recovered as an iterator
-    /// let iter_data = err.into_iter().collect::<Vec<_>>();
-    /// assert_eq!(iter_data.len(), 3, "recovered data should have 3 items");
+    /// // For supported types, the data can be recovered as an iterator using the `either` crate
+    /// let error_data = err.into_data().result.conv::<Either<_, _>>().into_iter().collect::<Vec<_>>();
+    ///
+    /// assert_eq!(error_data.len(), 3, "recovered data should have 3 items");
     /// assert!(
-    ///     iter_data.contains(&1) &&
-    ///     iter_data.contains(&2) &&
-    ///     iter_data.contains(&3),
+    ///     error_data.contains(&1) &&
+    ///     error_data.contains(&2) &&
+    ///     error_data.contains(&3),
     ///     "recovered data should contain all partial items",
     /// );
     /// ```

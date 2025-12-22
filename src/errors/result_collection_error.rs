@@ -2,7 +2,6 @@ use std::error::Error;
 use std::fmt::{Debug, Display};
 
 use display_as_debug::result::OpaqueResultDbg;
-use itertools::Either;
 use tap::Pipe;
 
 /// An error that occurs when collecting an iterator of [`Result`]s fails.
@@ -69,22 +68,6 @@ impl<E, C, CErr, I> std::ops::Deref for ResultCollectionError<E, C, CErr, I> {
 
     fn deref(&self) -> &Self::Target {
         &self.data
-    }
-}
-
-impl<T, E, C, CErr, I> IntoIterator for ResultCollectionError<E, C, CErr, I>
-where
-    C: IntoIterator<Item = T>,
-    CErr: IntoIterator<Item = T>,
-{
-    type Item = T;
-    type IntoIter = Either<C::IntoIter, CErr::IntoIter>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        match self.data.result {
-            Ok(c) => Either::Left(c.into_iter()),
-            Err(e) => Either::Right(e.into_iter()),
-        }
     }
 }
 

@@ -69,8 +69,11 @@ fn double_question_mark_example() {
 /// work, allowing you to recover what was successfully processed before the error.
 #[test]
 fn error_recovery_example() {
-    use collect_failable::TryCollectEx;
     use std::collections::HashSet;
+
+    use collect_failable::TryCollectEx;
+    use either::Either;
+    use tap::Conv;
 
     // Collect items until an error is encountered
     let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
@@ -87,13 +90,13 @@ fn error_recovery_example() {
     let collected = err.result.as_ref().expect("should be ok");
     assert_eq!(collected, &HashSet::from([1, 2, 3]));
 
-    // For supported types, the data can be recovered as an iterator.
+    // For supported types, the data can be recovered as an iterator using the `either` crate
     // and this works regardless of if the collection was successful
-    let iter_data = err.into_iter().collect::<Vec<_>>();
-    assert_eq!(iter_data.len(), 3);
-    assert!(iter_data.contains(&1)); // since the collection is a hashset
-    assert!(iter_data.contains(&2)); // order is not guranteed
-    assert!(iter_data.contains(&3));
+    let error_data = err.into_data().result.conv::<Either<_, _>>().into_iter().collect::<Vec<_>>();
+    assert_eq!(error_data.len(), 3);
+    assert!(error_data.contains(&1)); // since the collection is a hashset
+    assert!(error_data.contains(&2)); // order is not guranteed
+    assert!(error_data.contains(&3));
 }
 
 // TODO: Example showing the use of `flatten_err` for handling nested Result types.
