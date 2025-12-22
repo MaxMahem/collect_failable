@@ -5,7 +5,7 @@ use std::ops::{Range, RangeInclusive};
 /// This type is *read-only*.
 #[subdef::subdef(derive(Debug, PartialEq, Eq))]
 #[derive(thiserror::Error)]
-#[error("Collected items outside allowed range ({min}..{max}): {kind}", min = self.capacity.start, max = self.capacity.end)]
+#[error("Collected items out of bounds ({min}..{max}): {kind}", min = self.capacity.start, max = self.capacity.end)]
 #[readonly::make]
 pub struct CapacityMismatch {
     /// The allowed capacity range for the collection.

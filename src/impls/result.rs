@@ -116,7 +116,27 @@ where
     /// # Examples
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/result.rs", try_from_iter_result_example, [])]
+    /// use collect_failable::{TryCollectEx, TryFromIterator};
+    /// use std::collections::HashSet;
+    ///
+    /// let ok_results: Vec<Result<i32, &str>> = vec![Ok(1), Ok(2), Ok(3)];
+    /// let collection_result: Result<Result<HashSet<i32>, _>, _> = Result::try_from_iter(ok_results);
+    /// let Ok(Ok(set)) = collection_result else {
+    ///     panic!("should succeed");
+    /// };
+    /// assert_eq!(set, HashSet::from([1, 2, 3]), "set should contain all items");
+    ///
+    /// let results_with_err: Vec<Result<i32, &str>> = vec![Ok(1), Err("oops"), Ok(3)];
+    /// let collection_result: Result<Result<HashSet<i32>, _>, _> = results_with_err.into_iter().try_collect_ex();
+    /// let iter_err = collection_result.expect_err("should fail on iterator error");
+    /// assert_eq!(iter_err.error, "oops", "error should be the first error encountered");
+    ///
+    /// let results_with_collision: Vec<Result<i32, &str>> = vec![Ok(1), Ok(1), Ok(3)];
+    /// let collection_result: Result<Result<HashSet<i32>, _>, _> = results_with_collision.into_iter().try_collect_ex();
+    /// let Ok(Err(collision_err)) = collection_result else {
+    ///     panic!("should fail on container construction");
+    /// };
+    /// assert_eq!(collision_err.item, 1, "collision should be on item 1");
     /// ```
     ///
     /// ## Error Handling
@@ -128,7 +148,32 @@ where
     /// operator.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/result.rs", double_question_mark_example, [])]
+    /// use collect_failable::TryCollectEx;
+    /// use std::collections::HashSet;
+    /// use std::error::Error;
+    ///
+    /// // Define a simple error type that implements Error
+    /// #[derive(Debug, thiserror::Error)]
+    /// #[error("parse error")]
+    /// struct ParseError;
+    ///
+    /// // Most errors can be converted to Box<dyn std::error::Error> using From
+    /// fn process_data(data: Vec<Result<i32, ParseError>>) -> Result<HashSet<i32>, Box<dyn Error + 'static>> {
+    ///     let set = data.into_iter().try_collect_ex::<Result<HashSet<i32>, _>>()??;
+    ///     Ok(set)
+    /// }
+    ///
+    /// // Success case
+    /// let result = process_data(vec![Ok(1), Ok(2), Ok(3)]).expect("should succeed");
+    /// assert_eq!(result, HashSet::from([1, 2, 3]), "set should contain all items");
+    ///
+    /// // Outer error (element error wrapped in ResultCollectionError)
+    /// let err = process_data(vec![Ok(1), Err(ParseError), Ok(3)]).expect_err("should fail on parse error");
+    /// assert_eq!(err.to_string(), "Iterator error: parse error");
+    ///
+    /// // Inner error (container error)
+    /// let err = process_data(vec![Ok(1), Ok(1), Ok(3)]).expect_err("should fail on collision");
+    /// assert_eq!(err.to_string(), "Collection collision");
     /// ```
     ///
     /// ## Recovering Data
@@ -139,13 +184,29 @@ where
     /// [`ResultCollectionError`] to recover the data consumed by the iterator in either case.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/result.rs", error_recovery_example, [])]
-    /// ```
+    /// use collect_failable::TryCollectEx;
+    /// use std::collections::HashSet;
     ///
-    /// # Examples
+    /// // Collect items until an error is encountered
+    /// let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
+    /// let result: Result<Result<HashSet<_>, _>, _> = data.into_iter().try_collect_ex();
+    /// let err = result.expect_err("should fail on invalid item");
     ///
-    /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/result.rs", try_from_iter_result_example, [])]
+    /// assert_eq!(err.error, "invalid", "error should be the iteration error");
+    /// assert_eq!(err.iter.size_hint(), (1, Some(1)), "remaining iterator should have 1 item");
+    ///
+    /// let collected = err.result.as_ref().expect("partial collection should succeed");
+    /// assert_eq!(collected, &HashSet::from([1, 2, 3]), "partial collection should contain first 3 items");
+    ///
+    /// // For supported types, the data can be recovered as an iterator
+    /// let iter_data = err.into_iter().collect::<Vec<_>>();
+    /// assert_eq!(iter_data.len(), 3, "recovered data should have 3 items");
+    /// assert!(
+    ///     iter_data.contains(&1) &&
+    ///     iter_data.contains(&2) &&
+    ///     iter_data.contains(&3),
+    ///     "recovered data should contain all partial items",
+    /// );
     /// ```
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let extractor = ResultIter::new(into_iter.into_iter());

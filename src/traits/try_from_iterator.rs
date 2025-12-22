@@ -33,7 +33,11 @@ pub trait TryFromIterator<I: IntoIterator>: Sized {
     /// Provided [`HashMap`] implementations error if a key would collide.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/try_from_iterator.rs", try_from_iter_collision_example, [])]
+    /// use collect_failable::TryFromIterator;
+    /// use std::collections::HashMap;
+    ///
+    /// let err = HashMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should fail on collision");
+    /// assert_eq!(err.item, (1, 3), "colliding item should be (1, 3)");
     /// ```    
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>;
 }
@@ -64,7 +68,12 @@ pub trait TryCollectEx: Iterator {
     /// Collecting into a [`HashMap`] that fails if a key would collide.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/try_collect_ex.rs", try_collect_ex_collision_example, [])]
+    /// use collect_failable::TryCollectEx;
+    /// use std::collections::HashMap;
+    ///
+    /// let data = [(1, 2), (1, 3)];
+    /// let result = data.into_iter().try_collect_ex::<HashMap<_, _>>().expect_err("should fail on collision");
+    /// assert_eq!(result.item, (1, 3), "colliding item should be (1, 3)");
     /// ```
     fn try_collect_ex<C>(self) -> Result<C, C::Error>
     where

@@ -31,7 +31,14 @@ pub trait TryUnzip {
     /// Different types of containers can be unzipped into.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/try_unzip.rs", try_unzip_different_containers_example, [])]
+    /// use collect_failable::TryUnzip;
+    /// use std::collections::{BTreeSet, HashSet};
+    ///
+    /// let pairs = vec![(1, 'a'), (2, 'b'), (3, 'c')];
+    /// let (nums, chars): (BTreeSet<_>, HashSet<_>) = pairs.into_iter().try_unzip().expect("should be ok");
+    ///
+    /// assert_eq!(nums, BTreeSet::from([1, 2, 3]), "should contain all items");
+    /// assert_eq!(chars, HashSet::from(['a', 'b', 'c']), "should contain all items");
     /// ```
     ///
     /// ## Error Recovery
@@ -40,7 +47,20 @@ pub trait TryUnzip {
     /// successful side, allowing for recovery or reconstruction of the original iterator.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/try_unzip.rs", try_unzip_collision_example, [])]
+    /// use collect_failable::TryUnzip;
+    /// use std::collections::HashSet;
+    ///
+    /// let unzip_err = vec![(1, "a"), (2, "b"), (1, "c"), (3, "d")]
+    ///     .into_iter()
+    ///     .try_unzip::<HashSet<_>, HashSet<_>>()
+    ///     .expect_err("Should be Err");
+    /// let failed_side = unzip_err.side.as_ref().left().expect("Should be left");
+    ///
+    /// assert_eq!(failed_side.error.item, 1, "should have error from failed side");
+    /// assert_eq!(failed_side.failed, HashSet::from([1, 2]), "should have partially constructed failed side");
+    /// assert_eq!(failed_side.successful, HashSet::from(["a", "b"]), "should have partially constructed successful side");
+    /// assert_eq!(failed_side.unevaluated, Some("c"), "should have unevaluated items");
+    /// assert_eq!(unzip_err.remaining.size_hint(), (1, Some(1)), "should have remaining items");
     /// ```
     fn try_unzip<FromA, FromB>(self) -> Result<(FromA, FromB), UnzipError<FromA, FromB, Self>>
     where

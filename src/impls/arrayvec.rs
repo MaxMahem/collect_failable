@@ -11,7 +11,14 @@ use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 /// # Examples
 ///
 /// ```rust
-#[doc = include_doc::function_body!("tests/doc/arrayvec.rs", try_from_iter_arrayvec_example, [])]
+/// use arrayvec::ArrayVec;
+/// use collect_failable::TryFromIterator;
+///
+/// let array: ArrayVec<i32, 4> = ArrayVec::try_from_iter(1..=3).expect("should succeed");
+/// assert_eq!(array.as_slice(), &[1, 2, 3], "array should contain all items");
+///
+/// let err = ArrayVec::<i32, 3>::try_from_iter(1..=4).expect_err("should fail with too many items");
+/// assert_eq!(err.into_iter().collect::<Vec<_>>(), vec![1, 2, 3, 4], "error should contain all items");
 /// ```
 impl<T, I, const N: usize> TryFromIterator<I> for ArrayVec<T, N>
 where
@@ -52,7 +59,17 @@ where
     /// # Examples
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/arrayvec.rs", try_extend_arrayvec_example, [])]
+    /// use arrayvec::ArrayVec;
+    /// use collect_failable::{TryCollectEx, TryExtend};
+    ///
+    /// let mut array: ArrayVec<i32, 4> = (1..=2).try_collect_ex().expect("should succeed");
+    /// array.try_extend([3]).expect("extending with one item should succeed");
+    /// assert_eq!(*array, [1, 2, 3], "array should contain 3 items");
+    ///
+    /// let err = array.try_extend([4, 5]).expect_err("should fail with too many items");
+    /// // `array` may be modified, err should contain all items not inserted
+    /// let all_items = array.into_iter().chain(err).collect::<Vec<_>>();
+    /// assert_eq!(all_items, [1, 2, 3, 4, 5], "no items should be lost");
     /// ```
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
@@ -78,7 +95,18 @@ where
     /// # Examples
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/arrayvec.rs", try_extend_safe_arrayvec_example, [])]
+    /// use arrayvec::ArrayVec;
+    /// use collect_failable::{TryCollectEx, TryExtendSafe};
+    ///
+    /// let mut array: ArrayVec<i32, 4> = (1..=2).try_collect_ex().expect("should succeed");
+    /// array.try_extend_safe([3]).expect("extending with one item should succeed");
+    /// assert_eq!(*array, [1, 2, 3], "array should contain 3 items");
+    ///
+    /// let err = array.try_extend_safe([4, 5]).expect_err("should fail with too many items");
+    /// assert_eq!(*array, [1, 2, 3], "array should be unchanged on error");
+    ///
+    /// let collected: Vec<i32> = err.into_iter().collect();
+    /// assert_eq!(collected, [4, 5], "error should contain all unconsumed items");
     /// ```
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
@@ -95,6 +123,7 @@ impl<T, const N: usize> crate::TryExtendOne for ArrayVec<T, N> {
     type Item = T;
     type Error = CapacityError<T>;
 
+    /// Forwards directly to [`ArrayVec::try_push`].
     fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error> {
         self.try_push(item)
     }
