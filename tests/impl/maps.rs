@@ -4,7 +4,8 @@ use std::collections::{BTreeMap, HashMap};
 
 use hashbrown::HashMap as HashBrownMap;
 
-use collect_failable::{ItemCollision, TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
+use collect_failable::errors::ItemCollision;
+use collect_failable::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 const UNIQUE_KEYS: [(i32, i32); 2] = [(1, 2), (2, 3)];
 const COLLIDE_WITH_SELF: [(i32, i32); 3] = [(3, 3), (4, 4), (3, 5)];
@@ -19,7 +20,6 @@ macro_rules! test_try_from_iter_and_extend_iter {
             #[test]
             fn try_collect_key_collision() {
                 let err = <$map_type>::try_from_iter(COLLIDE_WITH_REMAINING).expect_err("should be err");
-                assert_eq!(err.len(), 5, "should have 5 items");
 
                 let parts = err.into_data();
 
@@ -59,7 +59,6 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 let mut map = <$map_type>::from(UNIQUE_KEYS);
 
                 let err = map.try_extend_safe(COLLIDE_WITH_MAP).expect_err("should be err");
-                assert_eq!(err.len(), 2, "should have 2 items");
 
                 assert_eq!(map, <$map_type>::from(UNIQUE_KEYS), "map should be unchanged");
 

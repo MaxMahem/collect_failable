@@ -3,7 +3,8 @@ use std::hash::{BuildHasher, Hash};
 
 use fluent_result::expect::dbg::ExpectNone;
 
-use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::errors::{CollectionCollision, ItemCollision};
+use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 #[allow(clippy::implicit_hasher)]
 impl<K: Eq + Hash, V, I> TryFromIterator<I> for HashMap<K, V>
@@ -80,13 +81,14 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne<(K, V)> for HashMap<K, V, S> {
-    type Error = crate::ItemCollision<(K, V)>;
+impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne for HashMap<K, V, S> {
+    type Item = (K, V);
+    type Error = ItemCollision<(K, V)>;
 
     fn try_extend_one(&mut self, item: (K, V)) -> Result<(), Self::Error> {
         let (key, value) = item;
         match self.contains_key(&key) {
-            true => Err(crate::ItemCollision::new((key, value))),
+            true => Err(ItemCollision::new((key, value))),
             false => {
                 self.insert(key, value).expect_none("should not be occupied");
                 Ok(())

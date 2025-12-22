@@ -1,91 +1,77 @@
-use collect_failable::TupleExtensionError;
+use collect_failable::errors::TupleExtensionError;
+use collect_failable::TryExtendOne;
 
-use super::error_tests::{expect_panic, test_format, test_source, TestError};
+use super::error_tests::{test_format, test_source, TestError};
 
 const SIDE_A_ERROR: TestError = TestError::new("A side failed");
 const SIDE_B_ERROR: TestError = TestError::new("B side failed");
 
-fn create_a_error_with_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
+// Wrapper type to allow using TestError in tests
+#[derive(Debug)]
+#[allow(dead_code)]
+struct TestColl;
+
+impl TryExtendOne for TestColl {
+    type Item = u32;
+    type Error = TestError;
+
+    fn try_extend_one(&mut self, _item: u32) -> Result<(), TestError> {
+        // Not actually used in error construction tests
+        unimplemented!()
+    }
+}
+
+fn create_a_error_with_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_a(SIDE_A_ERROR, Some(20), remaining.into_iter())
 }
 
-fn create_a_error_without_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>>
-{
+fn create_a_error_without_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_a(SIDE_A_ERROR, None, remaining.into_iter())
 }
 
-fn create_b_error_with_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>> {
+fn create_b_error_with_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_b(SIDE_B_ERROR, Some(10), remaining.into_iter())
 }
 
-fn create_b_error_without_unevaluated() -> TupleExtensionError<TestError, TestError, u32, u32, std::array::IntoIter<(u32, u32), 3>>
-{
+fn create_b_error_without_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
     TupleExtensionError::new_b(SIDE_B_ERROR, None, remaining.into_iter())
 }
 
-const EXPECTED_DEBUG_A_WITH: &str = r#"TupleExtensionError::A(TupleExtensionErrorSide { error: TestError { identity: "A side failed" }, unevaluated: Some(..), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
-const EXPECTED_DEBUG_A_WITHOUT: &str = r#"TupleExtensionError::A(TupleExtensionErrorSide { error: TestError { identity: "A side failed" }, unevaluated: None, remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
-const EXPECTED_DEBUG_B_WITH: &str = r#"TupleExtensionError::B(TupleExtensionErrorSide { error: TestError { identity: "B side failed" }, unevaluated: Some(..), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
-const EXPECTED_DEBUG_B_WITHOUT: &str = r#"TupleExtensionError::B(TupleExtensionErrorSide { error: TestError { identity: "B side failed" }, unevaluated: None, remaining: "core::array::iter::IntoIter<(u32, u32), 3>" })"#;
+const EXPECTED_DEBUG_A_WITH: &str = r#"TupleExtensionError { side: Left(Side { error: TestError { identity: "A side failed" }, unevaluated: Some(..) }), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" }"#;
+const EXPECTED_DEBUG_A_WITHOUT: &str = r#"TupleExtensionError { side: Left(Side { error: TestError { identity: "A side failed" }, unevaluated: None }), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" }"#;
+const EXPECTED_DEBUG_B_WITH: &str = r#"TupleExtensionError { side: Right(Side { error: TestError { identity: "B side failed" }, unevaluated: Some(..) }), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" }"#;
+const EXPECTED_DEBUG_B_WITHOUT: &str = r#"TupleExtensionError { side: Right(Side { error: TestError { identity: "B side failed" }, unevaluated: None }), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" }"#;
 const EXPECTED_DISPLAY_A: &str = "Failed while extending first collection: Test error: A side failed";
 const EXPECTED_DISPLAY_B: &str = "Failed while extending second collection: Test error: B side failed";
 
+// Test Debug formatting
 test_format!(debug_a_with_unevaluated, create_a_error_with_unevaluated(), "{:?}", EXPECTED_DEBUG_A_WITH);
 test_format!(debug_a_without_unevaluated, create_a_error_without_unevaluated(), "{:?}", EXPECTED_DEBUG_A_WITHOUT);
 test_format!(debug_b_with_unevaluated, create_b_error_with_unevaluated(), "{:?}", EXPECTED_DEBUG_B_WITH);
 test_format!(debug_b_without_unevaluated, create_b_error_without_unevaluated(), "{:?}", EXPECTED_DEBUG_B_WITHOUT);
+
+// Test Display formatting
 test_format!(display_a, create_a_error_with_unevaluated(), "{}", EXPECTED_DISPLAY_A);
 test_format!(display_b, create_b_error_with_unevaluated(), "{}", EXPECTED_DISPLAY_B);
 
-expect_panic!(expect_a_panic, create_b_error_with_unevaluated(), expect_a, "Should panic with msg");
-expect_panic!(expect_b_panic, create_a_error_with_unevaluated(), expect_b, "Should panic with msg");
-
+// Test into_data method
 #[test]
-fn unwrap_a() {
+fn into_data() {
     let error = create_a_error_with_unevaluated();
-    let side = error.unwrap_a();
-    assert_eq!(side.error, SIDE_A_ERROR);
+    let data = error.into_data();
+
+    assert!(data.side.is_left());
+    assert_eq!(data.remaining.collect::<Vec<_>>(), vec![(3, 30), (4, 40), (5, 50)]);
 }
 
 #[test]
-fn unwrap_b() {
-    let error = create_b_error_with_unevaluated();
-    let side = error.unwrap_b();
-    assert_eq!(side.error, SIDE_B_ERROR);
-}
-
-#[test]
-fn error_side_into_error() {
+fn deref_field_access() {
     let error = create_a_error_with_unevaluated();
-    let side = error.unwrap_a();
-    let inner = side.into_error();
-    assert_eq!(inner, SIDE_A_ERROR);
-}
-
-#[test]
-fn error_side_into_parts_with_unevaluated() {
-    let error = create_a_error_with_unevaluated();
-    let side = error.unwrap_a();
-    let parts = side.into_data();
-
-    assert_eq!(parts.error, SIDE_A_ERROR);
-    assert_eq!(parts.unevaluated, Some(20));
-    assert_eq!(parts.remaining.collect::<Vec<_>>(), vec![(3, 30), (4, 40), (5, 50)]);
-}
-
-#[test]
-fn error_side_into_parts_without_unevaluated() {
-    let error = create_a_error_without_unevaluated();
-    let side = error.unwrap_a();
-    let parts = side.into_data();
-
-    assert_eq!(parts.error, SIDE_A_ERROR);
-    assert_eq!(parts.unevaluated, None);
-    assert_eq!(parts.remaining.collect::<Vec<_>>(), vec![(3, 30), (4, 40), (5, 50)]);
+    assert!(error.side.is_left());
 }
 
 test_source!(error_trait_source_a, create_a_error_with_unevaluated(), TestError);

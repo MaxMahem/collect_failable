@@ -37,7 +37,18 @@ pub trait TryExtend<I: IntoIterator> {
     /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/try_extend.rs", try_extend_basic_guarantee_example, [])]
+    /// use collect_failable::TryExtend;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut map = HashMap::from([(1, 2)]);
+    /// let err = map.try_extend([(2, 3), (3, 4), (1, 5)]).expect_err("should be err");
+    ///
+    /// assert_eq!(err.item, (1, 5));
+    ///
+    /// // map may be modified, but colliding value should not be changed
+    /// assert_eq!(map[&1], 2);
+    /// assert_eq!(map[&2], 3);
+    /// assert_eq!(map[&3], 4);
     /// ```
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error>;
 }
@@ -73,7 +84,25 @@ pub trait TryExtendSafe<I: IntoIterator>: TryExtend<I> {
     /// The provided [`HashMap`] implementation errors if a key collision occurs during extension.
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/try_extend.rs", try_extend_safe_map_collision_example, [])]
+    /// use collect_failable::TryExtendSafe;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut map = HashMap::from([(1, 2), (2, 3)]);
+    /// let err = map.try_extend_safe([(3, 4), (1, 5), (4, 6)]).expect_err("should collide");
+    ///
+    /// assert_eq!(err.item, (1, 5), "item should be the colliding item");
+    ///
+    /// let iterated_items: Vec<_> = err.into_iter().collect();
+    /// // iterator can be reconstructed. Order is not guranteed for hashmap
+    /// assert_eq!(iterated_items.len(), 3, "length should be unchanged");
+    /// assert!(
+    ///     iterated_items.contains(&(3, 4)) &&
+    ///     iterated_items.contains(&(1, 5)) &&
+    ///     iterated_items.contains(&(4, 6)),
+    ///     "all items should be present"
+    /// );
+    ///
+    /// assert_eq!(map, HashMap::from([(1, 2), (2, 3)]), "map should be unchanged");
     /// ```
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error>;
 }
@@ -82,7 +111,10 @@ pub trait TryExtendSafe<I: IntoIterator>: TryExtend<I> {
 ///
 /// Unlike [`TryExtend`], this trait works with individual items rather than iterators, it always
 /// should provide a strong error guarantee, guaranteeing that the collection remains unchanged on error.
-pub trait TryExtendOne<T> {
+pub trait TryExtendOne {
+    /// The type of item that can be extended into the collection.
+    type Item;
+
     /// Error type returned by [`try_extend_one`](TryExtendOne::try_extend_one).
     type Error;
 
@@ -104,12 +136,12 @@ pub trait TryExtendOne<T> {
     ///
     /// let mut map = HashMap::from([(1, 2)]);
     /// map.try_extend_one((2, 3)).expect("should succeed");
-    /// assert_eq!(map.get(&2), Some(&3));
+    /// assert_eq!(map.get(&2), Some(&3), "value should be inserted");
     ///
     /// // Collision error
     /// let err = map.try_extend_one((1, 5)).expect_err("should collide");
-    /// assert_eq!(err.item, (1, 5));
-    /// assert_eq!(map.get(&1), Some(&2)); // Original value unchanged
+    /// assert_eq!(err.item, (1, 5), "item should be the colliding item");
+    /// assert_eq!(map.get(&1), Some(&2), "original value should be unchanged");
     /// ```
-    fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error>;
+    fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error>;
 }

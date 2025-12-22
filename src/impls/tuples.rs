@@ -1,62 +1,23 @@
-use std::iter::Once;
-
 use no_drop::dbg::IntoNoDrop;
 
-use crate::{TryExtend, TryFromIterator, TupleCollectionError, TupleExtensionError};
+use crate::errors::TupleExtensionError;
+use crate::{TryExtend, TryExtendOne};
 
 #[cfg(doc)]
 use crate::TryUnzip;
-
-/// Converts an iterator of `(A, B)` into a `(TryFromA, TryFromB)`, upholding the
-/// [`TryFromIterator`] contract of both types.
-impl<A, B, TryFromA, TryFromB, I> TryFromIterator<I> for (TryFromA, TryFromB)
-where
-    I: IntoIterator<Item = (A, B)>,
-    TryFromA: TryFromIterator<Vec<A>>,
-    TryFromB: TryFromIterator<Vec<B>>,
-{
-    type Error = TupleCollectionError<TryFromA::Error, TryFromB::Error, TryFromA, Vec<B>>;
-
-    /// Converts an iterator of `(A, B)` into a `(TryFromA, TryFromB)`.
-    ///
-    /// This implementation is suboptimal. If possible, prefer [`TryUnzip::try_unzip`] or
-    /// [`TryExtend::try_extend`] instead.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    #[doc = include_doc::function_body!("tests/doc/tuples.rs", try_from_iter_tuple_example, [])]
-    /// ```
-    fn try_from_iter(iter: I) -> Result<Self, Self::Error> {
-        let (vec_a, vec_b): (Vec<A>, Vec<B>) = iter.into_iter().unzip();
-        let (vec_a, vec_b) = (vec_a.no_drop(), vec_b.no_drop());
-
-        let collection_a = match TryFromA::try_from_iter(vec_a.unwrap()) {
-            Ok(coll) => coll.no_drop(),
-            Err(error) => return Err(TupleCollectionError::new_a(error, vec_b.unwrap())),
-        };
-
-        let collection_b = match TryFromB::try_from_iter(vec_b.unwrap()) {
-            Ok(coll) => coll.no_drop(),
-            Err(error) => return Err(TupleCollectionError::new_b(error, collection_a.unwrap())),
-        };
-
-        Ok((collection_a.unwrap(), collection_b.unwrap()))
-    }
-}
 
 /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
 ///
 /// Note: Tuples do not implement [`TryExtendSafe`](crate::TryExtendSafe) because they cannot
 /// provide a strong error guarantee. Extension has to proceed element by element and if the
 /// second collection fails to extend, the first may have already been modified.
-impl<A, B, TryFromA, TryFromB, I> TryExtend<I> for (TryFromA, TryFromB)
+impl<TryFromA, TryFromB, I> TryExtend<I> for (TryFromA, TryFromB)
 where
-    I: IntoIterator<Item = (A, B)>,
-    TryFromA: TryExtend<Once<A>> + Default,
-    TryFromB: TryExtend<Once<B>> + Default,
+    I: IntoIterator<Item = (TryFromA::Item, TryFromB::Item)>,
+    TryFromA: TryExtendOne + Default,
+    TryFromB: TryExtendOne + Default,
 {
-    type Error = TupleExtensionError<TryFromA::Error, TryFromB::Error, A, B, I::IntoIter>;
+    type Error = TupleExtensionError<TryFromA, TryFromB, I::IntoIter>;
 
     /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
     ///
@@ -66,15 +27,30 @@ where
     /// # Examples
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/tuples.rs", try_extend_tuple_example, [])]
+    /// use collect_failable::TryExtend;
+    /// use std::collections::HashMap;
+    ///
+    /// let pairs = [((1, 1), (2, 2)), ((3, 3), (4, 4))];
+    /// let mut tuple_of_maps = (HashMap::new(), HashMap::new());
+    /// tuple_of_maps.try_extend(pairs).expect("should extend both collections");
+    ///
+    /// assert_eq!(tuple_of_maps.0, HashMap::from([(1, 1), (3, 3)]), "should contain all items");
+    /// assert_eq!(tuple_of_maps.1, HashMap::from([(2, 2), (4, 4)]), "should contain all items");
+    ///
+    /// let colliding_pairs = [((5, 5), (6, 6)), ((1, 10), (7, 7))];
+    /// let extend_err = tuple_of_maps.try_extend(colliding_pairs).expect_err("should collide on second item");
+    /// let err_side = extend_err.side.as_ref().left().expect("should collide on left side");
+    ///
+    /// assert_eq!(err_side.error.item, (1, 10), "should contain colliding item");
+    /// assert_eq!(tuple_of_maps.0[&1], 1, "value should not be modified");
     /// ```
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
         for (a, b) in iter.by_ref().map(|(a, b)| (a.no_drop(), b.no_drop())) {
-            if let Err(error) = self.0.try_extend(std::iter::once(a.unwrap())) {
+            if let Err(error) = self.0.try_extend_one(a.unwrap()) {
                 return Err(TupleExtensionError::new_a(error, Some(b.unwrap()), iter));
             }
-            if let Err(error) = self.1.try_extend(std::iter::once(b.unwrap())) {
+            if let Err(error) = self.1.try_extend_one(b.unwrap()) {
                 return Err(TupleExtensionError::new_b(error, None, iter));
             }
         }

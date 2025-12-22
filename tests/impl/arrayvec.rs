@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 
 use crate::utils::FixedSizeHintEx;
-use collect_failable::CapacityMismatch;
+use collect_failable::errors::CapacityMismatch;
 
 type TestArray = ArrayVec<u32, 2>;
 

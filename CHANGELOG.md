@@ -6,6 +6,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2025-12-22
+
+### Added
+
+ - Added `tuples` feature flag (enabled by default) that gates tuple and unzip functionality. `TupleExtensionError` and `UnzipError` require this feature.
+ - Re-exported `either::Either` type in the public API as `collect_failable::Either` when the `tuples` feature is enabled. Users no longer need to directly depend on the `either` crate to use error types that include `Either`.
+ - Added `CollectionError::bounds` and `CollectionError::overflow` convenience constructors.
+
+### Removed
+
+ - **Breaking:** Removed methods that drop data:
+   - Removed `CollectionCollision::into_item()` - use `into_data().item` or direct field access via `Deref` instead.
+   - Removed `CollectionError::into_error()` - use `into_data().error` or direct field access via `Deref` instead.
+ - **Breaking:** Removed `len()` and `is_empty()` methods from `CollectionError` and `CollectionCollision`.
+ - **Breaking:** Removed `IntoIterator` implementation for `ResultCollectionError`. This was removed because it was potentially misleading, as it only iterated over the collected items and ignored the remaining iterator.
+ - Removed `itertools` dependency.
+ - **Breaking:** Removed the `utils` module and `utils` feature. The `FoldMut` trait has been extracted into its own standalone crate: [`fold_mut`](https://github.com/MaxMahem/fold_mut).
+   - Migration: Add `fold_mut` as a dependency and change `use collect_failable::utils::FoldMut;` to `use fold_mut::FoldMut;`.
+ - Removed `TupleCollectionError` error type. Tuple collections should use `TryUnzip` or `TryExtend` instead of `TryFromIterator`.
+ - Removed `TryFromIterator` implementation for tuples. Use `TryUnzip::try_unzip` or `TryExtend::try_extend` instead.
+
+### Changed
+
+ - **Breaking:** Moved all error types into the `errors` submodule. Error types are no longer re-exported at the crate root.
+   - Migration: change `use collect_failable::ErrorType;` to `use collect_failable::errors::ErrorType;` or add `use collect_failable::errors::*;` to import all error types.
+ - **Breaking:** Refactored `TryExtendOne` to use an associated type `Item` instead of a generic type parameter. This significantly simplifies type signatures throughout the codebase, particularly reducing `UnzipError` from 5 to 3 type parameters and `UnzipSide` from 4 to 2 type parameters. 
+   - Migration: change `impl TryExtendOne<T>` to `impl TryExtendOne { type Item = T; }` and update bounds from `where C: TryExtendOne<T>` to `where C: TryExtendOne<Item = T>`.
+ - **Breaking:** Simplified `ResultCollectionError` field names for clarity and consistency:
+   - `iteration_error` → `error` (the first error encountered from the iterator)
+   - `collection_result` → `result` (the partial collection result)
+   - `result_iter` → `iter` (the remaining iterator)
+   - Removed helper methods `into_iteration_error()`, `into_collection_result()`, and `into_result_iter()`. Use `into_data()` to access all fields, or access fields directly via the `Deref` implementation.
+   - Migration: Update field accesses to use new names. Replace method calls like `err.into_iteration_error()` with `err.into_data().error` or simply `err.error`.
+ - Made `CapacityMismatch` fields readonly. (This was considered a non-breaking change because there should be no reason to mutate the error.)
+ - Improved documentation for error types (`CollectionCollision`, `CollectionError`, `UnzipErrorSide`, `TupleExtensionErrorSide`) by hiding internal data structs and documenting readonly fields directly on parent types.
+ - Converted `TupleExtensionError` and `UnzipError` from enum to struct type for improved API consistency. `either::Either` is used to hold the error sides, with a custom inner type. 
+
 ## [0.12.3] - 2025-12-19
 
 ### Fixed

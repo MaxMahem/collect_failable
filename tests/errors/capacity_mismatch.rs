@@ -1,4 +1,4 @@
-use collect_failable::CapacityMismatch;
+use collect_failable::errors::CapacityMismatch;
 
 use crate::error_tests::identity;
 

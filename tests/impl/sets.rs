@@ -5,7 +5,8 @@ use std::collections::{BTreeSet, HashSet};
 use hashbrown::HashSet as HashBrownSet;
 
 use crate::utils::Identifiable;
-use collect_failable::{ItemCollision, TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
+use collect_failable::errors::ItemCollision;
+use collect_failable::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 macro_rules! try_from_iter_and_extend_iter {
     ($module:ident, $set_type:ty) => {
@@ -19,7 +20,6 @@ macro_rules! try_from_iter_and_extend_iter {
             #[test]
             fn try_collect_value_collision() {
                 let err = <$set_type>::try_from_iter(COLLIDE_WITH_SELF).expect_err("should be err");
-                assert_eq!(err.len(), 5, "should have 5 items");
 
                 let parts = err.into_data();
 
@@ -44,7 +44,6 @@ macro_rules! try_from_iter_and_extend_iter {
                 let mut set = <$set_type>::from(UNIQUE_VALUES);
 
                 let err = set.try_extend_safe(COLLIDE_WITH_UNIQUE).expect_err("should be err");
-                assert_eq!(err.len(), 3, "should have 3 items");
 
                 assert_eq!(set, <$set_type>::from(UNIQUE_VALUES), "set should be unchanged");
 

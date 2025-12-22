@@ -8,13 +8,16 @@
 // Allow multiple crate versions from transitive dependencies (include-doc)
 #![allow(clippy::multiple_crate_versions)]
 
-mod errors;
+/// Error types returned by provided failable collection operation implementations.
+pub mod errors;
 mod impls;
 mod traits;
 
-/// Helper utilities for testing and authoring failable collection implementations.
-#[cfg(feature = "utils")]
-pub mod utils;
-
-pub use errors::*;
 pub use traits::*;
+
+#[cfg(feature = "tuple")]
+/// Re-export of the `Either` type from the `either` crate.
+pub mod either {
+    #[doc(inline)]
+    pub use either::Either;
+}

@@ -2,7 +2,7 @@ use std::mem::MaybeUninit;
 
 use fluent_result::into::IntoResult;
 
-use crate::CapacityMismatch;
+use crate::errors::CapacityMismatch;
 
 /// A guard that ensures that all elements in a slice are initialized
 pub struct SliceGuard<'a, T> {

@@ -1,19 +1,22 @@
 use std::ops::{Range, RangeInclusive};
 
 /// An error indicating that the a collection was not created because the capacity was violated.
+///
+/// This type is *read-only*.
 #[subdef::subdef(derive(Debug, PartialEq, Eq))]
 #[derive(thiserror::Error)]
-#[error("Collected items outside allowed range ({min}..{max}): {kind}", min = self.capacity.start, max = self.capacity.end)]
+#[error("Collected items out of bounds ({min}..{max}): {kind}", min = self.capacity.start, max = self.capacity.end)]
+#[readonly::make]
 pub struct CapacityMismatch {
     /// The allowed capacity range for the collection.
     pub capacity: Range<usize>,
     /// The specific kind of capacity mismatch that occurred.
     pub kind: [_; {
         /// Describes the specific type of capacity mismatch.
-        #[derive(thiserror::Error)]
+        #[derive(derive_more::Display)]
         pub enum MismatchKind {
             /// The item collections bounds cannot fit within the allowed capacity.
-            #[error("Item count bounds ({min}..={max:?}) cannot satisfy capacity")]
+            #[display("Item count bounds ({min}..={max:?}) cannot satisfy capacity")]
             Bounds {
                 /// The minimum bound.
                 min: usize,
@@ -21,13 +24,13 @@ pub struct CapacityMismatch {
                 max: Option<usize>,
             },
             /// The iterator produced fewer items than the minimum required capacity.
-            #[error("Fewer ({count}) items than necessary")]
+            #[display("Fewer ({count}) items than necessary")]
             Underflow {
                 /// The actual number of items produced.
                 count: usize,
             },
             /// The iterator produced more items than the maximum allowed capacity.
-            #[error("Item count exceeds capacity")]
+            #[display("Item count exceeds capacity")]
             Overflow,
         }
     }],

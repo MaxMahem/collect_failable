@@ -2,7 +2,8 @@ use std::collections::BTreeSet;
 
 use fluent_result::bool::dbg::Expect;
 
-use crate::{CollectionCollision, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::errors::{CollectionCollision, ItemCollision};
+use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 impl<T: Ord, I> TryFromIterator<I> for BTreeSet<T>
 where
@@ -75,12 +76,13 @@ where
     }
 }
 
-impl<T: Ord> crate::TryExtendOne<T> for BTreeSet<T> {
-    type Error = crate::ItemCollision<T>;
+impl<T: Ord> crate::TryExtendOne for BTreeSet<T> {
+    type Item = T;
+    type Error = ItemCollision<T>;
 
-    fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error> {
+    fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error> {
         match self.contains(&item) {
-            true => Err(crate::ItemCollision::new(item)),
+            true => Err(ItemCollision::new(item)),
             false => {
                 self.insert(item);
                 Ok(())

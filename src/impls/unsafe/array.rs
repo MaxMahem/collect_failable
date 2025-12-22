@@ -2,7 +2,9 @@ use std::mem::MaybeUninit;
 
 use fluent_result::into::IntoResult;
 
-use crate::{impls::r#unsafe::DisarmError, CapacityMismatch, CollectionError, TryFromIterator};
+use crate::errors::{CapacityMismatch, CollectionError};
+use crate::impls::r#unsafe::DisarmError;
+use crate::TryFromIterator;
 
 /// Create an array of size `N` from an iterator, failing if the iterator produces fewer or more items than `N`.
 impl<const N: usize, T, I> TryFromIterator<I> for [T; N]
@@ -16,12 +18,25 @@ where
     /// # Errors
     ///
     /// Returns [`CollectionError`] if the iterator produces more or fewer items than `N`.
+    /// All items from the iterator are preserved in the error, and can be retrieved using
+    /// [`CollectionError::into_iter`].
     ///
     /// # Examples
     ///
     /// ```rust
-    #[doc = include_doc::function_body!("tests/doc/array.rs", try_from_iter_array_example, [])]
+    /// use collect_failable::errors::CapacityMismatch;
+    /// use collect_failable::TryFromIterator;
+    ///
+    /// let array = <[_; 3]>::try_from_iter(1..=3).expect("should succeed");
+    /// assert_eq!(array, [1, 2, 3]);
+    ///
+    /// let too_few_err = <[u32; 3]>::try_from_iter(1..=2).expect_err("should fail, too few items");
+    /// assert_eq!(too_few_err.into_iter().collect::<Vec<_>>(), vec![1, 2], "err should contain all items");
+    ///
+    /// let too_many_err = <[u32; 3]>::try_from_iter(1..=4).expect_err("should fail, too many items");
+    /// assert_eq!(too_many_err.into_iter().collect::<Vec<_>>(), vec![1, 2, 3, 4], "err should contain all items");
     /// ```
+    #[inline]
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut array = [const { MaybeUninit::uninit() }; N];
         try_from_iterator_erased(into_iter.into_iter(), &mut array)

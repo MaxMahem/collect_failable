@@ -23,7 +23,7 @@ fn try_from_iter_result_iter_failure_example() {
     match result {
         Ok(Ok(ok)) => panic!("should have failed: {ok:?}"),
         Ok(Err(err)) => panic!("should be iter failure: {err:?}"),
-        Err(e) => assert!(e.collection_result.is_err()),
+        Err(e) => assert!(e.result.is_err()),
     }
 }
 
