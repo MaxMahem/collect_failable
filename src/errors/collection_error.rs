@@ -121,7 +121,7 @@ impl<I: Iterator, C> CollectionError<I, C, CapacityMismatch> {
     /// Panics in debug mode if the hint does not indicate a bounds error.
     #[must_use]
     #[inline]
-    pub(crate) fn bounds(iterator: I, capacity: RangeInclusive<usize>) -> Self
+    pub fn bounds(iterator: I, capacity: RangeInclusive<usize>) -> Self
     where
         C: Default,
     {
@@ -142,7 +142,7 @@ impl<I: Iterator, C> CollectionError<I, C, CapacityMismatch> {
     /// * `capacity` - The allowed capacity range for the collection
     #[must_use]
     #[inline]
-    pub(crate) fn overflow(iterator: I, collected: C, rejected: I::Item, capacity: RangeInclusive<usize>) -> Self {
+    pub fn overflow(iterator: I, collected: C, rejected: I::Item, capacity: RangeInclusive<usize>) -> Self {
         Self::new(iterator, collected, Some(rejected), CapacityMismatch::overflow(capacity))
     }
 }
