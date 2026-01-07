@@ -1,4 +1,7 @@
+<!-- Markdownlint-disable no-duplicate-heading -->
+
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -6,55 +9,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `CollectionError::underflow` convenience constructor.
+- Re-exported `size_hinter::SizeHint` type in the `errors` module.
+- Added `Capacity` type with `TryFrom<RangeInclusive<usize>>` implementation to represent validated capacity ranges.
+- Added `InvalidCapacity` error type returned when attempting to create an invalid `Capacity`.
+
+### Changed
+
+- **Breaking:** Changed `MismatchKind::Bounds` variant to use `SizeHint` instead of a raw `(usize, Option<usize>)` tuple. This provides better type safety and semantic meaning for size hint information.
+  - Migration: If you pattern match on `MismatchKind::Bounds`, update from `MismatchKind::Bounds(min, max)` to `MismatchKind::Bounds(size_hint)` and use `size_hint.lower()` and `size_hint.upper()` to access the bounds.
+- **Breaking:** Changed `CapacityMismatch` to use a `capacity: Capacity` field instead of separate `min`/`max` fields. This encapsulates validation logic and prevents potential overflow issues when converting `RangeInclusive` to `Range` for capacities near `usize::MAX`.
+  - Migration: Replace `error.min` with `error.capacity.min` and `error.max` with `error.capacity.max`.
+- **Breaking:** Changed `ResultCollectionError` iterator type from `Either<I::IntoIter, iter::Empty<...>>` to `I::IntoIter`. The `Either` wrapper was an internal implementation detail and is no longer exposed in the public API.
+  - Migration: If you have code that explicitly references the error type with the full type signature, remove the `Either` wrapper. The iterator field can now be used directly without unwrapping.
+
 ## [0.13.0] - 2025-12-22
 
 ### Added
 
- - Added `tuples` feature flag (enabled by default) that gates tuple and unzip functionality. `TupleExtensionError` and `UnzipError` require this feature.
- - Re-exported `either::Either` type in the public API as `collect_failable::Either` when the `tuples` feature is enabled. Users no longer need to directly depend on the `either` crate to use error types that include `Either`.
- - Added `CollectionError::bounds` and `CollectionError::overflow` convenience constructors.
+- Added `tuples` feature flag (enabled by default) that gates tuple and unzip functionality. `TupleExtensionError` and `UnzipError` require this feature.
+- Re-exported `either::Either` type in the public API as `collect_failable::Either` when the `tuples` feature is enabled. Users no longer need to directly depend on the `either` crate to use error types that include `Either`.
+- Added `CollectionError::bounds` and `CollectionError::overflow` convenience constructors.
 
 ### Removed
 
- - **Breaking:** Removed methods that drop data:
-   - Removed `CollectionCollision::into_item()` - use `into_data().item` or direct field access via `Deref` instead.
-   - Removed `CollectionError::into_error()` - use `into_data().error` or direct field access via `Deref` instead.
- - **Breaking:** Removed `len()` and `is_empty()` methods from `CollectionError` and `CollectionCollision`.
- - **Breaking:** Removed `IntoIterator` implementation for `ResultCollectionError`. This was removed because it was potentially misleading, as it only iterated over the collected items and ignored the remaining iterator.
- - Removed `itertools` dependency.
- - **Breaking:** Removed the `utils` module and `utils` feature. The `FoldMut` trait has been extracted into its own standalone crate: [`fold_mut`](https://github.com/MaxMahem/fold_mut).
-   - Migration: Add `fold_mut` as a dependency and change `use collect_failable::utils::FoldMut;` to `use fold_mut::FoldMut;`.
- - Removed `TupleCollectionError` error type. Tuple collections should use `TryUnzip` or `TryExtend` instead of `TryFromIterator`.
- - Removed `TryFromIterator` implementation for tuples. Use `TryUnzip::try_unzip` or `TryExtend::try_extend` instead.
+- **Breaking:** Removed methods that drop data:
+  - Removed `CollectionCollision::into_item()` - use `into_data().item` or direct field access via `Deref` instead.
+  - Removed `CollectionError::into_error()` - use `into_data().error` or direct field access via `Deref` instead.
+- **Breaking:** Removed `len()` and `is_empty()` methods from `CollectionError` and `CollectionCollision`.
+- **Breaking:** Removed `IntoIterator` implementation for `ResultCollectionError`. This was removed because it was potentially misleading, as it only iterated over the collected items and ignored the remaining iterator.
+- Removed `itertools` dependency.
+- **Breaking:** Removed the `utils` module and `utils` feature. The `FoldMut` trait has been extracted into its own standalone crate: [`fold_mut`](https://github.com/MaxMahem/fold_mut).
+  - Migration: Add `fold_mut` as a dependency and change `use collect_failable::utils::FoldMut;` to `use fold_mut::FoldMut;`.
+- Removed `TupleCollectionError` error type. Tuple collections should use `TryUnzip` or `TryExtend` instead of `TryFromIterator`.
+- Removed `TryFromIterator` implementation for tuples. Use `TryUnzip::try_unzip` or `TryExtend::try_extend` instead.
 
 ### Changed
 
- - **Breaking:** Moved all error types into the `errors` submodule. Error types are no longer re-exported at the crate root.
-   - Migration: change `use collect_failable::ErrorType;` to `use collect_failable::errors::ErrorType;` or add `use collect_failable::errors::*;` to import all error types.
- - **Breaking:** Refactored `TryExtendOne` to use an associated type `Item` instead of a generic type parameter. This significantly simplifies type signatures throughout the codebase, particularly reducing `UnzipError` from 5 to 3 type parameters and `UnzipSide` from 4 to 2 type parameters. 
-   - Migration: change `impl TryExtendOne<T>` to `impl TryExtendOne { type Item = T; }` and update bounds from `where C: TryExtendOne<T>` to `where C: TryExtendOne<Item = T>`.
- - **Breaking:** Simplified `ResultCollectionError` field names for clarity and consistency:
-   - `iteration_error` → `error` (the first error encountered from the iterator)
-   - `collection_result` → `result` (the partial collection result)
-   - `result_iter` → `iter` (the remaining iterator)
-   - Removed helper methods `into_iteration_error()`, `into_collection_result()`, and `into_result_iter()`. Use `into_data()` to access all fields, or access fields directly via the `Deref` implementation.
-   - Migration: Update field accesses to use new names. Replace method calls like `err.into_iteration_error()` with `err.into_data().error` or simply `err.error`.
- - Made `CapacityMismatch` fields readonly. (This was considered a non-breaking change because there should be no reason to mutate the error.)
- - Improved documentation for error types (`CollectionCollision`, `CollectionError`, `UnzipErrorSide`, `TupleExtensionErrorSide`) by hiding internal data structs and documenting readonly fields directly on parent types.
- - Converted `TupleExtensionError` and `UnzipError` from enum to struct type for improved API consistency. `either::Either` is used to hold the error sides, with a custom inner type. 
+- **Breaking:** Moved all error types into the `errors` submodule. Error types are no longer re-exported at the crate root.
+  - Migration: change `use collect_failable::ErrorType;` to `use collect_failable::errors::ErrorType;` or add `use collect_failable::errors::*;` to import all error types.
+- **Breaking:** Refactored `TryExtendOne` to use an associated type `Item` instead of a generic type parameter. This significantly simplifies type signatures throughout the codebase, particularly reducing `UnzipError` from 5 to 3 type parameters and `UnzipSide` from 4 to 2 type parameters.
+  - Migration: change `impl TryExtendOne<T>` to `impl TryExtendOne { type Item = T; }` and update bounds from `where C: TryExtendOne<T>` to `where C: TryExtendOne<Item = T>`.
+- **Breaking:** Simplified `ResultCollectionError` field names for clarity and consistency:
+  - `iteration_error` → `error` (the first error encountered from the iterator)
+  - `collection_result` → `result` (the partial collection result)
+  - `result_iter` → `iter` (the remaining iterator)
+  - Removed helper methods `into_iteration_error()`, `into_collection_result()`, and `into_result_iter()`. Use `into_data()` to access all fields, or access fields directly via the `Deref` implementation.
+  - Migration: Update field accesses to use new names. Replace method calls like `err.into_iteration_error()` with `err.into_data().error` or simply `err.error`.
+- Made `CapacityMismatch` fields readonly. (This was considered a non-breaking change because there should be no reason to mutate the error.)
+- Improved documentation for error types (`CollectionCollision`, `CollectionError`, `UnzipErrorSide`, `TupleExtensionErrorSide`) by hiding internal data structs and documenting readonly fields directly on parent types.
+- Converted `TupleExtensionError` and `UnzipError` from enum to struct type for improved API consistency. `either::Either` is used to hold the error sides, with a custom inner type.
 
 ## [0.12.3] - 2025-12-19
 
 ### Fixed
 
- - Fixed debug format assertions in `tuple_extension_error` tests to match actual `TestError` struct format.
+- Fixed debug format assertions in `tuple_extension_error` tests to match actual `TestError` struct format.
 
 ## [0.12.1] - 2025-12-18
 
 ### Fixed
 
- - Removed internal `utils` dependency.
- - Updated dependencies to use crates.io instead of git.
+- Removed internal `utils` dependency.
+- Updated dependencies to use crates.io instead of git.
 
 ## [0.12.0] - 2025-12-17
 
@@ -62,161 +81,161 @@ Major rework, aiming to make iter information recoverable on all errors.
 
 ### Added
 
- - Added `TryExtendOne` trait for extending collections with a single item, providing cleaner error types and strong error guarantees.
- - Added `ItemCollision<T>` error type for single-item collection collisions (maps and sets).
- - Added `ReadOnlyPartialIterErr` and `PartialIterErr` for returning errors from failable collection methods.
- - Added `CollectionCollision` for returning errors when a collision occurs during a collection operation.
- - Added `TupleCollectionError` and `TupleExtensionError` for returning errors when a tuple collection operation fails.
- - Added `CapacityMismatch` error type to replace `ExceedsCapacity`, providing more semantic information about capacity violations.
+- Added `TryExtendOne` trait for extending collections with a single item, providing cleaner error types and strong error guarantees.
+- Added `ItemCollision<T>` error type for single-item collection collisions (maps and sets).
+- Added `ReadOnlyPartialIterErr` and `PartialIterErr` for returning errors from failable collection methods.
+- Added `CollectionCollision` for returning errors when a collision occurs during a collection operation.
+- Added `TupleCollectionError` and `TupleExtensionError` for returning errors when a tuple collection operation fails.
+- Added `CapacityMismatch` error type to replace `ExceedsCapacity`, providing more semantic information about capacity violations.
 
 ### Changed
 
- - **Breaking:** Moved generic iterator parameter `I` from method level to trait level in `TryFromIterator`. The trait signature changed from `TryFromIterator<T>` to `TryFromIterator<I>`. This allows the error type to see the iterator type, which is useful for error recovery. Most user code remains compatible due to type inference.
+- **Breaking:** Moved generic iterator parameter `I` from method level to trait level in `TryFromIterator`. The trait signature changed from `TryFromIterator<T>` to `TryFromIterator<I>`. This allows the error type to see the iterator type, which is useful for error recovery. Most user code remains compatible due to type inference.
 
 Change the error types of most implementations to allow recovering the consumed data on an error.
 
- - **Breaking:** Changed the implementation of `TryFromIterator` for all set and map types to use `CollectionCollision` instead of `KeyCollision` and `ValueCollision`.
- - **Breaking:** Changed `try_unzip` error type to `UnzipError<A, B, FromA, FromB, I>`.
- - **Breaking:** Changed `try_extend` error type to `TupleExtensionError<A, B, FromA, FromB, I>`.
- - **Breaking:** Changed `ArrayVec` implementations to use `CollectionError<T, I::IntoIter, Vec<T>, CapacityMismatch>` instead of `ExceedsCapacity`.
- - **Breaking:** Changed `TryFromIterator` for `Result<C, C::Error>` to return `ResultCollectionError<E, C, C::Error>` instead of `E`. This preserves both the iterator error and the partial collection result, allowing full recovery of all information when an error occurs.
- - **Breaking:** Changed `TryFromIterator` for arrays (`[T; N]`) to return `CollectionError<T, I::IntoIter, Vec<T>, CountMismatch>` instead of `ItemCountMismatch`. This allows recovery of collected items and the remaining iterator when array collection fails due to length mismatch.
- - **Breaking:** Renamed `ItemCountMismatch` to `CountMismatch`.
+- **Breaking:** Changed the implementation of `TryFromIterator` for all set and map types to use `CollectionCollision` instead of `KeyCollision` and `ValueCollision`.
+- **Breaking:** Changed `try_unzip` error type to `UnzipError<A, B, FromA, FromB, I>`.
+- **Breaking:** Changed `try_extend` error type to `TupleExtensionError<A, B, FromA, FromB, I>`.
+- **Breaking:** Changed `ArrayVec` implementations to use `CollectionError<T, I::IntoIter, Vec<T>, CapacityMismatch>` instead of `ExceedsCapacity`.
+- **Breaking:** Changed `TryFromIterator` for `Result<C, C::Error>` to return `ResultCollectionError<E, C, C::Error>` instead of `E`. This preserves both the iterator error and the partial collection result, allowing full recovery of all information when an error occurs.
+- **Breaking:** Changed `TryFromIterator` for arrays (`[T; N]`) to return `CollectionError<T, I::IntoIter, Vec<T>, CountMismatch>` instead of `ItemCountMismatch`. This allows recovery of collected items and the remaining iterator when array collection fails due to length mismatch.
+- **Breaking:** Renamed `ItemCountMismatch` to `CountMismatch`.
 
 ### Removed
 
- - **Breaking:** Removed `KeyCollision` and `ValueCollision` error types. Use `CollectionCollision` instead, which provides a unified error type for all collection collision scenarios.
- - **Breaking:** Removed `OneOf2` error type. Use `TupleCollectionError` or `TupleExtensionError` instead.
- - **Breaking:** Removed `ExceedsCapacity` error type. Use `CapacityMismatch` instead.
+- **Breaking:** Removed `KeyCollision` and `ValueCollision` error types. Use `CollectionCollision` instead, which provides a unified error type for all collection collision scenarios.
+- **Breaking:** Removed `OneOf2` error type. Use `TupleCollectionError` or `TupleExtensionError` instead.
+- **Breaking:** Removed `ExceedsCapacity` error type. Use `CapacityMismatch` instead.
 
 ### Migration Guide
 
- - Use the new error types. In most cases, the original error types can be recovered via the `NewErrorType.error` field.
- - Migrate implementations to use the new interface shape.
+- Use the new error types. In most cases, the original error types can be recovered via the `NewErrorType.error` field.
+- Migrate implementations to use the new interface shape.
 
 ## [0.11.1] - 2025-12-02
 
 ### Fixed
 
- - Fixed a problem with `utils` module internal visibility.
+- Fixed a problem with `utils` module internal visibility.
 
 ## [0.11.0] - 2025-12-02
 
 ### Changed
 
- - Moved the `FoldMut` trait into the `utils` module.
- - Split `TryExtend` trait into `TryExtend` (basic guarantee) and `TryExtendSafe` (strong guarantee).
- - `TryExtendSafe` is now a supertrait of `TryExtend`.
- - Tuples now only implement `TryExtend` as they cannot provide strong error guarantees.
+- Moved the `FoldMut` trait into the `utils` module.
+- Split `TryExtend` trait into `TryExtend` (basic guarantee) and `TryExtendSafe` (strong guarantee).
+- `TryExtendSafe` is now a supertrait of `TryExtend`.
+- Tuples now only implement `TryExtend` as they cannot provide strong error guarantees.
 
 ### Added
 
- - Exposed the `FixedSizeHint` and `FixedSizeHintEx` traits. Useful for testing.
- - Exposed the `Identifiable` trait. Useful for testing.
+- Exposed the `FixedSizeHint` and `FixedSizeHintEx` traits. Useful for testing.
+- Exposed the `Identifiable` trait. Useful for testing.
 
 ## [0.10.0] - 2025-11-28
 
 ### Added
 
- - Added `TryFromIterator` implementations for `Result<C, E>`.
+- Added `TryFromIterator` implementations for `Result<C, E>`.
 
 ### Changed
 
- - Improvement to `ArrayVec::try_extend_safe` algorithm.
+- Improvement to `ArrayVec::try_extend_safe` algorithm.
 
 ## [0.9.0] - 2025-11-22
 
 ### Added
 
- - Added `FoldMut` trait, accumulating values via mutation rather than move.
- - Added `IsVariant`, `TryUnwrap`, and `Unwrap` derives for `OneOf2`.
+- Added `FoldMut` trait, accumulating values via mutation rather than move.
+- Added `IsVariant`, `TryUnwrap`, and `Unwrap` derives for `OneOf2`.
 
 ### Changed
 
- - Changed `TryCollectEx` trait to be a super trait of `Iterator`.
+- Changed `TryCollectEx` trait to be a super trait of `Iterator`.
 
 ## [0.8.0] - 2025-11-20
 
 ### Added
 
- - Added `TryFromIterator` and `TryExtend` implementations for `ArrayVec`.
- - Added `TryUnzip` trait for `Iterator`s of tuples, allowing for failable construction of multiple collections at once, similar to `Unzip`.
- - Added `TryFromIterator` and `TryExtend` implementations for 2 value tuples.
- - Added `TryFromIterator` implementations for arrays.
- - Added `unsafe` feature gate (enabled by default).
- - Added `ExceedsCapacity` error type.
+- Added `TryFromIterator` and `TryExtend` implementations for `ArrayVec`.
+- Added `TryUnzip` trait for `Iterator`s of tuples, allowing for failable construction of multiple collections at once, similar to `Unzip`.
+- Added `TryFromIterator` and `TryExtend` implementations for 2 value tuples.
+- Added `TryFromIterator` implementations for arrays.
+- Added `unsafe` feature gate (enabled by default).
+- Added `ExceedsCapacity` error type.
 
 ## [0.7.2] - 2025-11-15
 
 ### Fixed/Changed
 
- - Ensured the display trait was implemented for `ValueCollision<T>`
- - Removed display of the `key`/`value` fields from `KeyCollision<T>` and `ValueCollision<T>` to avoid requiring `Debug` or `Display` on the `K` and `V` types.
+- Ensured the display trait was implemented for `ValueCollision<T>`
+- Removed display of the `key`/`value` fields from `KeyCollision<T>` and `ValueCollision<T>` to avoid requiring `Debug` or `Display` on the `K` and `V` types.
 
 ## [0.7.1] - 2025-11-15
 
 ### Fixed
 
- - Fixed optional dependencies
+- Fixed optional dependencies
 
 ## [0.7.0] - 2025-11-15
 
 ### Added
 
- - Added implementations for `TryFromIterator` and `TryExtend` for `HashSet`, `BTreeSet`, `hashbrown::HashSet`, and `indexmap::IndexSet`.
+- Added implementations for `TryFromIterator` and `TryExtend` for `HashSet`, `BTreeSet`, `hashbrown::HashSet`, and `indexmap::IndexSet`.
 
 ### Removed
 
- - Removed `BtreeMap` and `HashMap` features. Those implementations are now present by default.
+- Removed `BtreeMap` and `HashMap` features. Those implementations are now present by default.
 
 ## [0.6.0] - 2025-11-15
 
 ### Added
 
- - Added `Ord`, `PartialOrd`, `Eq`, and `PartialEq` derives for `KeyCollision<K>`.
+- Added `Ord`, `PartialOrd`, `Eq`, and `PartialEq` derives for `KeyCollision<K>`.
 
 ### Changed
 
- - Changed the `TryExtend` trait implementations to return a `KeyCollection<K>`.
- - Added `BuildHasher` generic parameter to `TryExtend` implementations.
+- Changed the `TryExtend` trait implementations to return a `KeyCollection<K>`.
+- Added `BuildHasher` generic parameter to `TryExtend` implementations.
 
 ### Removed
 
- - Removed the `NonUniqueKey` error type.
+- Removed the `NonUniqueKey` error type.
 
 ## [0.5.0] - 2025-11-15
 
 ### Added
 
- - Added the `TryExtend` trait, including implementations for `HashMap`, `BTreeMap`, `hashbrown::HashMap`, and `indexmap::IndexMap`.
+- Added the `TryExtend` trait, including implementations for `HashMap`, `BTreeMap`, `hashbrown::HashMap`, and `indexmap::IndexMap`.
 
 ### Changed
 
- - Removed `Hash` and `Eq` requirement from `BTreeMap` `TryFromIterator` implementation.
+- Removed `Hash` and `Eq` requirement from `BTreeMap` `TryFromIterator` implementation.
 
 ## [0.4.0] - 2025-11-12
 
 ### Changed
 
- - Renamed the `hash_brown` feature to `hashbrown`
+- Renamed the `hash_brown` feature to `hashbrown`
 
 ## [0.3.1] - 2025-11-12
 
 ### Added
 
- - Added the `indexmap` feature
+- Added the `indexmap` feature
 
 ## [0.3.0] - 2025-10-28
 
 ### Changed
- 
- - Renamed the FailableCollectEx trait to TryCollectEx
+
+- Renamed the FailableCollectEx trait to TryCollectEx
 
 ## [0.2.0] - 2025-10-28
 
 ### Changed
 
- - Changed the try_from_iterator to consume a IntoIterator instead of a Iterator
+- Changed the try_from_iterator to consume a IntoIterator instead of a Iterator
 
 ## [0.1.0] - 2025-10-27
 

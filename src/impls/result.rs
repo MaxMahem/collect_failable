@@ -1,9 +1,7 @@
-use std::cell::RefCell;
-use std::iter;
+use core::cell::RefCell;
 use std::rc::Rc;
 
-use either::Either;
-use fluent_result::bool::Then;
+use size_hinter::SizeHint;
 use tap::Pipe;
 
 use crate::errors::ResultCollectionError;
@@ -14,12 +12,12 @@ use crate::TryFromIterator;
 ///
 /// This type is not user constructable.
 #[subdef::subdef(derive(Debug))]
-#[allow(clippy::type_complexity)]
 pub struct ResultIter<I: Iterator, E>(
-    [Rc<RefCell<ResultIterState<Either<I, iter::Empty<I::Item>>, E>>>; {
-        struct ResultIterState<Iter, E> {
-            iter: Iter,
-            error: Option<E>,
+    [Rc<RefCell<IterState<I, E>>>; {
+        enum IterState<Iter, E> {
+            Active(Iter),
+            Taken,
+            Errored { error: E, remaining: Iter },
         }
     }],
 );
@@ -28,17 +26,16 @@ impl<I, E, T> ResultIter<I, E>
 where
     I: Iterator<Item = Result<T, E>>,
 {
-    const EMPTY_STATE: ResultIterState<Either<I, iter::Empty<I::Item>>, E> =
-        ResultIterState { iter: Either::Right(iter::empty()), error: None };
+    const EMPTY_STATE: IterState<I, E> = IterState::Taken;
 
     /// Creates a new `ExtractErr` wrapping the given iterator.
     fn new(iter: I) -> Self {
-        ResultIterState { iter: Either::Left(iter), error: None }.pipe(RefCell::new).pipe(Rc::new).pipe(ResultIter)
+        IterState::Active(iter).pipe(RefCell::new).pipe(Rc::new).pipe(ResultIter)
     }
 
     /// Takes and returns the inner state, replacing it with an empty state.
-    fn take_inner(&self) -> ResultIterState<Either<I, iter::Empty<I::Item>>, E> {
-        std::mem::replace(&mut *self.0.borrow_mut(), Self::EMPTY_STATE)
+    fn take_inner(&self) -> IterState<I, E> {
+        core::mem::replace(&mut *self.0.borrow_mut(), Self::EMPTY_STATE)
     }
 
     /// Creates a new handle to the same shared iterator state.
@@ -48,9 +45,27 @@ where
     }
 }
 
-/// Implements Iterator for `ExtractErr`, yielding Ok values and capturing the first Err.
+impl<Iter: Iterator, E> IterState<Iter, E> {
+    /// Advances the iterator, returning the next value if available, or an error if encountered.
+    /// while also updating the state to reflect the result of the advance.
+    fn advance<T>(self) -> (Self, Option<T>)
+    where
+        Iter: Iterator<Item = Result<T, E>>,
+    {
+        match self {
+            Self::Active(mut iter) => match iter.next() {
+                Some(Ok(v)) => (Self::Active(iter), Some(v)),
+                Some(Err(e)) => (Self::Errored { error: e, remaining: iter }, None),
+                None => (Self::Active(iter), None),
+            },
+            state @ (Self::Errored { .. } | Self::Taken) => (state, None),
+        }
+    }
+}
+
+/// Implements Iterator for `ResultIter`, yielding [`Ok`] values and capturing the first [`Err`].
 ///
-/// Once an Err is encountered, the iterator terminates and stores the error along with the remaining iterator.
+/// Once an [`Err`] is encountered, the iterator terminates and stores the error along with the remaining iterator.
 impl<I, T, E> Iterator for ResultIter<I, E>
 where
     I: Iterator<Item = Result<T, E>>,
@@ -59,23 +74,15 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut state = self.0.borrow_mut();
-        state.error.is_some().then_none()?;
-        match state.iter.next() {
-            None => None,
-            Some(Ok(v)) => Some(v),
-            Some(Err(e)) => {
-                state.error = Some(e);
-                None
-            }
-        }
+        let (new_state, item) = core::mem::replace(&mut *state, Self::EMPTY_STATE).advance();
+        *state = new_state;
+        item
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        const NO_MORE_ITEMS: (usize, Option<usize>) = (0, Some(0));
-
         match &*self.0.borrow() {
-            ResultIterState { error: Some(_), .. } => NO_MORE_ITEMS,
-            ResultIterState { error: None, iter } => (0, iter.size_hint().1),
+            IterState::Errored { .. } | IterState::Taken => SizeHint::ZERO.into(),
+            IterState::Active(iter) => (0, iter.size_hint().1),
         }
     }
 }
@@ -99,7 +106,7 @@ where
     I: IntoIterator<Item = Result<T, E>>,
     C: TryFromIterator<ResultIter<I::IntoIter, E>>,
 {
-    type Error = ResultCollectionError<E, C, C::Error, Either<I::IntoIter, iter::Empty<Result<T, E>>>>;
+    type Error = ResultCollectionError<E, C, C::Error, I::IntoIter>;
 
     /// Converts an [`IntoIterator`] of [`Result<T, E>`] into a `Result<C, C::Error>`.
     ///
@@ -107,11 +114,12 @@ where
     ///
     /// There are three possible states this function can return:
     ///
-    /// - `Ok(Ok(C))`: The [`IntoIterator`] completed successfully and the container (`C`) was successfully constructed.
-    /// - `Ok(Err(C::Error))`: The [`IntoIterator`] completed successfully,
-    ///   but the container (`C`) construction failed with `C::Error`.
-    /// - `Err(ResultCollectionError)`: The [`IntoIterator`] encountered an [`Err<E>`] before completion,
-    ///   producing a [`ResultCollectionError`].
+    /// - `Ok(Ok(C))`: The [`IntoIterator`] completed successfully and the container (`C`) was
+    ///   successfully constructed.
+    /// - `Ok(Err(C::Error))`: The [`IntoIterator`] completed successfully, but the container (`C`)
+    ///   construction failed with `C::Error`.
+    /// - `Err(ResultCollectionError)`: The [`IntoIterator`] encountered an [`Err<E>`] before
+    ///   completion, producing a [`ResultCollectionError`].
     ///
     /// # Examples
     ///
@@ -119,33 +127,34 @@ where
     /// use collect_failable::{TryCollectEx, TryFromIterator};
     /// use std::collections::HashSet;
     ///
-    /// let ok_results: Vec<Result<i32, &str>> = vec![Ok(1), Ok(2), Ok(3)];
-    /// let collection_result: Result<Result<HashSet<i32>, _>, _> = Result::try_from_iter(ok_results);
-    /// let Ok(Ok(set)) = collection_result else {
-    ///     panic!("should succeed");
+    /// let all_ok: Vec<Result<i32, &str>> = vec![Ok(1), Ok(2), Ok(3)];
+    /// match Result::<HashSet<i32>, _>::try_from_iter(all_ok) {
+    ///     Ok(Ok(set)) => assert_eq!(set, HashSet::from([1, 2, 3]), "set should contain all items"),
+    ///     Ok(Err(_)) => panic!("should succeed"),
+    ///     Err(_) => panic!("should succeed"),
     /// };
-    /// assert_eq!(set, HashSet::from([1, 2, 3]), "set should contain all items");
     ///
-    /// let results_with_err: Vec<Result<i32, &str>> = vec![Ok(1), Err("oops"), Ok(3)];
-    /// let collection_result: Result<Result<HashSet<i32>, _>, _> = results_with_err.into_iter().try_collect_ex();
-    /// let iter_err = collection_result.expect_err("should fail on iterator error");
-    /// assert_eq!(iter_err.error, "oops", "error should be the first error encountered");
-    ///
-    /// let results_with_collision: Vec<Result<i32, &str>> = vec![Ok(1), Ok(1), Ok(3)];
-    /// let collection_result: Result<Result<HashSet<i32>, _>, _> = results_with_collision.into_iter().try_collect_ex();
-    /// let Ok(Err(collision_err)) = collection_result else {
-    ///     panic!("should fail on container construction");
+    /// let iter_err: Vec<Result<i32, &str>> = vec![Ok(1), Err("oops"), Ok(3)];
+    /// match Result::<HashSet<i32>, _>::try_from_iter(iter_err) {
+    ///     Ok(Ok(_)) => panic!("should fail"),
+    ///     Ok(Err(_)) => panic!("iterating values should fail"),
+    ///     Err(e) => assert_eq!(e.error, "oops", "error should be the first error encountered"),
     /// };
-    /// assert_eq!(collision_err.item, 1, "collision should be on item 1");
+    ///
+    /// let collection_err: Vec<Result<i32, &str>> = vec![Ok(1), Ok(1), Ok(3)];
+    /// match Result::<HashSet<i32>, _>::try_from_iter(collection_err) {
+    ///     Ok(Ok(_)) => panic!("should fail"),
+    ///     Ok(Err(e)) => assert_eq!(e.item, 1, "collision should be on value 1"),
+    ///     Err(_) => panic!("iterating values should succeed"),
+    /// };
     /// ```
     ///
     /// ## Error Handling
     ///
-    /// Handling the nested `Result<Result<C, E>, C::Error>` may be cumbersome. Consider using
-    /// `fluent_result::nested::FlattenErr::flatten_err` or `fluent_result::nested::BoxErr::box_err` (from the
-    /// `fluent_result` crate) to flatten the error type for more ergonomic handling. Alternatively, if both error types
-    /// are convertable to the return type of the scope using [`From`], you can simply use two instances of the `??`
-    /// operator.
+    /// Handling the nested `Result<Result<C, E>, C::Error>` may be cumbersome. Several crates may
+    /// offer means of flattening the error type. Alternatively, if both error types are
+    /// convertable to the return type of the local scope using [`From`], two instances of the `??`
+    /// operator can be used to flatten the error.
     ///
     /// ```rust
     /// use collect_failable::TryCollectEx;
@@ -163,31 +172,27 @@ where
     ///     Ok(set)
     /// }
     ///
-    /// // Success case
-    /// let result = process_data(vec![Ok(1), Ok(2), Ok(3)]).expect("should succeed");
-    /// assert_eq!(result, HashSet::from([1, 2, 3]), "set should contain all items");
+    /// let success = process_data(vec![Ok(1), Ok(2), Ok(3)]).expect("should succeed");
+    /// assert_eq!(success, HashSet::from([1, 2, 3]), "set should contain all items");
     ///
-    /// // Outer error (element error wrapped in ResultCollectionError)
-    /// let err = process_data(vec![Ok(1), Err(ParseError), Ok(3)]).expect_err("should fail on parse error");
-    /// assert_eq!(err.to_string(), "Iterator error: parse error");
+    /// let iter_err = process_data(vec![Ok(1), Err(ParseError), Ok(3)]).expect_err("should fail on parse error");
+    /// assert_eq!(iter_err.to_string(), "Iterator error: parse error");
     ///
-    /// // Inner error (container error)
-    /// let err = process_data(vec![Ok(1), Ok(1), Ok(3)]).expect_err("should fail on collision");
-    /// assert_eq!(err.to_string(), "Collection collision");
+    /// let collect_err = process_data(vec![Ok(1), Ok(1), Ok(3)]).expect_err("should fail on collision");
+    /// assert_eq!(collect_err.to_string(), "Collection collision");
     /// ```
     ///
     /// ## Recovering Data
     ///
-    /// In the case of an error during iteration, which produces a [`ResultCollectionError`], the iterator
-    /// and the collection result can be recovered. If the container type and error type are both [`IntoIterator`]
-    /// (which all implementations from this crate are), you can use the [`IntoIterator`] implementation of
-    /// [`ResultCollectionError`] to recover the data consumed by the iterator in either case.
+    /// In the case of an error during iteration, which produces a [`ResultCollectionError`], which
+    /// provides access to:
+    /// - [`error`](ResultCollectionError::error): The error that was encountered
+    /// - [`result`](ResultCollectionError::result): The partial collection result (`Ok` or `Err`).
+    /// - [`iter`](ResultCollectionError::iter): The remaining unconsumed items from the original `Iterator`.
     ///
     /// ```rust
     /// use collect_failable::TryCollectEx;
     /// use std::collections::HashSet;
-    /// use either::Either;
-    /// use tap::Conv;
     ///
     /// // Collect items until an error is encountered
     /// let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
@@ -195,21 +200,43 @@ where
     /// let err = result.expect_err("should fail on invalid item");
     ///
     /// assert_eq!(err.error, "invalid", "error should be the iteration error");
-    /// assert_eq!(err.iter.size_hint(), (1, Some(1)), "remaining iterator should have 1 item");
-    ///
     /// let collected = err.result.as_ref().expect("partial collection should succeed");
     /// assert_eq!(collected, &HashSet::from([1, 2, 3]), "partial collection should contain first 3 items");
+    /// assert_eq!(err.iter.size_hint(), (1, Some(1)), "remaining iterator should have 1 item");
+    /// let next = err.into_data().iter.next();
+    /// assert_eq!(next, Some(Ok(5)), "remaining iterator should contain the unconsumed item");
+    /// ```
     ///
-    /// // For supported types, the data can be recovered as an iterator using the `either` crate
-    /// let error_data = err.into_data().result.conv::<Either<_, _>>().into_iter().collect::<Vec<_>>();
+    /// When both the success type (`C`) and error type (`CErr`) implement [`IntoIterator`], which
+    /// all implementations from this crate do, you can use the [`either`](either) crate (or
+    /// similar) to uniformly recover all partially collected data, regardless of whether the
+    /// collection succeeded or failed. In other words it lets you go easily from a
+    /// [`ResultCollectionError::result`] value to an [Iterator<Item = T>].
     ///
-    /// assert_eq!(error_data.len(), 3, "recovered data should have 3 items");
-    /// assert!(
-    ///     error_data.contains(&1) &&
-    ///     error_data.contains(&2) &&
-    ///     error_data.contains(&3),
-    ///     "recovered data should contain all partial items",
-    /// );
+    /// ```rust
+    /// use collect_failable::TryCollectEx;
+    /// use collect_failable::errors::ResultCollectionErrorData;
+    /// use std::collections::HashSet;
+    /// use either::Either;
+    /// use tap::Conv;
+    ///
+    /// let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
+    /// let result: Result<Result<HashSet<_>, _>, _> = data.into_iter().try_collect_ex();
+    /// let err = result.expect_err("should fail on invalid item");
+    ///
+    /// // Use Either to uniformly handle both Ok and Err cases
+    /// let collected_items: Vec<_> = err
+    ///     .into_data()
+    ///     .result
+    ///     .conv::<Either<_, _>>()
+    ///     .into_iter()
+    ///     .collect();
+    ///
+    /// // Regardless of whether collection succeeded or failed, we get the items
+    /// assert_eq!(collected_items.len(), 3);
+    /// assert!(collected_items.contains(&1));
+    /// assert!(collected_items.contains(&2));
+    /// assert!(collected_items.contains(&3));
     /// ```
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let extractor = ResultIter::new(into_iter.into_iter());
@@ -217,10 +244,10 @@ where
         let try_from_result = extractor.share().pipe(C::try_from_iter);
 
         match (extractor.take_inner(), try_from_result) {
-            (ResultIterState { error: None, .. }, Ok(v)) => Ok(Ok(v)), // iter without err, and successful collect
-            (ResultIterState { error: None, .. }, Err(e)) => Ok(Err(e)), // iter without err, but collect failed
-            // errored during iter, collect may have succeeded or failed.
-            (ResultIterState { error: Some(error), iter }, result) => Err(ResultCollectionError::new(error, result, iter)),
+            (IterState::Active(_), Ok(v)) => Ok(Ok(v)),
+            (IterState::Active(_), Err(e)) => Ok(Err(e)),
+            (IterState::Errored { error, remaining }, result) => Err(ResultCollectionError::new(error, result, remaining)),
+            (IterState::Taken, _) => unreachable!("take_inner called multiple times"),
         }
     }
 }

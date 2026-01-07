@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 
-use crate::utils::FixedSizeHintEx;
 use collect_failable::errors::CapacityMismatch;
+use size_hinter::{SizeHint, SizeHinter};
 
 type TestArray = ArrayVec<u32, 2>;
 
@@ -11,8 +11,8 @@ mod try_from_iter {
     use collect_failable::TryFromIterator;
 
     try_collect!(valid, TestArray, 1..=2, Ok(ArrayVec::from_iter(1..=2)));
-    try_collect!(bounds, TestArray, 1..=3, Err(CapacityMismatch::bounds(0..=2, (3, Some(3)))));
-    try_collect!(overflow, TestArray, (1..=3).hide_size(), Err(CapacityMismatch::overflow(0..=2)));
+    try_collect!(bounds, TestArray, 1..=3, Err(CapacityMismatch::bounds(SizeHint::bounded(0, 2), SizeHint::exact(3))));
+    try_collect!(overflow, TestArray, (1..=3).hide_size(), Err(CapacityMismatch::overflow(SizeHint::bounded(0, 2))));
 }
 
 #[test]
@@ -34,8 +34,18 @@ mod try_extend_safe {
     use collect_failable::TryExtendSafe;
 
     try_extend_safe!(valid, TestArray::from_iter(3..=3), 3..=3, Ok(TestArray::from_iter([3, 3])));
-    try_extend_safe!(bound_fail, TestArray::from_iter(3..=3), 1..=3, Err(CapacityMismatch::bounds(0..=1, (1..=3).size_hint())));
-    try_extend_safe!(overflow, TestArray::from_iter(3..=3), (1..=2).hide_size(), Err(CapacityMismatch::overflow(0..=1)));
+    try_extend_safe!(
+        bound_fail,
+        TestArray::from_iter(3..=3),
+        1..=3,
+        Err(CapacityMismatch::bounds(SizeHint::bounded(0, 1), SizeHint::exact(3)))
+    );
+    try_extend_safe!(
+        overflow,
+        TestArray::from_iter(3..=3),
+        (1..=2).hide_size(),
+        Err(CapacityMismatch::overflow(SizeHint::bounded(0, 1)))
+    );
 }
 
 mod try_extend {
@@ -44,8 +54,18 @@ mod try_extend {
     use collect_failable::TryExtend;
 
     try_extend!(valid, TestArray::from_iter(3..=3), 3..=3, Ok(ArrayVec::from_iter([3, 3])));
-    try_extend!(bounds_fail, TestArray::from_iter(3..=3), 1..=3, Err(CapacityMismatch::bounds(0..=1, (3, Some(3)))));
-    try_extend!(overflow, TestArray::from_iter(3..=3), (1..=2).hide_size(), Err(CapacityMismatch::overflow(0..=1)));
+    try_extend!(
+        bounds_fail,
+        TestArray::from_iter(3..=3),
+        1..=3,
+        Err(CapacityMismatch::bounds(SizeHint::bounded(0, 1), SizeHint::exact(3)))
+    );
+    try_extend!(
+        overflow,
+        TestArray::from_iter(3..=3),
+        (1..=2).hide_size(),
+        Err(CapacityMismatch::overflow(SizeHint::bounded(0, 1)))
+    );
 }
 
 mod try_extend_one {

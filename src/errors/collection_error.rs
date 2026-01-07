@@ -1,9 +1,10 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::Chain;
-use std::ops::{Deref, RangeInclusive};
+use std::ops::Deref;
 
-use display_as_debug::option::OpaqueOptionDbg;
+use display_as_debug::option::OptionDebugExt;
+use size_hinter::SizeHint;
 use tap::Pipe;
 
 use super::CapacityMismatch;
@@ -95,14 +96,14 @@ impl<I: Iterator, C> CollectionError<I, C, CapacityMismatch> {
     ///
     /// # Panics
     ///
-    /// Panics in debug mode if the hint does not indicate a bounds error.
+    /// Panics if the iterator's size hint is invalid.
     #[must_use]
     #[inline]
-    pub fn bounds(iterator: I, capacity: RangeInclusive<usize>) -> Self
+    pub fn bounds(iterator: I, capacity: SizeHint) -> Self
     where
         C: Default,
     {
-        let hint = iterator.size_hint();
+        let hint = iterator.size_hint().try_into().unwrap();
         Self::new(iterator, C::default(), None, CapacityMismatch::bounds(capacity, hint))
     }
 
@@ -119,8 +120,28 @@ impl<I: Iterator, C> CollectionError<I, C, CapacityMismatch> {
     /// * `capacity` - The allowed capacity range for the collection
     #[must_use]
     #[inline]
-    pub fn overflow(iterator: I, collected: C, rejected: I::Item, capacity: RangeInclusive<usize>) -> Self {
+    pub fn overflow(iterator: I, collected: C, rejected: I::Item, capacity: SizeHint) -> Self {
         Self::new(iterator, collected, Some(rejected), CapacityMismatch::overflow(capacity))
+    }
+
+    /// Creates a new [`CollectionError`] with a [`CapacityMismatch`] error of type [`MismatchKind::Underflow`].
+    ///
+    /// This is a convenience method for creating errors when the iterator produced fewer items
+    /// than the minimum allowed capacity during actual collection.
+    ///
+    /// # Arguments
+    ///
+    /// * `iterator` - The remaining iterator after underflow occurred
+    /// * `collected` - The values that were collected before underflow
+    /// * `capacity` - The allowed capacity range for the collection
+    #[must_use]
+    #[inline]
+    pub fn underflow(iterator: I, collected: C, capacity: SizeHint) -> Self
+    where
+        for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
+    {
+        let count = (&collected).into_iter().len();
+        Self::new(iterator, collected, None, CapacityMismatch::underflow(capacity, count))
     }
 }
 
@@ -151,7 +172,7 @@ impl<I: Iterator, C, E: Debug> Debug for CollectionError<I, C, E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PartialIterErr")
             .field("collected", &std::any::type_name::<C>())
-            .field("rejected", &OpaqueOptionDbg(&self.rejected))
+            .field("rejected", &self.rejected.debug_opaque())
             .field("error", &self.error)
             .field("iterator", &std::any::type_name::<I>())
             .finish()

@@ -2,8 +2,8 @@ use std::cell::Cell;
 use std::panic::{self, AssertUnwindSafe};
 use std::rc::Rc;
 
-use crate::utils::FixedSizeHintEx;
 use collect_failable::TryFromIterator;
+use size_hinter::SizeHinter;
 
 #[derive(Debug, Clone, Default)]
 struct DropTracker {

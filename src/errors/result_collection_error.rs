@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt::{Debug, Display};
 
-use display_as_debug::result::OpaqueResultDbg;
+use display_as_debug::result::ResultDebugExt;
 use tap::Pipe;
 
 /// An error that occurs when collecting an iterator of [`Result`]s fails.
@@ -75,7 +75,7 @@ impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectionError<E, C, CErr, I>
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ResultCollectionError")
             .field("error", &self.data.error)
-            .field("result", &OpaqueResultDbg(&self.data.result))
+            .field("result", &self.data.result.debug_opaque())
             .field("iter", &std::any::type_name::<I>())
             .finish()
     }

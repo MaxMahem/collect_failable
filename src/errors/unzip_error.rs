@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 
-use display_as_debug::option::OpaqueOptionDbg;
+use display_as_debug::option::OptionDebugExt;
 use tap::Pipe;
 
 use crate::either::Either;
@@ -118,7 +118,7 @@ where
             .field("error", &self.error)
             .field("failed", &"...")
             .field("successful", &"...")
-            .field("unevaluated", &OpaqueOptionDbg(&self.unevaluated))
+            .field("unevaluated", &self.unevaluated.debug_opaque())
             .finish()
     }
 }

@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::ops::Deref;
 
-use display_as_debug::option::OpaqueOptionDbg;
+use display_as_debug::option::OptionDebugExt;
 use tap::Pipe;
 
 #[cfg(doc)]
@@ -102,7 +102,7 @@ impl<CollA: TryExtendOne, CollB: TryExtendOne, I> Deref for TupleExtensionError<
 
 impl<Err: std::fmt::Debug, Unevaluated> std::fmt::Debug for TupleExtensionErrorSide<Err, Unevaluated> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Side").field("error", &self.error).field("unevaluated", &OpaqueOptionDbg(&self.unevaluated)).finish()
+        f.debug_struct("Side").field("error", &self.error).field("unevaluated", &self.unevaluated.debug_opaque()).finish()
     }
 }
 

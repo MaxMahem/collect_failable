@@ -20,3 +20,5 @@ pub use result_collection_error::*;
 pub use tuple_extension_error::*;
 #[cfg(feature = "tuple")]
 pub use unzip_error::*;
+
+pub use size_hinter::SizeHint;
