@@ -1,11 +1,14 @@
 #[cfg(doc)]
 use crate::TryFromIterator;
 
-#[cfg(doc)]
+use core::ops::Deref;
+#[cfg(all(doc, feature = "std"))]
 use std::collections::HashMap;
 
-use std::fmt::{Debug, Formatter};
-use std::iter::{Chain, Once};
+use core::fmt::{Debug, Formatter};
+use core::iter::{Chain, Once};
+
+use alloc::boxed::Box;
 
 use tap::Pipe;
 
@@ -63,7 +66,7 @@ impl<I: Iterator, C> CollectionCollision<I, C> {
 }
 
 #[doc(hidden)]
-impl<I: Iterator, C> std::ops::Deref for CollectionCollision<I, C> {
+impl<I: Iterator, C> Deref for CollectionCollision<I, C> {
     type Target = CollectionCollisionData<I, C>;
 
     fn deref(&self) -> &Self::Target {
@@ -81,16 +84,16 @@ impl<I: Iterator, C: IntoIterator<Item = I::Item>> IntoIterator for CollectionCo
     /// The exact iteration order depends on the implementation of `IntoIterator` for `C`, and may
     /// not be the same as the order in which the values were collected.
     fn into_iter(self) -> Self::IntoIter {
-        std::iter::once(self.data.item).chain(self.data.collected).chain(self.data.iterator)
+        core::iter::once(self.data.item).chain(self.data.collected).chain(self.data.iterator)
     }
 }
 
 impl<I: Iterator, C> Debug for CollectionCollision<I, C> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("CollectionCollision")
-            .field("collected", &std::any::type_name::<C>())
-            .field("item", &std::any::type_name::<I::Item>())
-            .field("iterator", &std::any::type_name::<I>())
+            .field("collected", &core::any::type_name::<C>())
+            .field("item", &core::any::type_name::<I::Item>())
+            .field("iterator", &core::any::type_name::<I>())
             .finish()
     }
 }

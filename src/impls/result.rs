@@ -1,5 +1,5 @@
+use alloc::rc::Rc;
 use core::cell::RefCell;
-use std::rc::Rc;
 
 use size_hinter::SizeHint;
 use tap::Pipe;

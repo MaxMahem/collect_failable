@@ -1,5 +1,7 @@
-use std::error::Error;
-use std::fmt::{Debug, Display};
+use core::error::Error;
+use core::fmt::{Debug, Display, Formatter};
+
+use alloc::boxed::Box;
 
 use display_as_debug::result::ResultDebugExt;
 use tap::Pipe;
@@ -63,7 +65,7 @@ impl<E, C, CErr, I> ResultCollectionError<E, C, CErr, I> {
 }
 
 #[doc(hidden)]
-impl<E, C, CErr, I> std::ops::Deref for ResultCollectionError<E, C, CErr, I> {
+impl<E, C, CErr, I> core::ops::Deref for ResultCollectionError<E, C, CErr, I> {
     type Target = ResultCollectionErrorData<E, C, CErr, I>;
 
     fn deref(&self) -> &Self::Target {
@@ -72,17 +74,17 @@ impl<E, C, CErr, I> std::ops::Deref for ResultCollectionError<E, C, CErr, I> {
 }
 
 impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectionError<E, C, CErr, I> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ResultCollectionError")
             .field("error", &self.data.error)
             .field("result", &self.data.result.debug_opaque())
-            .field("iter", &std::any::type_name::<I>())
+            .field("iter", &core::any::type_name::<I>())
             .finish()
     }
 }
 
 impl<E: Display, C, CErr: Display, I> Display for ResultCollectionError<E, C, CErr, I> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "Iterator error: {}", self.data.error).and_then(|()| match &self.data.result {
             Err(e) => write!(f, "; Collection error: {e}"),
             _ => Ok(()),

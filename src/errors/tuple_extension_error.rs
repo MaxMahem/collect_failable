@@ -1,7 +1,9 @@
-use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
-use std::marker::PhantomData;
-use std::ops::Deref;
+use core::error::Error;
+use core::fmt::{Debug, Display, Formatter};
+use core::marker::PhantomData;
+use core::ops::Deref;
+
+use alloc::boxed::Box;
 
 use display_as_debug::option::OptionDebugExt;
 use tap::Pipe;
@@ -100,8 +102,8 @@ impl<CollA: TryExtendOne, CollB: TryExtendOne, I> Deref for TupleExtensionError<
     }
 }
 
-impl<Err: std::fmt::Debug, Unevaluated> std::fmt::Debug for TupleExtensionErrorSide<Err, Unevaluated> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl<Err: core::fmt::Debug, Unevaluated> core::fmt::Debug for TupleExtensionErrorSide<Err, Unevaluated> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Side").field("error", &self.error).field("unevaluated", &self.unevaluated.debug_opaque()).finish()
     }
 }
@@ -111,10 +113,10 @@ where
     CollA::Error: Debug,
     CollB::Error: Debug,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("TupleExtensionError")
             .field("side", &self.data.side)
-            .field("remaining", &std::any::type_name::<I>())
+            .field("remaining", &core::any::type_name::<I>())
             .finish()
     }
 }
@@ -124,7 +126,7 @@ where
     CollA::Error: Display,
     CollB::Error: Display,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match &self.data.side {
             Either::Left(side) => write!(f, "Failed while extending first collection: {}", side.error),
             Either::Right(side) => write!(f, "Failed while extending second collection: {}", side.error),

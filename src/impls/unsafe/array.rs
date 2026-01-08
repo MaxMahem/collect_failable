@@ -1,4 +1,5 @@
-use std::mem::MaybeUninit;
+use alloc::vec::Vec;
+use core::mem::MaybeUninit;
 
 use fluent_result::into::IntoResult;
 use size_hinter::SizeHint;
@@ -42,7 +43,7 @@ where
         let mut array = [const { MaybeUninit::uninit() }; N];
         try_from_iterator_erased(into_iter.into_iter(), &mut array)
             // SAFETY: all elements are initialized on success
-            .map(|()| unsafe { std::mem::transmute_copy(&array) }) // TODO: Use array_assume_init once stable
+            .map(|()| unsafe { core::mem::transmute_copy(&array) }) // TODO: Use array_assume_init once stable
     }
 }
 

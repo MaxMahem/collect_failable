@@ -9,12 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-01-07
+
 ### Added
 
 - Added `CollectionError::underflow` convenience constructor.
 - Re-exported `size_hinter::SizeHint` type in the `errors` module.
 - Added `Capacity` type with `TryFrom<RangeInclusive<usize>>` implementation to represent validated capacity ranges.
 - Added `InvalidCapacity` error type returned when attempting to create an invalid `Capacity`.
+- **Added `no_std` support** with `alloc` and `std` features (both enabled by default). The crate now works in `no_std` environments when the `std` feature is disabled:
+  - `alloc` feature enables allocation-dependent types (`BTreeMap`, `BTreeSet`, `Result`, `Rc`, `Vec`, `Box`)
+  - `std` feature enables standard library types (`HashMap`, `HashSet`)
+  - All imports updated to use `core` and `alloc` equivalents where possible
+  - `HashMap` and `HashSet` require `std` due to their dependency on the standard library's default hasher
 
 ### Changed
 

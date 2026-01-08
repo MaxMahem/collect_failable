@@ -5,7 +5,13 @@
 #![warn(missing_docs)]
 #![allow(clippy::match_bool)]
 #![allow(clippy::single_match_else)]
-//#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "std")]
+extern crate std;
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 /// Error types returned by provided failable collection operation implementations.
 pub mod errors;

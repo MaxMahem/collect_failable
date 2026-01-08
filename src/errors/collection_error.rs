@@ -1,7 +1,9 @@
-use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
-use std::iter::Chain;
-use std::ops::Deref;
+use core::error::Error;
+use core::fmt::{Debug, Display, Formatter};
+use core::iter::Chain;
+use core::ops::Deref;
+
+use alloc::boxed::Box;
 
 use display_as_debug::option::OptionDebugExt;
 use size_hinter::SizeHint;
@@ -147,7 +149,7 @@ impl<I: Iterator, C> CollectionError<I, C, CapacityMismatch> {
 
 impl<I: Iterator, C: IntoIterator<Item = I::Item>, E> IntoIterator for CollectionError<I, C, E> {
     type Item = I::Item;
-    type IntoIter = Chain<Chain<std::option::IntoIter<I::Item>, C::IntoIter>, I>;
+    type IntoIter = Chain<Chain<core::option::IntoIter<I::Item>, C::IntoIter>, I>;
 
     /// Consumes the error, and reconstructs the iterator it was created from. This will include
     /// the `rejected` item, `collected` values, and the remaining `iterator`, in that order.
@@ -157,7 +159,7 @@ impl<I: Iterator, C: IntoIterator<Item = I::Item>, E> IntoIterator for Collectio
 }
 
 impl<I: Iterator, C, E: Display> Display for CollectionError<I, C, E> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.error)
     }
 }
@@ -169,12 +171,12 @@ impl<I: Iterator, C, E: Error + Debug + 'static> Error for CollectionError<I, C,
 }
 
 impl<I: Iterator, C, E: Debug> Debug for CollectionError<I, C, E> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("PartialIterErr")
-            .field("collected", &std::any::type_name::<C>())
+            .field("collected", &core::any::type_name::<C>())
             .field("rejected", &self.rejected.debug_opaque())
             .field("error", &self.error)
-            .field("iterator", &std::any::type_name::<I>())
+            .field("iterator", &core::any::type_name::<I>())
             .finish()
     }
 }

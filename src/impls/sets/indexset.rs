@@ -1,4 +1,4 @@
-use std::hash::{BuildHasher, Hash};
+use core::hash::{BuildHasher, Hash};
 
 use fluent_result::bool::dbg::Expect;
 use indexmap::IndexSet;

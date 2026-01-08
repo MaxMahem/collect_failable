@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use arrayvec::{ArrayVec, CapacityError};
 use fluent_result::into::IntoResult;
 use size_hinter::SizeHint;

@@ -1,6 +1,8 @@
-use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
-use std::ops::Deref;
+use core::error::Error;
+use core::fmt::{Debug, Display, Formatter};
+use core::ops::Deref;
+
+use alloc::boxed::Box;
 
 use display_as_debug::option::OptionDebugExt;
 use tap::Pipe;
@@ -113,7 +115,7 @@ impl<Failed: TryExtendOne, Successful: TryExtendOne> Debug for UnzipErrorSide<Fa
 where
     Failed::Error: Debug,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("UnzipSide")
             .field("error", &self.error)
             .field("failed", &"...")
@@ -130,8 +132,8 @@ where
     FromA::Error: Debug,
     FromB::Error: Debug,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("UnzipError").field("side", &self.data.side).field("remaining", &std::any::type_name::<I>()).finish()
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("UnzipError").field("side", &self.data.side).field("remaining", &core::any::type_name::<I>()).finish()
     }
 }
 
@@ -142,7 +144,7 @@ where
     FromA::Error: Display,
     FromB::Error: Display,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match &self.data.side {
             Either::Left(side) => write!(f, "Failed while unzipping into first collection: {}", side.error),
             Either::Right(side) => write!(f, "Failed while unzipping into second collection: {}", side.error),

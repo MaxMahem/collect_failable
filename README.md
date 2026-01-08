@@ -1,11 +1,11 @@
+# `collect_failable`
+
 [![Build](https://github.com/MaxMahem/collect_failable/actions/workflows/build.yml/badge.svg)](https://github.com/MaxMahem/collect_failable/actions/workflows/build.yml)
 [![Docs](https://github.com/MaxMahem/collect_failable/actions/workflows/docs.yml/badge.svg)](https://maxmahem.github.io/collect_failable/collect_failable/index.html)
 [![Crates.io](https://img.shields.io/crates/v/collect_failable)](https://crates.io/crates/collect_failable)
 [![dependency status](https://deps.rs/repo/github/maxmahem/collect_failable/status.svg)](https://deps.rs/repo/github/maxmahem/collect_failable)
 [![codecov](https://codecov.io/github/MaxMahem/collect_failable/graph/badge.svg?token=6JJF59BIO3)](https://codecov.io/github/MaxMahem/collect_failable)
 ![GitHub License](https://img.shields.io/github/license/maxmahem/collect_failable)
-
-# `collect_failable`
 
 A set of traits for collecting values into containers that must uphold invariants during construction or extension. These traits let you propagate structured errors instead of panicking or silently discarding data. Examples include preventing duplicate keys in a `HashMap` or respecting capacity limits in types like `ArrayVec`.
 
@@ -29,11 +29,19 @@ It's on [crates.io](https://crates.io/crates/collect_failable).
 
 This crate provides the following optional features:
 
+- `alloc` (default) – Enables support for allocation-dependent types (`BTreeMap`, `BTreeSet`, `Result`, `Rc`, `Vec`, `Box`). Required for most functionality. When disabled, only the core traits are available.
+- `std` (default) – Enables standard library support, including `HashMap` and `HashSet` implementations. When disabled, the crate operates in `no_std` mode with `alloc`.
 - `unsafe` (default) – Enables `TryFromIterator` implementations for arrays using unsafe code.
 - `tuple` (default) – Enables tuple extension (`TryExtend` for tuples) and `TryUnzip` trait, requiring a public dependency on the `either` crate (re-exported as `collect_failable::Either`).
 - `arrayvec` – Enables `TryFromIterator` and `TryExtend` implementations for `ArrayVec`.
 - `hashbrown` – Enables `TryFromIterator` and `TryExtend` implementations for `hashbrown::HashMap` and `hashbrown::HashSet`.
 - `indexmap` – Enables `TryFromIterator` and `TryExtend` implementations for `indexmap::IndexMap` and `indexmap::IndexSet`.
+
+### No-std Support
+
+This crate supports `no_std` environments when the `std` feature is disabled. The `alloc` feature provides allocation-dependent functionality (`BTreeMap`, `BTreeSet`, etc.) without requiring the full standard library.
+
+**Note**: `HashMap` and `HashSet` require the `std` feature because they depend on the standard library's default hasher. For `no_std` environments, consider `BTreeMap`/`BTreeSet` (with `alloc`) or `hashbrown`/`indexmap` (with their respective features).
 
 ## Usage
 
@@ -111,12 +119,13 @@ assert_eq!(chars, HashSet::from(['a', 'b', 'c']));
 ## Implementations
 
 Implementations for various containers are provided.
-* [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html), [HashSet](https://doc.rust-lang.org/std/collections/struct.HashSet.html)
-* [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html), [BTreeSet](https://doc.rust-lang.org/std/collections/struct.BTreeSet.html)
-* [Array](https://doc.rust-lang.org/std/primitive.array.html) (feature `unsafe`, enabled by default)
-* [ArrayVec](https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html) (feature `arrayvec`)
-* [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html), [hashbrown::HashSet](https://docs.rs/hashbrown/latest/hashbrown/struct.HashSet.html) (feature `hashbrown`)
-* [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/), [indexmap::IndexSet](https://docs.rs/indexmap/latest/indexmap/) (feature `indexmap`)
+
+- [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html), [HashSet](https://doc.rust-lang.org/std/collections/struct.HashSet.html) (feature `std`, enabled by default)
+- [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html), [BTreeSet](https://doc.rust-lang.org/std/collections/struct.BTreeSet.html) (feature `alloc`, enabled by default)
+- [Array](https://doc.rust-lang.org/std/primitive.array.html) (feature `unsafe`, enabled by default)
+- [ArrayVec](https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html) (feature `arrayvec`)
+- [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html), [hashbrown::HashSet](https://docs.rs/hashbrown/latest/hashbrown/struct.HashSet.html) (feature `hashbrown`)
+- [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/), [indexmap::IndexSet](https://docs.rs/indexmap/latest/indexmap/) (feature `indexmap`)
 
 ### Tuple Implementations
 
