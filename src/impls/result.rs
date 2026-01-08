@@ -161,7 +161,6 @@ where
     /// use std::collections::HashSet;
     /// use std::error::Error;
     ///
-    /// // Define a simple error type that implements Error
     /// #[derive(Debug, thiserror::Error)]
     /// #[error("parse error")]
     /// struct ParseError;
@@ -224,7 +223,6 @@ where
     /// let result: Result<Result<HashSet<_>, _>, _> = data.into_iter().try_collect_ex();
     /// let err = result.expect_err("should fail on invalid item");
     ///
-    /// // Use Either to uniformly handle both Ok and Err cases
     /// let collected_items: Vec<_> = err
     ///     .into_data()
     ///     .result
@@ -232,7 +230,8 @@ where
     ///     .into_iter()
     ///     .collect();
     ///
-    /// // Regardless of whether collection succeeded or failed, we get the items
+    /// // Regardless of whether collection succeeded or failed, we get the consumed items
+    /// // since the underlying collection could be a hashset (or not) order is not guranteed.
     /// assert_eq!(collected_items.len(), 3);
     /// assert!(collected_items.contains(&1));
     /// assert!(collected_items.contains(&2));
@@ -253,13 +252,13 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+mod result_iter {
     use super::*;
 
     const TEST_DATA: [Result<i32, i32>; 4] = [Ok(1), Err(3), Ok(3), Ok(4)];
 
     #[test]
-    fn extract_err_zero_size_after_err() {
+    fn zero_size_after_err() {
         let mut extractor = ResultIter::new(TEST_DATA.into_iter());
 
         extractor.next(); // Ok(1)
@@ -277,4 +276,46 @@ mod tests {
 
         assert_eq!(extractor.size_hint(), (0, Some(3)));
     }
+}
+
+#[cfg(test)]
+mod iter_state_advance {
+    use super::*;
+
+    macro_rules! test {
+        ($name:ident: $state:expr => value: $expected_value:expr, state: $expected_state:pat) => {
+            #[test]
+            fn $name() {
+                let state = $state;
+                let (new_state, value) = state.advance();
+                assert_eq!(value, $expected_value);
+                assert!(matches!(new_state, $expected_state));
+            }
+        };
+    }
+
+    test!(advance_active_yields_ok:
+        IterState::Active([Ok::<_, &str>(1)].into_iter())
+        => value: Some(1), state: IterState::Active(_)
+    );
+
+    test!(advance_active_yields_err:
+        IterState::Active([Err::<i32, &str>("error")].into_iter())
+        => value: None, state: IterState::Errored { error: "error", .. }
+    );
+
+    test!(advance_active_exhausted:
+        IterState::Active(core::iter::empty::<Result<i32, &str>>())
+        => value: None, state: IterState::Active(_)
+    );
+
+    test!(advance_errored_stays_errored:
+        IterState::Errored { error: "error", remaining: [Ok(1), Ok(2)].into_iter() }
+        => value: None, state: IterState::Errored { error: "error", .. }
+    );
+
+    test!(advance_taken_stays_taken:
+        IterState::<std::vec::IntoIter<Result<i32, &str>>, &str>::Taken
+        => value: None, state: IterState::Taken
+    );
 }
