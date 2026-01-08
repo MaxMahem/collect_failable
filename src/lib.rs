@@ -5,8 +5,13 @@
 #![warn(missing_docs)]
 #![allow(clippy::match_bool)]
 #![allow(clippy::single_match_else)]
-// Allow multiple crate versions from transitive dependencies (include-doc)
-#![allow(clippy::multiple_crate_versions)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "std")]
+extern crate std;
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 /// Error types returned by provided failable collection operation implementations.
 pub mod errors;
@@ -18,6 +23,5 @@ pub use traits::*;
 #[cfg(feature = "tuple")]
 /// Re-export of the `Either` type from the `either` crate.
 pub mod either {
-    #[doc(inline)]
     pub use either::Either;
 }

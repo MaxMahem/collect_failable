@@ -1,5 +1,5 @@
+use core::hash::{BuildHasher, Hash};
 use std::collections::HashMap;
-use std::hash::{BuildHasher, Hash};
 
 use fluent_result::expect::dbg::ExpectNone;
 

@@ -1,9 +1,12 @@
-use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
-use std::iter::Chain;
-use std::ops::{Deref, RangeInclusive};
+use core::error::Error;
+use core::fmt::{Debug, Display, Formatter};
+use core::iter::Chain;
+use core::ops::Deref;
 
-use display_as_debug::option::OpaqueOptionDbg;
+use alloc::boxed::Box;
+
+use display_as_debug::option::OptionDebugExt;
+use size_hinter::SizeHint;
 use tap::Pipe;
 
 use super::CapacityMismatch;
@@ -95,14 +98,14 @@ impl<I: Iterator, C> CollectionError<I, C, CapacityMismatch> {
     ///
     /// # Panics
     ///
-    /// Panics in debug mode if the hint does not indicate a bounds error.
+    /// Panics if the iterator's size hint is invalid.
     #[must_use]
     #[inline]
-    pub fn bounds(iterator: I, capacity: RangeInclusive<usize>) -> Self
+    pub fn bounds(iterator: I, capacity: SizeHint) -> Self
     where
         C: Default,
     {
-        let hint = iterator.size_hint();
+        let hint = iterator.size_hint().try_into().unwrap();
         Self::new(iterator, C::default(), None, CapacityMismatch::bounds(capacity, hint))
     }
 
@@ -119,14 +122,34 @@ impl<I: Iterator, C> CollectionError<I, C, CapacityMismatch> {
     /// * `capacity` - The allowed capacity range for the collection
     #[must_use]
     #[inline]
-    pub fn overflow(iterator: I, collected: C, rejected: I::Item, capacity: RangeInclusive<usize>) -> Self {
+    pub fn overflow(iterator: I, collected: C, rejected: I::Item, capacity: SizeHint) -> Self {
         Self::new(iterator, collected, Some(rejected), CapacityMismatch::overflow(capacity))
+    }
+
+    /// Creates a new [`CollectionError`] with a [`CapacityMismatch`] error of type [`MismatchKind::Underflow`].
+    ///
+    /// This is a convenience method for creating errors when the iterator produced fewer items
+    /// than the minimum allowed capacity during actual collection.
+    ///
+    /// # Arguments
+    ///
+    /// * `iterator` - The remaining iterator after underflow occurred
+    /// * `collected` - The values that were collected before underflow
+    /// * `capacity` - The allowed capacity range for the collection
+    #[must_use]
+    #[inline]
+    pub fn underflow(iterator: I, collected: C, capacity: SizeHint) -> Self
+    where
+        for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
+    {
+        let count = (&collected).into_iter().len();
+        Self::new(iterator, collected, None, CapacityMismatch::underflow(capacity, count))
     }
 }
 
 impl<I: Iterator, C: IntoIterator<Item = I::Item>, E> IntoIterator for CollectionError<I, C, E> {
     type Item = I::Item;
-    type IntoIter = Chain<Chain<std::option::IntoIter<I::Item>, C::IntoIter>, I>;
+    type IntoIter = Chain<Chain<core::option::IntoIter<I::Item>, C::IntoIter>, I>;
 
     /// Consumes the error, and reconstructs the iterator it was created from. This will include
     /// the `rejected` item, `collected` values, and the remaining `iterator`, in that order.
@@ -136,7 +159,7 @@ impl<I: Iterator, C: IntoIterator<Item = I::Item>, E> IntoIterator for Collectio
 }
 
 impl<I: Iterator, C, E: Display> Display for CollectionError<I, C, E> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.error)
     }
 }
@@ -148,12 +171,12 @@ impl<I: Iterator, C, E: Error + Debug + 'static> Error for CollectionError<I, C,
 }
 
 impl<I: Iterator, C, E: Debug> Debug for CollectionError<I, C, E> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("PartialIterErr")
-            .field("collected", &std::any::type_name::<C>())
-            .field("rejected", &OpaqueOptionDbg(&self.rejected))
+            .field("collected", &core::any::type_name::<C>())
+            .field("rejected", &self.rejected.debug_opaque())
             .field("error", &self.error)
-            .field("iterator", &std::any::type_name::<I>())
+            .field("iterator", &core::any::type_name::<I>())
             .finish()
     }
 }

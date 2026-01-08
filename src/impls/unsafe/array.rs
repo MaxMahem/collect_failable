@@ -1,6 +1,8 @@
-use std::mem::MaybeUninit;
+use alloc::vec::Vec;
+use core::mem::MaybeUninit;
 
 use fluent_result::into::IntoResult;
+use size_hinter::SizeHint;
 
 use crate::errors::{CapacityMismatch, CollectionError};
 use crate::impls::r#unsafe::DisarmError;
@@ -41,7 +43,7 @@ where
         let mut array = [const { MaybeUninit::uninit() }; N];
         try_from_iterator_erased(into_iter.into_iter(), &mut array)
             // SAFETY: all elements are initialized on success
-            .map(|()| unsafe { std::mem::transmute_copy(&array) }) // TODO: Use array_assume_init once stable
+            .map(|()| unsafe { core::mem::transmute_copy(&array) }) // TODO: Use array_assume_init once stable
     }
 }
 
@@ -54,13 +56,13 @@ fn try_from_iterator_erased<T, I: Iterator<Item = T>>(
     array: &mut [MaybeUninit<T>],
 ) -> Result<(), CollectionError<I, Vec<T>, CapacityMismatch>> {
     match (array.len(), iter.size_hint()) {
-        (len, hint @ (min, _)) if min > len => CollectionError::bounds(iter, len..=len).into_err(),
-        (len, hint @ (_, Some(max))) if max < len => CollectionError::bounds(iter, len..=len).into_err(),
+        (len, hint @ (min, _)) if min > len => CollectionError::bounds(iter, SizeHint::exact(len)).into_err(),
+        (len, hint @ (_, Some(max))) if max < len => CollectionError::bounds(iter, SizeHint::exact(len)).into_err(),
         (len, _) => {
             let mut guard = super::SliceGuard::new(array);
             guard.extend(iter.by_ref());
             match iter.next() {
-                Some(reject) => CollectionError::overflow(iter, guard.drain(), reject, len..=len).into_err(),
+                Some(reject) => CollectionError::overflow(iter, guard.drain(), reject, SizeHint::exact(len)).into_err(),
                 None => guard.disarm().map_err(|DisarmError { error, items }| CollectionError::new(iter, items, None, error)),
             }
         }

@@ -1,6 +1,8 @@
-use std::mem::MaybeUninit;
+use alloc::vec::Vec;
+use core::mem::MaybeUninit;
 
 use fluent_result::into::IntoResult;
+use size_hinter::SizeHint;
 
 use crate::errors::CapacityMismatch;
 
@@ -29,8 +31,10 @@ impl<'a, T> SliceGuard<'a, T> {
     /// Disarms the guard, returning an error if the slice is not fully initialized.
     pub fn disarm(self) -> Result<(), DisarmError<T>> {
         match (self.initialized, self.slice.len()) {
-            (init, len) if init != len => DisarmError::new(CapacityMismatch::underflow(len..=len, init), self.drain()).into_err(),
-            _ => Ok(() = std::mem::forget(self)),
+            (init, len) if init != len => {
+                DisarmError::new(CapacityMismatch::underflow(SizeHint::exact(len), init), self.drain()).into_err()
+            }
+            _ => Ok(() = core::mem::forget(self)),
         }
     }
 
@@ -42,14 +46,14 @@ impl<'a, T> SliceGuard<'a, T> {
             // The slice is then consumed and so cannot be read through this type again
             .map(|i| unsafe { i.assume_init_read() })
             .collect();
-        std::mem::forget(self);
+        core::mem::forget(self);
         collection
     }
 }
 
 impl<T> Extend<T> for SliceGuard<'_, T> {
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
-        std::iter::zip(&mut self.slice[self.initialized..], iter).for_each(|(slot, value)| {
+        core::iter::zip(&mut self.slice[self.initialized..], iter).for_each(|(slot, value)| {
             slot.write(value);
             self.initialized += 1;
         });

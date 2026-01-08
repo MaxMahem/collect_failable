@@ -5,8 +5,10 @@ mod r#unsafe;
 mod arrayvec;
 
 mod maps;
-mod result;
 mod sets;
+
+#[cfg(feature = "alloc")]
+mod result;
 
 #[cfg(feature = "tuple")]
 mod tuples;

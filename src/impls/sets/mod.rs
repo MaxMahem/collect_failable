@@ -1,4 +1,7 @@
+#[cfg(feature = "alloc")]
 pub mod btree_set;
+
+#[cfg(feature = "std")]
 pub mod hash_set;
 
 #[cfg(feature = "hashbrown")]

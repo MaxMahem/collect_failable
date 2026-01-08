@@ -1,19 +1,19 @@
 use super::collection_tests::try_collect;
 
-use crate::utils::FixedSizeHint;
 use collect_failable::errors::CapacityMismatch;
 use collect_failable::TryFromIterator;
+use size_hinter::{SizeHint, SizeHinter};
 
-const TOO_SHORT_HINT_ERR: CapacityMismatch = CapacityMismatch::bounds(2..=2, (1, Some(1)));
-const TOO_LONG_HINT_ERR: CapacityMismatch = CapacityMismatch::bounds(2..=2, (3, Some(3)));
-const TOO_SHORT_HIDDEN_ERR: CapacityMismatch = CapacityMismatch::underflow(2..=2, 1);
-const TOO_LONG_HIDDEN_ERR: CapacityMismatch = CapacityMismatch::overflow(2..=2);
+const TOO_SHORT_HINT_ERR: CapacityMismatch = CapacityMismatch::bounds(SizeHint::exact(2), SizeHint::exact(1));
+const TOO_LONG_HINT_ERR: CapacityMismatch = CapacityMismatch::bounds(SizeHint::exact(2), SizeHint::exact(3));
+const TOO_SHORT_HIDDEN_ERR: CapacityMismatch = CapacityMismatch::underflow(SizeHint::exact(2), 1);
+const TOO_LONG_HIDDEN_ERR: CapacityMismatch = CapacityMismatch::overflow(SizeHint::exact(2));
 
 try_collect!(valid_array, [u32; 2], 1..=2, Ok([1, 2]));
 try_collect!(too_long_data, [u32; 2], 1..=3, Err(TOO_LONG_HINT_ERR));
 try_collect!(too_short_data, [u32; 2], 1..=1, Err(TOO_SHORT_HINT_ERR));
-try_collect!(too_long_data_hidden, [u32; 2], FixedSizeHint::hide_size(1..=3), Err(TOO_LONG_HIDDEN_ERR));
-try_collect!(too_short_data_hidden, [u32; 2], FixedSizeHint::hide_size(1..=1), Err(TOO_SHORT_HIDDEN_ERR));
+try_collect!(too_long_data_hidden, [u32; 2], (1..=3).hide_size(), Err(TOO_LONG_HIDDEN_ERR));
+try_collect!(too_short_data_hidden, [u32; 2], (1..=1).hide_size(), Err(TOO_SHORT_HIDDEN_ERR));
 
 struct BadIter(usize);
 

@@ -1,5 +1,5 @@
+use core::hash::{BuildHasher, Hash};
 use std::collections::HashSet;
-use std::hash::{BuildHasher, Hash};
 
 use fluent_result::bool::dbg::Expect;
 
@@ -81,7 +81,7 @@ where
     }
 }
 
-impl<T: Eq + std::hash::Hash, S: BuildHasher> crate::TryExtendOne for HashSet<T, S> {
+impl<T: Eq + Hash, S: BuildHasher> crate::TryExtendOne for HashSet<T, S> {
     type Item = T;
     type Error = ItemCollision<T>;
 
