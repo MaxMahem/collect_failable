@@ -31,7 +31,7 @@ arrayvec = { version = "0.7.6", optional = true }
 sealed = "0.6.0"
 subdef = "0.1.2"
 fluent_result = "0.10.1"
-no_drop = "0.2.3"
+no_drop = "0.3.0"
 display_as_debug = "0.3.0"
 readonly = "0.2.13"
 
