@@ -105,7 +105,7 @@ impl<I: Iterator, C> CollectionError<I, C, CapacityMismatch> {
     where
         C: Default,
     {
-        let hint = iterator.size_hint().try_into().unwrap();
+        let hint = iterator.size_hint().try_into().expect("Invalid size hint");
         Self::new(iterator, C::default(), None, CapacityMismatch::bounds(capacity, hint))
     }
 

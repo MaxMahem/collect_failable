@@ -13,7 +13,6 @@ extern crate std;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-/// Error types returned by provided failable collection operation implementations.
 pub mod errors;
 mod impls;
 mod traits;

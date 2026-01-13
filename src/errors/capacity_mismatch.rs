@@ -1,12 +1,9 @@
 use size_hinter::SizeHint;
 
 /// An error indicating that the a collection was not created because the capacity was violated.
-///
-/// This type is *read-only*.
 #[subdef::subdef(derive(Debug, PartialEq, Eq))]
 #[derive(thiserror::Error)]
 #[error("Collected items out of bounds ({capacity:?}): {kind}")]
-#[readonly::make]
 pub struct CapacityMismatch {
     /// The allowed capacity for the collection.
     pub capacity: SizeHint,
@@ -33,30 +30,18 @@ pub struct CapacityMismatch {
 
 impl CapacityMismatch {
     /// Creates a new [`CapacityMismatch`] indicating that the bounds provided by [`Iterator::size_hint`] were out of bounds.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `hint` or `capacity` is invalid (min > max).
     #[must_use]
     pub const fn bounds(capacity: SizeHint, hint: SizeHint) -> Self {
         Self { capacity, kind: MismatchKind::Bounds(hint) }
     }
 
     /// Creates a new [`CapacityMismatch`] indicating that the iterator exceeded the expected capacity.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `capacity` is invalid (min > max).
     #[must_use]
     pub const fn overflow(capacity: SizeHint) -> Self {
         Self { capacity, kind: MismatchKind::Overflow }
     }
 
     /// Creates a new [`CapacityMismatch`] indicating that the iterator did not produce the expected number of items.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `capacity` is invalid (min > max).
     #[must_use]
     pub const fn underflow(capacity: SizeHint, count: usize) -> Self {
         Self { capacity, kind: MismatchKind::Underflow { count } }
