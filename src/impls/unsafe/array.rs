@@ -5,7 +5,19 @@ use tap::TryConv;
 use fluent_result::into::IntoResult;
 
 use crate::errors::{CapacityError, CollectionError};
-use crate::{SizeHint, TryFromIterator};
+use crate::{MaxSize, RemainingSize, SizeHint, TryFromIterator};
+
+impl<const N: usize, T> RemainingSize for [T; N] {
+    /// Always returns `SizeHint::ZERO`, since arrays are fixed-size.
+    fn remaining_size(&self) -> SizeHint {
+        SizeHint::ZERO
+    }
+}
+
+impl<const N: usize, T> MaxSize for [T; N] {
+    /// Always returns `SizeHint::exact(N)`, since arrays are fixed-size.
+    const MAX_SIZE: SizeHint = SizeHint::exact(N);
+}
 
 /// Create an array of size `N` from an iterator, failing if the iterator produces fewer or more items than `N`.
 impl<const N: usize, T, I> TryFromIterator<I> for [T; N]

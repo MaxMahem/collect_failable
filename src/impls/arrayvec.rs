@@ -5,12 +5,16 @@ use fluent_result::into::IntoResult;
 use tap::{Pipe, TryConv};
 
 use crate::errors::{CapacityError, CollectionError};
-use crate::{Capacity, SizeHint, TryExtend, TryExtendSafe, TryFromIterator};
+use crate::{MaxSize, RemainingSize, SizeHint, TryExtend, TryExtendSafe, TryFromIterator};
 
-impl<T, const N: usize> Capacity for ArrayVec<T, N> {
-    fn capacity_hint(&self) -> SizeHint {
+impl<T, const N: usize> RemainingSize for ArrayVec<T, N> {
+    fn remaining_size(&self) -> SizeHint {
         self.remaining_capacity().pipe(SizeHint::at_most)
     }
+}
+
+impl<T, const N: usize> MaxSize for ArrayVec<T, N> {
+    const MAX_SIZE: SizeHint = SizeHint::at_most(N);
 }
 
 /// Tries to create an [`ArrayVec`] from an [`IntoIterator`].
@@ -43,15 +47,15 @@ where
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut iter = into_iter.into_iter();
 
-        match iter.size_hint() {
-            (min, _) if min > N => CollectionError::bounds(iter, SizeHint::at_most(N)).into_err(),
-            (_, Some(max)) if max <= N => iter.collect::<Self>().into_ok(),
-            _ => iter
+        match (iter.size_hint().try_conv::<SizeHint>().expect("Invalid size hint"), Self::MAX_SIZE) {
+            (hint, size) if hint.disjoint(size) => CollectionError::bounds(iter, size).into_err(),
+            (hint, size) if hint.subset_of(size) => iter.collect::<Self>().into_ok(),
+            (_, size) => iter
                 .try_fold(Self::new(), |mut array, item| match array.try_push(item) {
                     Ok(()) => Ok(array),
                     Err(capacity_err) => Err((array, capacity_err.element())),
                 })
-                .map_err(|(array, reject)| CollectionError::overflow(iter, array, reject, SizeHint::at_most(N))),
+                .map_err(|(array, reject)| CollectionError::overflow(iter, array, reject, size)),
         }
     }
 }
@@ -98,7 +102,7 @@ where
     /// ```
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
-        match (iter.size_hint().try_conv::<SizeHint>().expect("Invalid size hint"), self.capacity_hint()) {
+        match (iter.size_hint().try_conv::<SizeHint>().expect("Invalid size hint"), self.remaining_size()) {
             (hint, capacity) if capacity.disjoint(hint) => CollectionError::bounds(iter, capacity).into_err(),
             _ => iter.try_for_each(|item| self.try_push(item)).map_err(|err| CollectionError::overflowed(iter, err.element())),
         }
@@ -144,7 +148,7 @@ where
     /// ```
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
-        match (iter.size_hint().try_conv::<SizeHint>().expect("Invalid size hint"), self.capacity_hint(), self.len()) {
+        match (iter.size_hint().try_conv::<SizeHint>().expect("Invalid size hint"), self.remaining_size(), self.len()) {
             (hint, capacity, _) if hint.disjoint(capacity) => CollectionError::bounds(iter, capacity).into_err(),
             (_, capacity, len) => iter
                 .try_for_each(|item| self.try_push(item))
