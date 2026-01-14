@@ -18,7 +18,7 @@ This crate provides several complementary traits for failable collection:
 - `TryExtend` and `TryExtendSafe` – failably extend a container with an `IntoIterator`, with different error guarantees.
 - `TryExtendOne` – failable extend a container with a single item.
 - `TryUnzip` – failably unzip an `IntoIterator` of pairs into two containers (requires feature `tuple`, enabled by default).
-- `Capacity` - expose capacity size hints for collection types (e.g. `ArrayVec`, `[T; N]`).
+- `Capacity` - expose capacity size hints for collection types (e.g., `ArrayVec`).
 
 Additionally, several implementations are provided for common and popular containers. See the [implementations](#implementations) section for more details.
 
