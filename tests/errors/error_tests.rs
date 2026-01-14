@@ -1,10 +1,31 @@
-use thiserror::Error;
+use std::marker::PhantomData;
+
+use collect_failable::errors::ErrorItemProvider;
 
 /// Simple error type for testing with identity
-#[derive(Debug, PartialEq, Eq, Error, derive_more::Constructor)]
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
 #[error("Test error: {identity}")]
-pub(crate) struct TestError {
+pub(crate) struct TestError<T = ()> {
     pub identity: &'static str,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> TestError<T> {
+    pub const fn new(identity: &'static str) -> Self {
+        Self { identity, _phantom: PhantomData }
+    }
+}
+
+impl<T> ErrorItemProvider for TestError<T> {
+    type Item = T;
+
+    fn into_item(self) -> Option<Self::Item> {
+        None
+    }
+
+    fn item(&self) -> Option<&Self::Item> {
+        None
+    }
 }
 
 /// Test that a formatted output (Debug/Display) matches expected value
@@ -32,42 +53,6 @@ macro_rules! into_iterator {
     };
 }
 
-/// Test that a Deref implementation allows field access
-///
-/// - `test_deref!(test_name, create_error(), field_name, expected_value);`
-macro_rules! test_deref {
-    ($name:ident, $setup:expr, $field:ident, $expected:expr) => {
-        #[test]
-        fn $name() {
-            let error = $setup;
-            assert_eq!(error.$field, $expected);
-        }
-    };
-}
-
-/// Test that a constructor produces the expected value
-///
-/// - `identity!(test_name, ctor_call(), expected_value);`
-/// - `identity!(test_name, ctor_call(), panics: "panic message");`
-macro_rules! identity {
-    // Success case: constructor should equal expected value
-    ($name:ident, $ctor:expr, $expected:expr) => {
-        #[test]
-        fn $name() {
-            assert_eq!($ctor, $expected);
-        }
-    };
-
-    // Panic case: constructor should panic with expected message
-    ($name:ident, $ctor:expr, panics: $msg:expr) => {
-        #[test]
-        #[should_panic(expected = $msg)]
-        fn $name() {
-            let _ = $ctor;
-        }
-    };
-}
-
 /// Test that an error's source() method returns the expected error type
 ///
 /// - `test_source!(test_name, create_error(), ExpectedSourceType);`
@@ -84,8 +69,23 @@ macro_rules! test_source {
     };
 }
 
-pub(crate) use identity;
+/// Test that a constructor produces an object with expected field values
+///
+/// Usage:
+/// - `test_ctor!(test_name, constructor_expr, field1 => expected1, field2 => expected2);`
+macro_rules! test_ctor {
+    ($test_name:ident, $ctor:expr, $( $field:ident => $expected:expr ),+ $(,)?) => {
+        #[test]
+        fn $test_name() {
+            let value = $ctor;
+            $(
+                assert_eq!(value.$field, $expected);
+            )+
+        }
+    };
+}
+
 pub(crate) use into_iterator;
-pub(crate) use test_deref;
+pub(crate) use test_ctor;
 pub(crate) use test_format;
 pub(crate) use test_source;

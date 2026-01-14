@@ -9,13 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- Made `CapacityMismatch` fields mutable.
+## [0.15.0] - 2026-01-14
 
 ### Added
 
+- Added `ErrorItemProvider` trait to allow error types to provide access to their collected items without consuming the error.
+- Added `Capacity` trait (with `capacity_hint` method) to expose exact size hints from collection types.
 - Benchmarks for `try_extend` and `try_extend_safe`.
+
+### Changed
+
+- **Breaking:** Renamed `CapacityMismatch` to `CapacityError`.
+  - Migration: Update all references from `CapacityMismatch` to `CapacityError`.
+- **Breaking:** Renamed `MismatchKind` to `CapacityErrorKind`.
+  - Migration: Update all references from `MismatchKind` to `CapacityErrorKind`.
+- **Breaking:** Renamed `ItemCollision` to `Collision`.
+  - Migration: Update all references from `ItemCollision` to `Collision`.
+- Made `CapacityError` (previously `CapacityMismatch`) fields mutable.
+
+### Removed
+
+- **Breaking:** Removed `CollectionCollision` error type. Use `CollectionError` directly instead.
+  - Migration: Replace `CollectionCollision` with `CollectionError<T, I, C, Collision<T>>` where appropriate.
 
 ## [0.14.0] - 2026-01-07
 

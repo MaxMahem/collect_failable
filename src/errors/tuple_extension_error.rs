@@ -19,7 +19,7 @@ use crate::TryExtendOne;
 /// This error preserves the error from whichever side failed, any unevaluated item,
 /// and the remaining iterator for error recovery.
 ///
-/// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`](std::ops::Deref)
+/// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`]
 /// implementation into a hidden `TupleExtensionErrorData` type, with identical fields. If necessary,
 /// you can consume an instance of this type via [`TupleExtensionError::into_data`] to get owned data.
 ///

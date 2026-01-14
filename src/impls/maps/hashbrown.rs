@@ -3,14 +3,14 @@ use core::hash::{BuildHasher, Hash};
 use hashbrown::hash_map::RawEntryMut;
 use hashbrown::HashMap;
 
-use crate::errors::{CollectionCollision, ItemCollision};
+use crate::errors::{CollectionError, Collision};
 use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 impl<K: Eq + Hash, V, I> TryFromIterator<I> for HashMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<I::IntoIter, Self>;
+    type Error = CollectionError<I::IntoIter, Self, Collision<(K, V)>>;
 
     /// Converts `iter` into a [`HashMap`], failing if a key would collide.
     ///
@@ -29,7 +29,7 @@ where
                 }
             }
         })
-        .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
+        .map_err(|(map, kvp)| CollectionError::collision(iter, map, kvp))
     }
 }
 
@@ -37,7 +37,7 @@ impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtend<I> for HashMap<K, V, 
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<I::IntoIter, Self>;
+    type Error = CollectionError<I::IntoIter, Self, Collision<(K, V)>>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -50,7 +50,7 @@ where
             true => Err((key, value)),
             false => Ok(_ = self.insert(key, value)),
         })
-        .map_err(|kvp| CollectionCollision::new(iter, Self::with_hasher(self.hasher().clone()), kvp))
+        .map_err(|kvp| CollectionError::collision(iter, Self::with_hasher(self.hasher().clone()), kvp))
     }
 }
 
@@ -85,18 +85,18 @@ where
             }
         })
         .map(|staging_map| self.extend(staging_map))
-        .map_err(|(staging_map, kvp)| CollectionCollision::new(iter, staging_map, kvp))
+        .map_err(|(staging_map, kvp)| CollectionError::collision(iter, staging_map, kvp))
     }
 }
 
 impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne for HashMap<K, V, S> {
     type Item = (K, V);
-    type Error = ItemCollision<(K, V)>;
+    type Error = Collision<(K, V)>;
 
     fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error> {
         let hash = self.hasher().hash_one(&item.0);
         match self.raw_entry_mut().from_hash(hash, |k| k == &item.0) {
-            RawEntryMut::Occupied(_) => Err(ItemCollision::new(item)),
+            RawEntryMut::Occupied(_) => Err(Collision::new(item)),
             RawEntryMut::Vacant(entry) => {
                 entry.insert_hashed_nocheck(hash, item.0, item.1);
                 Ok(())

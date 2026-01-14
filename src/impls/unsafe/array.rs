@@ -1,32 +1,36 @@
 use alloc::vec::Vec;
 use core::mem::MaybeUninit;
+use tap::TryConv;
 
 use fluent_result::into::IntoResult;
-use size_hinter::SizeHint;
 
-use crate::errors::{CapacityMismatch, CollectionError};
-use crate::impls::r#unsafe::DisarmError;
-use crate::TryFromIterator;
+use crate::errors::{CapacityError, CollectionError};
+use crate::{SizeHint, TryFromIterator};
 
 /// Create an array of size `N` from an iterator, failing if the iterator produces fewer or more items than `N`.
 impl<const N: usize, T, I> TryFromIterator<I> for [T; N]
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionError<I::IntoIter, Vec<T>, CapacityMismatch>;
+    type Error = CollectionError<I::IntoIter, Vec<T>, CapacityError<T>>;
 
-    /// Create an array from an iterator.
+    /// Create an array from an [`IntoIterator`], failing if the [`IntoIterator::IntoIter`]
+    /// produces fewer or more items than `N`.
     ///
     /// # Errors
     ///
-    /// Returns [`CollectionError`] if the iterator produces more or fewer items than `N`.
-    /// All items from the iterator are preserved in the error, and can be retrieved using
+    /// Returns [`CollectionError`] if the [`IntoIterator::IntoIter`] produces more or fewer items
+    /// than `N`. All items from the iterator are preserved in the error, and can be retrieved using
     /// [`CollectionError::into_iter`].
+    ///
+    /// # Panics
+    ///
+    /// This method panics if the iterator's [`size_hint`](Iterator::size_hint) is invalid.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use collect_failable::errors::CapacityMismatch;
+    /// use collect_failable::errors::CapacityError;
     /// use collect_failable::TryFromIterator;
     ///
     /// let array = <[_; 3]>::try_from_iter(1..=3).expect("should succeed");
@@ -53,17 +57,16 @@ where
 /// Assumes that all elements in the slice are unitialized
 fn try_from_iterator_erased<T, I: Iterator<Item = T>>(
     mut iter: I,
-    array: &mut [MaybeUninit<T>],
-) -> Result<(), CollectionError<I, Vec<T>, CapacityMismatch>> {
-    match (array.len(), iter.size_hint()) {
-        (len, hint @ (min, _)) if min > len => CollectionError::bounds(iter, SizeHint::exact(len)).into_err(),
-        (len, hint @ (_, Some(max))) if max < len => CollectionError::bounds(iter, SizeHint::exact(len)).into_err(),
-        (len, _) => {
-            let mut guard = super::SliceGuard::new(array);
+    slice: &mut [MaybeUninit<T>],
+) -> Result<(), CollectionError<I, Vec<T>, CapacityError<T>>> {
+    match (SizeHint::exact(slice.len()), iter.size_hint().try_conv::<SizeHint>().expect("invalid size hint")) {
+        (capacity, hint) if hint.disjoint(capacity) => CollectionError::bounds(iter, capacity).into_err(),
+        (capacity, _) => {
+            let mut guard = super::SliceGuard::new(slice);
             guard.extend(iter.by_ref());
             match iter.next() {
-                Some(reject) => CollectionError::overflow(iter, guard.drain(), reject, SizeHint::exact(len)).into_err(),
-                None => guard.disarm().map_err(|DisarmError { error, items }| CollectionError::new(iter, items, None, error)),
+                Some(reject) => CollectionError::overflow(iter, guard.drain(), reject, capacity).into_err(),
+                None => guard.disarm().map_err(|items| CollectionError::<_, Vec<T>, _>::underflow(iter, items, capacity)),
             }
         }
     }

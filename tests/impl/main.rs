@@ -7,6 +7,7 @@ mod result;
 mod sets;
 mod try_unzip;
 mod tuples;
+mod vec;
 
 #[path = "../utils/mod.rs"]
 mod utils;

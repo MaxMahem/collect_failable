@@ -18,7 +18,7 @@ use crate::TryUnzip;
 /// This error preserves the incomplete collection from the side that succeeded,
 /// along with the error from the side that failed, and the remaining iterator.
 ///
-/// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`](std::ops::Deref)
+/// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`]
 /// implementation into a hidden `UnzipErrorData` type, with identical fields. If necessary,
 /// you can consume an instance of this type via [`UnzipError::into_data`] to get owned data.
 ///

@@ -2,14 +2,14 @@ use alloc::collections::BTreeMap;
 
 use fluent_result::expect::dbg::ExpectNone;
 
-use crate::errors::{CollectionCollision, ItemCollision};
+use crate::errors::{CollectionError, Collision};
 use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 impl<K: Ord, V, I> TryFromIterator<I> for BTreeMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<I::IntoIter, Self>;
+    type Error = CollectionError<I::IntoIter, Self, Collision<(K, V)>>;
 
     /// Converts `iter` into a [`BTreeMap`], failing if a key would collide.
     ///
@@ -23,7 +23,7 @@ where
                 Ok(map)
             }
         })
-        .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
+        .map_err(|(map, kvp)| CollectionError::collision(iter, map, kvp))
     }
 }
 
@@ -31,7 +31,7 @@ impl<K: Ord, V, I> TryExtend<I> for BTreeMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<I::IntoIter, Self>;
+    type Error = CollectionError<I::IntoIter, Self, Collision<(K, V)>>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -45,7 +45,7 @@ where
                 Ok(())
             }
         })
-        .map_err(|kvp| CollectionCollision::new(iter, Self::new(), kvp))
+        .map_err(|kvp| CollectionError::collision(iter, Self::new(), kvp))
     }
 }
 
@@ -69,17 +69,17 @@ where
             },
         })
         .map(|map| self.extend(map))
-        .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
+        .map_err(|(map, kvp)| CollectionError::collision(iter, map, kvp))
     }
 }
 
 impl<K: Ord, V> crate::TryExtendOne for BTreeMap<K, V> {
     type Item = (K, V);
-    type Error = ItemCollision<(K, V)>;
+    type Error = Collision<(K, V)>;
 
     fn try_extend_one(&mut self, (key, value): (K, V)) -> Result<(), Self::Error> {
         match self.contains_key(&key) {
-            true => Err(ItemCollision::new((key, value))),
+            true => Err(Collision::new((key, value))),
             false => {
                 self.insert(key, value).expect_none("should not be occupied");
                 Ok(())

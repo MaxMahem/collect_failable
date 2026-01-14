@@ -65,6 +65,7 @@ fn drop_safety_failure_too_many() {
 
 #[test]
 fn check_zst() {
+    #[derive(Debug)]
     struct Zst;
 
     let items = vec![Zst, Zst, Zst];
