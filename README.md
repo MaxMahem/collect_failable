@@ -18,6 +18,7 @@ This crate provides several complementary traits for failable collection:
 - `TryExtend` and `TryExtendSafe` – failably extend a container with an `IntoIterator`, with different error guarantees.
 - `TryExtendOne` – failable extend a container with a single item.
 - `TryUnzip` – failably unzip an `IntoIterator` of pairs into two containers (requires feature `tuple`, enabled by default).
+- `Capacity` - expose capacity size hints for collection types (e.g. `ArrayVec`, `[T; N]`).
 
 Additionally, several implementations are provided for common and popular containers. See the [implementations](#implementations) section for more details.
 
@@ -55,7 +56,7 @@ use collect_failable::{TryFromIterator, TryCollectEx};
 
 // can be called on any type that implements TryFromIterator
 let err = HashMap::try_from_iter([(1, 2), (2, 3), (1, 4), (3, 5)]).expect_err("should be Err");
-assert_eq!(err.item.0, 1); // err.item is the colliding (K, V) tuple
+assert_eq!(err.error.item.0, 1); // err.error.item is the colliding (K, V) tuple
 
 // For `HashMap` the error contains all the data necessary to reconstruct the consumed iterator
 let all_items: Vec<_> = err.into_iter().collect();
@@ -99,10 +100,6 @@ Extend a collection with a single item. This trait always provides a **strong gu
 ### `TryUnzip`
 
 Fallible equivalent of [`Iterator::unzip`](https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.unzip). Given an iterator of `(A, B)` items, produce two collections that implement `Default + TryExtend`, stopping on the first failure.
-
-Allows unzipping an iterator of pairs into two collections that implement `Default` and `TryExtend`.
-
-This is analogous to [`Iterator::unzip`](https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.unzip), except allows for failable construction.
 
 ```rust
 use std::collections::{BTreeSet, HashSet};

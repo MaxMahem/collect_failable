@@ -1,39 +1,25 @@
 use alloc::vec::Vec;
 use core::mem::MaybeUninit;
 
-use fluent_result::into::IntoResult;
-use size_hinter::SizeHint;
-
-use crate::errors::CapacityMismatch;
-
 /// A guard that ensures that all elements in a slice are initialized
 pub struct SliceGuard<'a, T> {
     slice: &'a mut [MaybeUninit<T>],
     initialized: usize,
 }
 
-#[derive(Debug, thiserror::Error, PartialEq, Eq, derive_more::Constructor)]
-pub struct DisarmError<T> {
-    #[source]
-    pub error: CapacityMismatch,
-    pub items: Vec<T>,
-}
-
 impl<'a, T> SliceGuard<'a, T> {
     /// Creates a new guard for the given slice
     ///
-    /// Assumes that all elements in `slice` are unitialized. Passing in initialized elements is
+    /// Assumes all elements in `slice` are unitialized. Passing in initialized elements is
     /// safe, but may result in a memory leak, as their destructors may not be called.
     pub const fn new(slice: &'a mut [MaybeUninit<T>]) -> Self {
         Self { slice, initialized: 0 }
     }
 
     /// Disarms the guard, returning an error if the slice is not fully initialized.
-    pub fn disarm(self) -> Result<(), DisarmError<T>> {
+    pub fn disarm(self) -> Result<(), Vec<T>> {
         match (self.initialized, self.slice.len()) {
-            (init, len) if init != len => {
-                DisarmError::new(CapacityMismatch::underflow(SizeHint::exact(len), init), self.drain()).into_err()
-            }
+            (init, len) if init != len => Err(self.drain()),
             _ => Ok(() = core::mem::forget(self)),
         }
     }

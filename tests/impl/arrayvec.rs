@@ -1,7 +1,8 @@
 use arrayvec::ArrayVec;
 
-use collect_failable::errors::CapacityMismatch;
-use size_hinter::{SizeHint, SizeHinter};
+use crate::collection_tests::panics;
+use collect_failable::errors::CapacityError;
+use size_hinter::{InvalidIterator, SizeHint, SizeHinter};
 
 type TestArray = ArrayVec<u32, 2>;
 
@@ -11,8 +12,8 @@ mod try_from_iter {
     use collect_failable::TryFromIterator;
 
     try_collect!(valid, TestArray, 1..=2, Ok(ArrayVec::from_iter(1..=2)));
-    try_collect!(bounds, TestArray, 1..=3, Err(CapacityMismatch::bounds(SizeHint::bounded(0, 2), SizeHint::exact(3))));
-    try_collect!(overflow, TestArray, (1..=3).hide_size(), Err(CapacityMismatch::overflow(SizeHint::bounded(0, 2))));
+    try_collect!(bounds, TestArray, 1..=3, Err(CapacityError::bounds(SizeHint::at_most(2), SizeHint::exact(3))));
+    try_collect!(overflow, TestArray, (1..=3).hide_size(), Err(CapacityError::overflow(SizeHint::at_most(2), 3)));
 }
 
 #[test]
@@ -38,14 +39,17 @@ mod try_extend_safe {
         bound_fail,
         TestArray::from_iter(3..=3),
         1..=3,
-        Err(CapacityMismatch::bounds(SizeHint::bounded(0, 1), SizeHint::exact(3)))
+        Err(CapacityError::bounds(SizeHint::at_most(1), SizeHint::exact(3)), Vec::new(), 1..=3)
     );
+
     try_extend_safe!(
         overflow,
         TestArray::from_iter(3..=3),
         (1..=2).hide_size(),
-        Err(CapacityMismatch::overflow(SizeHint::bounded(0, 1)))
+        Err(CapacityError::overflow(SizeHint::at_most(1), 2), vec![1], std::iter::empty())
     );
+
+    panics!(invalid_iter, ArrayVec::<(), 2>::new().try_extend_safe(InvalidIterator), "Invalid size hint");
 }
 
 mod try_extend {
@@ -58,14 +62,17 @@ mod try_extend {
         bounds_fail,
         TestArray::from_iter(3..=3),
         1..=3,
-        Err(CapacityMismatch::bounds(SizeHint::bounded(0, 1), SizeHint::exact(3)))
+        Err(CapacityError::bounds(SizeHint::at_most(1), SizeHint::exact(3)), Vec::new(), 1..=3)
     );
+
     try_extend!(
         overflow,
         TestArray::from_iter(3..=3),
         (1..=2).hide_size(),
-        Err(CapacityMismatch::overflow(SizeHint::bounded(0, 1)))
+        Err(CapacityError::overflow(SizeHint::ZERO, 2), Vec::new(), std::iter::empty())
     );
+
+    panics!(invalid_iter, ArrayVec::<(), 2>::new().try_extend(InvalidIterator), "Invalid size hint");
 }
 
 mod try_extend_one {

@@ -5,7 +5,7 @@ use std::collections::{BTreeSet, HashSet};
 use hashbrown::HashSet as HashBrownSet;
 
 use crate::utils::Identifiable;
-use collect_failable::errors::ItemCollision;
+use collect_failable::errors::{Collision, ErrorItemProvider};
 use collect_failable::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 macro_rules! try_from_iter_and_extend_iter {
@@ -26,7 +26,7 @@ macro_rules! try_from_iter_and_extend_iter {
                 let expected_collected = <$set_type>::from([3, 4]);
                 assert_eq!(parts.collected, expected_collected, "collected should have items before collision");
 
-                assert_eq!(parts.item, 3, "colliding value should be 3");
+                assert_eq!(parts.error.item(), Some(&3), "colliding value should be 3");
 
                 let remaining: Vec<_> = parts.iterator.collect();
                 assert_eq!(remaining, vec![5, 3], "remaining iterator should have 2 items");
@@ -54,7 +54,7 @@ macro_rules! try_from_iter_and_extend_iter {
                 assert!(parts.collected.contains(&3), "collected should have 3");
                 assert!(parts.collected.contains(&4), "collected should have 4");
 
-                assert_eq!(parts.item, 1, "colliding value should be 1");
+                assert_eq!(parts.error.item(), Some(&1), "colliding value should be 1");
 
                 let remaining: Vec<_> = parts.iterator.collect();
                 assert_eq!(remaining.len(), 0, "remaining should be empty");
@@ -75,7 +75,7 @@ macro_rules! try_from_iter_and_extend_iter {
                 assert!(parts.collected.contains(&3), "collected should have 3");
                 assert!(parts.collected.contains(&4), "collected should have 4");
 
-                assert_eq!(parts.item, 3, "colliding value should be 3");
+                assert_eq!(parts.error.item(), Some(&3), "colliding value should be 3");
 
                 let remaining: Vec<_> = parts.iterator.collect();
                 assert_eq!(remaining, vec![5, 3], "remaining should have 2 items");
@@ -104,7 +104,7 @@ macro_rules! try_from_iter_and_extend_iter {
                 // try_extend doesn't collect items in the error
                 assert_eq!(parts.collected.len(), 0, "collected should be empty");
 
-                assert_eq!(parts.item, 1, "colliding value should be 1");
+                assert_eq!(parts.error.item(), Some(&1), "colliding value should be 1");
 
                 let remaining: Vec<_> = parts.iterator.collect();
                 assert_eq!(remaining.len(), 0, "remaining should be empty");
@@ -126,7 +126,7 @@ macro_rules! try_from_iter_and_extend_iter {
                 // try_extend doesn't collect items in the error
                 assert_eq!(parts.collected.len(), 0, "collected should be empty");
 
-                assert_eq!(parts.item, 3, "colliding value should be 3");
+                assert_eq!(parts.error.item(), Some(&3), "colliding value should be 3");
 
                 let remaining: Vec<_> = parts.iterator.collect();
                 assert_eq!(remaining, vec![5, 3], "remaining should have 2 items");
@@ -145,8 +145,8 @@ macro_rules! try_from_iter_and_extend_iter {
                 let err = set.try_extend(std::iter::once(v2)).expect_err("should be err");
 
                 let parts = err.into_data();
-                assert_eq!(parts.item.value, 1, "should return collision with value 1");
-                assert_eq!(parts.item.id, 2, "colliding item should have id 2");
+                assert_eq!(parts.error.item().unwrap().value, 1, "should return collision with value 1");
+                assert_eq!(parts.error.item().unwrap().id, 2, "colliding item should have id 2");
 
                 // Verify the set still contains the original value (id: 1)
                 let stored = set.iter().next().unwrap();
@@ -157,7 +157,7 @@ macro_rules! try_from_iter_and_extend_iter {
                 use super::*;
 
                 try_extend_one!(valid, <$set_type>::new(), 1, Ok(<$set_type>::from([1])));
-                try_extend_one!(collision, <$set_type>::from([1, 2, 3]), 2, Err(ItemCollision::new(2)));
+                try_extend_one!(collision, <$set_type>::from([1, 2, 3]), 2, Err(Collision::new(2)));
             }
         }
     };

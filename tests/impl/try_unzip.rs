@@ -2,6 +2,18 @@ const INVALID_DATA_A: [(u32, u32); 2] = [(1, 3), (1, 4)];
 const INVALID_DATA_B: [(u32, u32); 2] = [(1, 2), (2, 2)];
 
 #[test]
+fn try_unzip_success() {
+    use collect_failable::TryUnzip;
+    use std::collections::HashSet;
+
+    let data = vec![(1, 10), (2, 20), (3, 30)];
+    let (set_a, set_b) = data.into_iter().try_unzip::<HashSet<_>, HashSet<_>>().expect("Should succeed");
+
+    assert_eq!(set_a, HashSet::from([1, 2, 3]));
+    assert_eq!(set_b, HashSet::from([10, 20, 30]));
+}
+
+#[test]
 fn try_unzip_fail_a() {
     use collect_failable::TryUnzip;
     use std::collections::HashSet;

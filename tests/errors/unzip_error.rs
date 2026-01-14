@@ -1,7 +1,7 @@
 use std::array::IntoIter;
 use std::collections::HashSet;
 
-use collect_failable::errors::{ItemCollision, UnzipError};
+use collect_failable::errors::{Collision, UnzipError};
 use collect_failable::TryUnzip;
 
 use crate::error_tests::{test_format, test_source};
@@ -12,8 +12,8 @@ const COLLISION_DATA_A: [(u32, u32); 4] = [(1, 10), (2, 20), (1, 30), (3, 40)];
 /// Data that will cause collision on second collection (B side)
 const COLLISION_DATA_B: [(u32, u32); 4] = [(10, 1), (20, 2), (30, 1), (40, 3)];
 
-const EXPECTED_DEBUG_UNZIP_ERROR_A: &str = r#"UnzipError { side: Left(UnzipSide { error: ItemCollision { item: 1 }, failed: "...", successful: "...", unevaluated: Some(..) }), remaining: "core::array::iter::IntoIter<(u32, u32), 4>" }"#;
-const EXPECTED_DEBUG_UNZIP_ERROR_B: &str = r#"UnzipError { side: Right(UnzipSide { error: ItemCollision { item: 1 }, failed: "...", successful: "...", unevaluated: None }), remaining: "core::array::iter::IntoIter<(u32, u32), 4>" }"#;
+const EXPECTED_DEBUG_UNZIP_ERROR_A: &str = r#"UnzipError { side: Left(UnzipSide { error: Collision { item: 1 }, failed: "...", successful: "...", unevaluated: Some(..) }), remaining: "core::array::iter::IntoIter<(u32, u32), 4>" }"#;
+const EXPECTED_DEBUG_UNZIP_ERROR_B: &str = r#"UnzipError { side: Right(UnzipSide { error: Collision { item: 1 }, failed: "...", successful: "...", unevaluated: None }), remaining: "core::array::iter::IntoIter<(u32, u32), 4>" }"#;
 const EXPECTED_DISPLAY_UNZIP_ERROR_A: &str = "Failed while unzipping into first collection: item collision";
 const EXPECTED_DISPLAY_UNZIP_ERROR_B: &str = "Failed while unzipping into second collection: item collision";
 
@@ -58,5 +58,5 @@ test_format!(unzip_error_debug_b, create_b_error(), "{:?}", EXPECTED_DEBUG_UNZIP
 test_format!(unzip_error_display_a, create_a_error(), "{}", EXPECTED_DISPLAY_UNZIP_ERROR_A);
 test_format!(unzip_error_display_b, create_b_error(), "{}", EXPECTED_DISPLAY_UNZIP_ERROR_B);
 
-test_source!(unzip_error_a_source, create_a_error(), ItemCollision<u32>);
-test_source!(unzip_error_b_source, create_b_error(), ItemCollision<u32>);
+test_source!(unzip_error_a_source, create_a_error(), Collision<u32>);
+test_source!(unzip_error_b_source, create_b_error(), Collision<u32>);

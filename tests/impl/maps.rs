@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use hashbrown::HashMap as HashBrownMap;
 
-use collect_failable::errors::ItemCollision;
+use collect_failable::errors::{Collision, ErrorItemProvider};
 use collect_failable::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 const UNIQUE_KEYS: [(i32, i32); 2] = [(1, 2), (2, 3)];
@@ -21,13 +21,13 @@ macro_rules! test_try_from_iter_and_extend_iter {
             fn try_collect_key_collision() {
                 let err = <$map_type>::try_from_iter(COLLIDE_WITH_REMAINING).expect_err("should be err");
 
-                let parts = err.into_data();
-
                 let expected_collected = <$map_type>::from([(1, 2), (2, 3)]);
-                assert_eq!(parts.collected, expected_collected, "collected should have items before collision");
+                assert_eq!(err.collected, expected_collected, "collected should have items before collision");
+                assert_eq!(err.collected.len(), 2, "collected should have 2 items before collision");
 
-                assert_eq!(parts.item.0, 1, "colliding key should be 1");
-                assert_eq!(parts.item.1, 4, "colliding value should be 4");
+                assert_eq!(err.error.item(), Some(&(1, 4)), "colliding item should be (1, 4)");
+
+                let parts = err.into_data();
 
                 let remaining: Vec<_> = parts.iterator.collect();
                 assert_eq!(remaining, vec![(3, 5), (4, 6)], "remaining iterator should have 2 items");
@@ -68,8 +68,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 assert_eq!(parts.collected.len(), 1, "collected should have 1 item before collision");
                 assert_eq!(parts.collected.get(&3), Some(&3), "collected should have (3, 3)");
 
-                assert_eq!(parts.item.0, 1, "colliding key should be 1");
-                assert_eq!(parts.item.1, 2, "colliding value should be 2");
+                assert_eq!(parts.error.item(), Some(&(1, 2)), "colliding item should be (1, 2)");
 
                 let remaining: Vec<_> = parts.iterator.collect();
                 assert_eq!(remaining.len(), 0, "remaining should be empty");
@@ -90,8 +89,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 assert_eq!(parts.collected.get(&3), Some(&3), "collected should have (3, 3)");
                 assert_eq!(parts.collected.get(&4), Some(&4), "collected should have (4, 4)");
 
-                assert_eq!(parts.item.0, 3, "colliding key should be 3");
-                assert_eq!(parts.item.1, 5, "colliding value should be 5");
+                assert_eq!(parts.error.item(), Some(&(3, 5)), "colliding item should be (3, 5)");
 
                 let remaining: Vec<_> = parts.iterator.collect();
                 assert_eq!(remaining.len(), 0, "remaining should be empty");
@@ -109,15 +107,11 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 assert_eq!(map.len(), 3, "map should have original 2 items plus 1 added before collision");
                 assert_eq!(map.get(&3), Some(&3), "map should have (3, 3) from successful insert");
 
-                let parts = err.into_data();
+                assert_eq!(err.collected.len(), 0, "collected should be empty");
 
-                // try_extend doesn't collect items in the error
-                assert_eq!(parts.collected.len(), 0, "collected should be empty");
+                assert_eq!(err.error.item(), Some(&(1, 2)), "colliding item should be (1, 2)");
 
-                assert_eq!(parts.item.0, 1, "colliding key should be 1");
-                assert_eq!(parts.item.1, 2, "colliding value should be 2");
-
-                let remaining: Vec<_> = parts.iterator.collect();
+                let remaining: Vec<_> = err.into_data().iterator.collect();
                 assert_eq!(remaining.len(), 0, "remaining should be empty");
             }
 
@@ -137,8 +131,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 // try_extend doesn't collect items in the error
                 assert_eq!(parts.collected.len(), 0, "collected should be empty");
 
-                assert_eq!(parts.item.0, 3, "colliding key should be 3");
-                assert_eq!(parts.item.1, 5, "colliding value should be 5");
+                assert_eq!(parts.error.item(), Some(&(3, 5)), "colliding item should be (3, 5)");
 
                 let remaining: Vec<_> = parts.iterator.collect();
                 assert_eq!(remaining.len(), 0, "remaining should be empty");
@@ -150,7 +143,7 @@ macro_rules! test_try_from_iter_and_extend_iter {
                 use super::*;
 
                 try_extend_one!(valid, <$map_type>::new(), (1, 1), Ok(<$map_type>::from([(1, 1)])));
-                try_extend_one!(collision, <$map_type>::from([(1, 1), (2, 2)]), (1, 2), Err(ItemCollision::new((1, 2))));
+                try_extend_one!(collision, <$map_type>::from([(1, 1), (2, 2)]), (1, 2), Err(Collision::new((1, 2))));
             }
         }
     };

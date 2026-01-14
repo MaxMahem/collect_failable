@@ -3,14 +3,14 @@ use core::hash::{BuildHasher, Hash};
 use fluent_result::expect::dbg::ExpectNone;
 use indexmap::IndexMap;
 
-use crate::errors::{CollectionCollision, ItemCollision};
+use crate::errors::{CollectionError, Collision};
 use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 impl<K: Eq + Hash, V, I> TryFromIterator<I> for IndexMap<K, V>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<I::IntoIter, Self>;
+    type Error = CollectionError<I::IntoIter, Self, Collision<(K, V)>>;
 
     /// Converts `iter` into a [`IndexMap`], failing if a key would collide.
     ///
@@ -29,7 +29,7 @@ where
                 Ok(map)
             }
         })
-        .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
+        .map_err(|(map, kvp)| CollectionError::collision(iter, map, kvp))
     }
 }
 
@@ -37,7 +37,7 @@ impl<K: Eq + Hash, V, S: BuildHasher, I> TryExtend<I> for IndexMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {
-    type Error = CollectionCollision<I::IntoIter, IndexMap<K, V>>;
+    type Error = CollectionError<I::IntoIter, IndexMap<K, V>, Collision<(K, V)>>;
 
     /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
     ///
@@ -50,7 +50,7 @@ where
             true => Err((key, value)),
             false => Ok(_ = self.insert(key, value)),
         })
-        .map_err(|kvp| CollectionCollision::new(iter, IndexMap::new(), kvp))
+        .map_err(|kvp| CollectionError::collision(iter, IndexMap::new(), kvp))
     }
 }
 
@@ -76,18 +76,18 @@ where
             },
         })
         .map(|map| self.extend(map))
-        .map_err(|(map, kvp)| CollectionCollision::new(iter, map, kvp))
+        .map_err(|(map, kvp)| CollectionError::collision(iter, map, kvp))
     }
 }
 
 impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne for IndexMap<K, V, S> {
     type Item = (K, V);
-    type Error = ItemCollision<(K, V)>;
+    type Error = Collision<(K, V)>;
 
     fn try_extend_one(&mut self, item: (K, V)) -> Result<(), Self::Error> {
         let (key, value) = item;
         match self.contains_key(&key) {
-            true => Err(ItemCollision::new((key, value))),
+            true => Err(Collision::new((key, value))),
             false => {
                 self.insert(key, value);
                 Ok(())

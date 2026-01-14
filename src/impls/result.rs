@@ -1,10 +1,10 @@
 use alloc::rc::Rc;
 use core::cell::RefCell;
 
-use size_hinter::SizeHint;
 use tap::Pipe;
 
 use crate::errors::ResultCollectionError;
+use crate::SizeHint;
 use crate::TryFromIterator;
 
 /// Iterator adaptor that extracts [`Ok`] values from a [`Result`] [`Iterator`],
@@ -144,7 +144,7 @@ where
     /// let collection_err: Vec<Result<i32, &str>> = vec![Ok(1), Ok(1), Ok(3)];
     /// match Result::<HashSet<i32>, _>::try_from_iter(collection_err) {
     ///     Ok(Ok(_)) => panic!("should fail"),
-    ///     Ok(Err(e)) => assert_eq!(e.item, 1, "collision should be on value 1"),
+    ///     Ok(Err(e)) => assert_eq!(e.error.item, 1, "collision should be on value 1"),
     ///     Err(_) => panic!("iterating values should succeed"),
     /// };
     /// ```
@@ -178,7 +178,7 @@ where
     /// assert_eq!(iter_err.to_string(), "Iterator error: parse error");
     ///
     /// let collect_err = process_data(vec![Ok(1), Ok(1), Ok(3)]).expect_err("should fail on collision");
-    /// assert_eq!(collect_err.to_string(), "Collection collision");
+    /// assert_eq!(collect_err.to_string(), "Collection Error: item collision");
     /// ```
     ///
     /// ## Recovering Data
@@ -207,7 +207,7 @@ where
     /// ```
     ///
     /// When both the success type (`C`) and error type (`CErr`) implement [`IntoIterator`], which
-    /// all implementations from this crate do, you can use the [`either`](either) crate (or
+    /// all implementations from this crate do, you can use the [`either`] crate (or
     /// similar) to uniformly recover all partially collected data, regardless of whether the
     /// collection succeeded or failed. In other words it lets you go easily from a
     /// [`ResultCollectionError::result`] value to an [Iterator<Item = T>].

@@ -3,14 +3,14 @@ use core::hash::{BuildHasher, Hash};
 use fluent_result::bool::dbg::Expect;
 use hashbrown::HashSet;
 
-use crate::errors::{CollectionCollision, ItemCollision};
+use crate::errors::{CollectionError, Collision};
 use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 impl<T: Eq + Hash, I> TryFromIterator<I> for HashSet<T>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<I::IntoIter, Self>;
+    type Error = CollectionError<I::IntoIter, Self, Collision<T>>;
 
     /// Converts `iter` into a [`HashSet`], failing if a value would collide.
     ///
@@ -29,7 +29,7 @@ where
                 Ok(set)
             }
         })
-        .map_err(|(set, value)| CollectionCollision::new(iter, set, value))
+        .map_err(|(set, value)| CollectionError::collision(iter, set, value))
     }
 }
 
@@ -37,7 +37,7 @@ impl<T: Eq + Hash, S: BuildHasher, I> TryExtend<I> for HashSet<T, S>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<I::IntoIter, HashSet<T>>;
+    type Error = CollectionError<I::IntoIter, HashSet<T>, Collision<T>>;
 
     /// Extends the set with `iter`, failing if a value would collide, with a basic error guarantee.
     ///
@@ -50,7 +50,7 @@ where
             true => Err(value),
             false => Ok(_ = self.insert(value)),
         })
-        .map_err(|value| CollectionCollision::new(iter, HashSet::new(), value))
+        .map_err(|value| CollectionError::collision(iter, HashSet::new(), value))
     }
 }
 
@@ -76,17 +76,17 @@ where
             },
         })
         .map(|set| self.extend(set))
-        .map_err(|(set, value)| CollectionCollision::new(iter, set, value))
+        .map_err(|(set, value)| CollectionError::collision(iter, set, value))
     }
 }
 
 impl<T: Eq + Hash, S: BuildHasher> crate::TryExtendOne for HashSet<T, S> {
     type Item = T;
-    type Error = ItemCollision<T>;
+    type Error = Collision<T>;
 
     fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error> {
         match self.contains(&item) {
-            true => Err(ItemCollision::new(item)),
+            true => Err(Collision::new(item)),
             false => {
                 self.insert(item);
                 Ok(())

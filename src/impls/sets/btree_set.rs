@@ -2,14 +2,14 @@ use alloc::collections::BTreeSet;
 
 use fluent_result::bool::dbg::Expect;
 
-use crate::errors::{CollectionCollision, ItemCollision};
+use crate::errors::{CollectionError, Collision};
 use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 impl<T: Ord, I> TryFromIterator<I> for BTreeSet<T>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<I::IntoIter, Self>;
+    type Error = CollectionError<I::IntoIter, Self, Collision<T>>;
 
     /// Converts `iter` into a [`BTreeSet`], failing if a value would collide.
     ///
@@ -26,7 +26,7 @@ where
                 Ok(set)
             }
         })
-        .map_err(|(set, value)| CollectionCollision::new(iter, set, value))
+        .map_err(|(set, value)| CollectionError::collision(iter, set, value))
     }
 }
 
@@ -34,7 +34,7 @@ impl<T: Ord, I> TryExtend<I> for BTreeSet<T>
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionCollision<I::IntoIter, Self>;
+    type Error = CollectionError<I::IntoIter, Self, Collision<T>>;
 
     /// Extends the set with `iter`, failing if a value would collide, with a basic error guarantee.
     ///
@@ -48,7 +48,7 @@ where
                 Ok(())
             }
         })
-        .map_err(|value| CollectionCollision::new(iter, Self::new(), value))
+        .map_err(|value| CollectionError::collision(iter, Self::new(), value))
     }
 }
 
@@ -72,17 +72,17 @@ where
             },
         })
         .map(|set| self.extend(set))
-        .map_err(|(set, value)| CollectionCollision::new(iter, set, value))
+        .map_err(|(set, value)| CollectionError::collision(iter, set, value))
     }
 }
 
 impl<T: Ord> crate::TryExtendOne for BTreeSet<T> {
     type Item = T;
-    type Error = ItemCollision<T>;
+    type Error = Collision<T>;
 
     fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error> {
         match self.contains(&item) {
-            true => Err(ItemCollision::new(item)),
+            true => Err(Collision::new(item)),
             false => {
                 self.insert(item);
                 Ok(())

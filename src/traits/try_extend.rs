@@ -43,7 +43,7 @@ pub trait TryExtend<I: IntoIterator> {
     /// let mut map = HashMap::from([(1, 2)]);
     /// let err = map.try_extend([(2, 3), (3, 4), (1, 5)]).expect_err("should be err");
     ///
-    /// assert_eq!(err.item, (1, 5));
+    /// assert_eq!(err.error.item, (1, 5));
     ///
     /// // map may be modified, but colliding value should not be changed
     /// assert_eq!(map[&1], 2);
@@ -90,7 +90,7 @@ pub trait TryExtendSafe<I: IntoIterator>: TryExtend<I> {
     /// let mut map = HashMap::from([(1, 2), (2, 3)]);
     /// let err = map.try_extend_safe([(3, 4), (1, 5), (4, 6)]).expect_err("should collide");
     ///
-    /// assert_eq!(err.item, (1, 5), "item should be the colliding item");
+    /// assert_eq!(err.error.item, (1, 5), "item should be the colliding item");
     ///
     /// let iterated_items: Vec<_> = err.into_iter().collect();
     /// // iterator can be reconstructed. Order is not guranteed for hashmap

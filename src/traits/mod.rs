@@ -1,9 +1,11 @@
+mod capacity;
 mod try_extend;
 mod try_from_iterator;
 
 #[cfg(feature = "tuple")]
 mod try_unzip;
 
+pub use capacity::*;
 pub use try_extend::*;
 pub use try_from_iterator::*;
 
