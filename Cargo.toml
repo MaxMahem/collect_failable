@@ -23,7 +23,7 @@ arrayvec = [ "dep:arrayvec" ]
 
 [dependencies]
 tap = { version = "1.0.1" }
-thiserror = { version = "2.0.17", default-features = false }
+thiserror = { version = "2.0.18", default-features = false }
 hashbrown = { version = "0.16.1", optional = true }
 derive_more = { version = "2.1.1", features = ["constructor", "deref", "display"] }
 indexmap = { version = "2.13.0", optional = true }
