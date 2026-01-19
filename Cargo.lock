@@ -251,9 +251,12 @@ dependencies = [
 
 [[package]]
 name = "display_as_debug"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a008f893024c4b4b6eb4ed6e85b4ba87f36c688550197d83f9e9d097870b502"
+checksum = "fbb3285aacde5fcac75ea7965fbcb17bd762ea600abdb39c0f38dd7734a866c9"
+dependencies = [
+ "sealed",
+]
 
 [[package]]
 name = "either"

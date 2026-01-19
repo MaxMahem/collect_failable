@@ -32,7 +32,7 @@ sealed = "0.6.0"
 subdef = "0.1.2"
 fluent_result = "0.10.1"
 no_drop = "0.3.0"
-display_as_debug = "0.3.0"
+display_as_debug = "0.4.0"
 
 # Public Dependencies
 either = "1.15.0"
