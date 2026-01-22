@@ -1,5 +1,8 @@
 use alloc::vec::Vec;
 use core::mem::MaybeUninit;
+use size_hinter::SizeHint;
+
+use crate::errors::CapacityError;
 
 /// A guard that ensures that all elements in a slice are initialized
 pub struct SliceGuard<'a, T> {
@@ -17,9 +20,9 @@ impl<'a, T> SliceGuard<'a, T> {
     }
 
     /// Disarms the guard, returning an error if the slice is not fully initialized.
-    pub fn disarm(self) -> Result<(), Vec<T>> {
+    pub fn disarm(self) -> Result<(), (Vec<T>, CapacityError<T>)> {
         match (self.initialized, self.slice.len()) {
-            (init, len) if init != len => Err(self.drain()),
+            (init, len) if init != len => Err((self.drain(), CapacityError::underflow(SizeHint::exact(len), init))),
             _ => Ok(() = core::mem::forget(self)),
         }
     }

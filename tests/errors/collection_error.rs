@@ -6,11 +6,19 @@ mod format {
     use super::*;
     use crate::error_tests::test_format;
 
-    const EXPECTED_DEBUG: &str = r#"CollectionError { collected: "alloc::vec::Vec<i32>", error: TestError { identity: "test", _phantom: PhantomData<i32> }, iterator: "core::ops::range::RangeInclusive<i32>" }"#;
+    const EXPECTED_DEBUG: &str = r#"CollectionError { collected: "alloc::vec::Vec<i32>", error: TestError("test"), iterator: "core::ops::range::RangeInclusive<i32>" }"#;
     const EXPECTED_DISPLAY: &str = "Collection Error: Test error: test";
+    const EXPECTED_DEBUG_DATA: &str =
+        r#"CollectionErrorData { iterator: RangeInclusive<i32>, collected: Vec<i32>, error: TestError("test") }"#;
 
     test_format!(debug, CollectionError::new(1..=2, vec![3, 4], TestError::<i32>::new("test")), "{:?}", EXPECTED_DEBUG);
     test_format!(display, CollectionError::new(1..=2, vec![3, 4], TestError::<i32>::new("test")), "{}", EXPECTED_DISPLAY);
+    test_format!(
+        debug_data,
+        CollectionError::new(1..=2, vec![3, 4], TestError::<i32>::new("test")).into_data(),
+        "{:?}",
+        EXPECTED_DEBUG_DATA
+    );
 }
 
 mod ctors {

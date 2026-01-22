@@ -3,11 +3,17 @@ use std::marker::PhantomData;
 use collect_failable::errors::ErrorItemProvider;
 
 /// Simple error type for testing with identity
-#[derive(Debug, PartialEq, Eq, thiserror::Error)]
+#[derive(PartialEq, Eq, thiserror::Error)]
 #[error("Test error: {identity}")]
 pub(crate) struct TestError<T = ()> {
     pub identity: &'static str,
     _phantom: PhantomData<T>,
+}
+
+impl<T> std::fmt::Debug for TestError<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("TestError").field(&self.identity).finish()
+    }
 }
 
 impl<T> TestError<T> {

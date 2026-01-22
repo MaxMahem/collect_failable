@@ -4,7 +4,8 @@ use core::ops::Deref;
 
 use alloc::boxed::Box;
 
-use display_as_debug::option::OptionDebugExt;
+use display_as_debug::fmt::DebugStructExt;
+use display_as_debug::types::Short;
 use tap::Pipe;
 
 use crate::either::Either;
@@ -111,6 +112,21 @@ where
     }
 }
 
+#[doc(hidden)]
+#[allow(clippy::missing_fields_in_debug, reason = "All data is covered")]
+impl<FromA, FromB, I> Debug for UnzipErrorData<FromA, FromB, I>
+where
+    FromA: TryExtendOne,
+    FromB: TryExtendOne,
+    FromA::Error: Debug,
+    FromB::Error: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("UnzipErrorData").field("side", &self.side).field_type::<I, Short>("remaining").finish()
+    }
+}
+
+#[allow(clippy::missing_fields_in_debug, reason = "All data is covered")]
 impl<Failed: TryExtendOne, Successful: TryExtendOne> Debug for UnzipErrorSide<Failed, Successful>
 where
     Failed::Error: Debug,
@@ -118,9 +134,9 @@ where
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("UnzipSide")
             .field("error", &self.error)
-            .field("failed", &"...")
-            .field("successful", &"...")
-            .field("unevaluated", &self.unevaluated.debug_opaque())
+            .field_type::<Failed, Short>("failed")
+            .field_type::<Successful, Short>("successful")
+            .field_type::<Successful::Item, Short>("unevaluated")
             .finish()
     }
 }
@@ -133,7 +149,7 @@ where
     FromB::Error: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("UnzipError").field("side", &self.data.side).field("remaining", &core::any::type_name::<I>()).finish()
+        f.debug_struct("UnzipError").field("side", &self.data.side).field_type::<I, Short>("remaining").finish()
     }
 }
 

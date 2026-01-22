@@ -2,25 +2,26 @@ use crate::SizeHint;
 
 /// A trait for types with a dynamic item capacity, expressed as a [`SizeHint`].
 ///
-/// This is the remaining capacity of the collection, and may change if the collection is modified.
-pub trait RemainingSize {
+/// This is the remaining capacity of the collection,
+/// and may change if the collection is modified.
+pub trait RemainingCap {
     /// Returns the remaining capacity of this collection as a [`SizeHint`].
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use collect_failable::{RemainingSize, SizeHint};
-    ///
-    /// let vec = Vec::<i32>::new();
-    /// assert_eq!(vec.remaining_size(), SizeHint::UNIVERSAL);
+    /// # use collect_failable::{RemainingCap, SizeHint};
+    /// # use arrayvec::ArrayVec;
+    /// let vec = ArrayVec::<i32, 4>::new();
+    /// assert_eq!(vec.remaining_cap(), SizeHint::at_most(4));
     /// ```
-    fn remaining_size(&self) -> SizeHint;
+    fn remaining_cap(&self) -> SizeHint;
 }
 
 /// A trait for types with a static item capacity, expressed as a [`SizeHint`].
 ///
-/// This is the static, maximum capacity of the collection, and it should never change.
-pub trait MaxSize: RemainingSize {
+/// This is the static capacity of the collection when empty, and it should never change.
+pub trait FixedCap: RemainingCap {
     /// The static capacity of this collection as a [`SizeHint`].
-    const MAX_SIZE: SizeHint;
+    const CAP: SizeHint;
 }

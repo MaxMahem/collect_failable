@@ -22,7 +22,9 @@ test_ctor!(
 const EXPECTED_DISPLAY_OK: &str = "Iterator error: Test error: iter error";
 const EXPECTED_DISPLAY_ERR: &str = "Iterator error: Test error: iter error; Collection error: Test error: collection error";
 const EXPECTED_DEBUG: &str =
-    "ResultCollectionError { error: TestError { identity: \"iter error\", _phantom: PhantomData<()> }, result: Ok(...), iter: \"core::ops::range::Range<i32>\" }";
+    "ResultCollectionError { error: TestError(\"iter error\"), result: Ok(HashSet<i32>), iter: Range<i32> }";
+const EXPECTED_DEBUG_DATA: &str =
+    "ResultCollectionErrorData { error: TestError(\"iter error\"), result: Ok(HashSet<i32>), iter: Range<i32> }";
 
 test_format!(
     display_format_ok,
@@ -42,6 +44,13 @@ test_format!(
     ResultCollectionError::new(TestError::<()>::new("iter error"), Ok::<_, ()>(HashSet::from([1, 2, 3])), 0..0),
     "{:?}",
     EXPECTED_DEBUG
+);
+
+test_format!(
+    debug_format_data,
+    ResultCollectionError::new(TestError::<()>::new("iter error"), Ok::<_, ()>(HashSet::from([1, 2, 3])), 0..0).into_data(),
+    "{:?}",
+    EXPECTED_DEBUG_DATA
 );
 
 test_source!(

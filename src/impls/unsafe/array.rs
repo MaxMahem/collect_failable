@@ -1,22 +1,19 @@
 use alloc::vec::Vec;
 use core::mem::MaybeUninit;
-use tap::TryConv;
-
-use fluent_result::into::IntoResult;
+use tap::{Pipe, TryConv};
 
 use crate::errors::{CapacityError, CollectionError};
-use crate::{MaxSize, RemainingSize, SizeHint, TryFromIterator};
+use crate::{FixedCap, RemainingCap, SizeHint, TryFromIterator};
 
-impl<const N: usize, T> RemainingSize for [T; N] {
-    /// Always returns `SizeHint::ZERO`, since arrays are fixed-size.
-    fn remaining_size(&self) -> SizeHint {
+impl<const N: usize, T> RemainingCap for [T; N] {
+    /// Always returns [`SizeHint::ZERO`], since arrays are fixed-size.
+    fn remaining_cap(&self) -> SizeHint {
         SizeHint::ZERO
     }
 }
 
-impl<const N: usize, T> MaxSize for [T; N] {
-    /// Always returns `SizeHint::exact(N)`, since arrays are fixed-size.
-    const MAX_SIZE: SizeHint = SizeHint::exact(N);
+impl<const N: usize, T> FixedCap for [T; N] {
+    const CAP: SizeHint = SizeHint::exact(N);
 }
 
 /// Create an array of size `N` from an iterator, failing if the iterator produces fewer or more items than `N`.
@@ -57,9 +54,11 @@ where
     #[inline]
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut array = [const { MaybeUninit::uninit() }; N];
-        try_from_iterator_erased(into_iter.into_iter(), &mut array)
+        let mut into_iter = into_iter.into_iter();
+        try_from_iterator_erased(&mut into_iter, &mut array)
             // SAFETY: all elements are initialized on success
             .map(|()| unsafe { core::mem::transmute_copy(&array) }) // TODO: Use array_assume_init once stable
+            .map_err(|(items, error)| CollectionError::new(into_iter, items, error))
     }
 }
 
@@ -67,18 +66,15 @@ where
 /// helper to avoid monomorphization for every different array size.
 ///
 /// Assumes that all elements in the slice are unitialized
-fn try_from_iterator_erased<T, I: Iterator<Item = T>>(
-    mut iter: I,
-    slice: &mut [MaybeUninit<T>],
-) -> Result<(), CollectionError<I, Vec<T>, CapacityError<T>>> {
-    match (SizeHint::exact(slice.len()), iter.size_hint().try_conv::<SizeHint>().expect("invalid size hint")) {
-        (capacity, hint) if hint.disjoint(capacity) => CollectionError::bounds(iter, capacity).into_err(),
+fn try_from_iterator_erased<T>(iter: &mut dyn Iterator<Item = T>, slice: &mut [MaybeUninit<T>]) -> Result<(), (Vec<T>, CapacityError<T>)> {
+    match (slice.len().pipe(SizeHint::exact), iter.size_hint().try_conv::<SizeHint>().expect("invalid size hint")) {
+        (capacity, hint) if hint.disjoint(capacity) => Err((Vec::new(), CapacityError::bounds(capacity, hint))),
         (capacity, _) => {
             let mut guard = super::SliceGuard::new(slice);
-            guard.extend(iter.by_ref());
+            guard.extend(&mut *iter);
             match iter.next() {
-                Some(reject) => CollectionError::overflow(iter, guard.drain(), reject, capacity).into_err(),
-                None => guard.disarm().map_err(|items| CollectionError::<_, Vec<T>, _>::underflow(iter, items, capacity)),
+                Some(reject) => Err((guard.drain(), CapacityError::overflow(capacity, reject))),
+                None => guard.disarm(),
             }
         }
     }

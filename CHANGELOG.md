@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `MaxSize` trait to expose static maximum capacity from collection types.
 - Added `RemainingSize` trait (with `remaining_size` method) to expose dynamic remaining capacity from collection types.
-- Added `RemainingSize` and `MaxSize` implementations for `String`, `VecDeque`, `LinkedList`, and `BinaryHeap`.
+- Added `RemainingSize` and `MaxSize` implementations for `ArrayVec` and `Array`.
+- Added `Debug` implementations for `CollectionErrorData`, `ResultCollectionErrorData`, and `UnzipErrorData`.
 
 ### Changed
 

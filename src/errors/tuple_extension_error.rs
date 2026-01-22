@@ -5,7 +5,8 @@ use core::ops::Deref;
 
 use alloc::boxed::Box;
 
-use display_as_debug::option::OptionDebugExt;
+use display_as_debug::fmt::DebugStructExt;
+use display_as_debug::types::Short;
 use tap::Pipe;
 
 #[cfg(doc)]
@@ -102,9 +103,10 @@ impl<CollA: TryExtendOne, CollB: TryExtendOne, I> Deref for TupleExtensionError<
     }
 }
 
+#[allow(clippy::missing_fields_in_debug, reason = "All data is covered")]
 impl<Err: core::fmt::Debug, Unevaluated> core::fmt::Debug for TupleExtensionErrorSide<Err, Unevaluated> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Side").field("error", &self.error).field("unevaluated", &self.unevaluated.debug_opaque()).finish()
+        f.debug_struct("Side").field("error", &self.error).field_type::<Unevaluated, Short>("unevaluated").finish()
     }
 }
 
@@ -114,10 +116,7 @@ where
     CollB::Error: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("TupleExtensionError")
-            .field("side", &self.data.side)
-            .field("remaining", &core::any::type_name::<I>())
-            .finish()
+        f.debug_struct("TupleExtensionError").field("side", &self.data.side).field_type::<I, Short>("remaining").finish()
     }
 }
 
