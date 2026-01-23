@@ -52,6 +52,6 @@ impl<T> Extend<T> for SliceGuard<'_, T> {
 impl<T> Drop for SliceGuard<'_, T> {
     fn drop(&mut self) {
         // SAFETY: elements up to `initialized` are initialized
-        self.slice[..self.initialized].iter_mut().for_each(|elem| unsafe { elem.assume_init_drop() });
+        unsafe { self.slice[..self.initialized].assume_init_drop() };
     }
 }

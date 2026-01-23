@@ -4,7 +4,8 @@ use fluent_result::bool::dbg::Expect;
 use indexmap::IndexSet;
 
 use crate::errors::{CollectionError, Collision};
-use crate::{TryExtend, TryExtendSafe, TryFromIterator};
+use crate::impls::try_extend_basic;
+use crate::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 impl<T: Eq + Hash, I> TryFromIterator<I> for IndexSet<T>
 where
@@ -20,16 +21,12 @@ where
         Self: Sized,
     {
         let mut iter = into_iter.into_iter();
-        let size_guess = iter.size_hint().0;
+        let mut set = Self::with_capacity(iter.size_hint().0);
 
-        iter.try_fold(Self::with_capacity(size_guess), |mut set, value| match set.contains(&value) {
-            true => Err((set, value)),
-            false => {
-                set.insert(value).expect_true("should not be occupied");
-                Ok(set)
-            }
-        })
-        .map_err(|(set, value)| CollectionError::collision(iter, set, value))
+        match try_extend_basic(&mut set, &mut iter) {
+            Ok(()) => Ok(set),
+            Err(err) => Err(CollectionError::new(iter, set, err)),
+        }
     }
 }
 
@@ -46,14 +43,7 @@ where
         let mut iter = iter.into_iter();
         self.reserve(iter.size_hint().0);
 
-        iter.try_for_each(|value| match self.contains(&value) {
-            true => Err(value),
-            false => {
-                self.insert(value).expect_true("Should not be occupied");
-                Ok(())
-            }
-        })
-        .map_err(|value| CollectionError::collision(iter, IndexSet::new(), value))
+        try_extend_basic(self, &mut iter).map_err(|err| CollectionError::new(iter, IndexSet::new(), err))
     }
 }
 
@@ -69,21 +59,18 @@ where
         let size_guess = iter.size_hint().0;
 
         iter.try_fold(IndexSet::with_capacity(size_guess), |mut set, value| match self.contains(&value) {
-            true => Err((set, value)),
-            false => match set.contains(&value) {
-                true => Err((set, value)),
-                false => {
-                    set.insert(value).expect_true("should not be occupied");
-                    Ok(set)
-                }
+            true => Err((set, Collision::new(value))),
+            false => match set.try_extend_one(value) {
+                Ok(()) => Ok(set),
+                Err(err) => Err((set, err)),
             },
         })
         .map(|set| self.extend(set))
-        .map_err(|(set, value)| CollectionError::collision(iter, set, value))
+        .map_err(|(set, err)| CollectionError::new(iter, set, err))
     }
 }
 
-impl<T: Eq + Hash, S: BuildHasher> crate::TryExtendOne for IndexSet<T, S> {
+impl<T: Eq + Hash, S: BuildHasher> TryExtendOne for IndexSet<T, S> {
     type Item = T;
     type Error = Collision<T>;
 
@@ -91,7 +78,7 @@ impl<T: Eq + Hash, S: BuildHasher> crate::TryExtendOne for IndexSet<T, S> {
         match self.contains(&item) {
             true => Err(Collision::new(item)),
             false => {
-                self.insert(item);
+                self.insert(item).expect_true("should not be occupied");
                 Ok(())
             }
         }

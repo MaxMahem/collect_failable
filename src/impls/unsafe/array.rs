@@ -66,7 +66,7 @@ where
 /// helper to avoid monomorphization for every different array size.
 ///
 /// Assumes that all elements in the slice are unitialized
-fn try_from_iterator_erased<T>(iter: &mut dyn Iterator<Item = T>, slice: &mut [MaybeUninit<T>]) -> Result<(), (Vec<T>, CapacityError<T>)> {
+fn try_from_iterator_erased<T>(iter: &mut impl Iterator<Item = T>, slice: &mut [MaybeUninit<T>]) -> Result<(), (Vec<T>, CapacityError<T>)> {
     match (slice.len().pipe(SizeHint::exact), iter.size_hint().try_conv::<SizeHint>().expect("invalid size hint")) {
         (capacity, hint) if hint.disjoint(capacity) => Err((Vec::new(), CapacityError::bounds(capacity, hint))),
         (capacity, _) => {

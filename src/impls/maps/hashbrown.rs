@@ -4,7 +4,8 @@ use hashbrown::hash_map::RawEntryMut;
 use hashbrown::HashMap;
 
 use crate::errors::{CollectionError, Collision};
-use crate::{TryExtend, TryExtendSafe, TryFromIterator};
+use crate::impls::try_extend_basic;
+use crate::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 impl<K: Eq + Hash, V, I> TryFromIterator<I> for HashMap<K, V>
 where
@@ -18,18 +19,12 @@ where
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut iter = into_iter.into_iter();
         let size_guess = iter.size_hint().0;
+        let mut map = Self::with_capacity(size_guess);
 
-        iter.try_fold(Self::with_capacity(size_guess), |mut map, (key, value)| {
-            let hash = map.hasher().hash_one(&key);
-            match map.raw_entry_mut().from_hash(hash, |k| k == &key) {
-                RawEntryMut::Occupied(_) => Err((map, (key, value))),
-                RawEntryMut::Vacant(entry) => {
-                    entry.insert_hashed_nocheck(hash, key, value);
-                    Ok(map)
-                }
-            }
-        })
-        .map_err(|(map, kvp)| CollectionError::collision(iter, map, kvp))
+        match try_extend_basic(&mut map, &mut iter) {
+            Ok(()) => Ok(map),
+            Err(err) => Err(CollectionError::new(iter, map, err)),
+        }
     }
 }
 
@@ -46,11 +41,7 @@ where
         let mut iter = iter.into_iter();
         self.reserve(iter.size_hint().0);
 
-        iter.try_for_each(|(key, value)| match self.contains_key(&key) {
-            true => Err((key, value)),
-            false => Ok(_ = self.insert(key, value)),
-        })
-        .map_err(|kvp| CollectionError::collision(iter, Self::with_hasher(self.hasher().clone()), kvp))
+        try_extend_basic(self, &mut iter).map_err(|err| CollectionError::new(iter, Self::with_hasher(self.hasher().clone()), err))
     }
 }
 
@@ -89,7 +80,7 @@ where
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne for HashMap<K, V, S> {
+impl<K: Eq + Hash, V, S: BuildHasher> TryExtendOne for HashMap<K, V, S> {
     type Item = (K, V);
     type Error = Collision<(K, V)>;
 

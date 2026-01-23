@@ -4,7 +4,8 @@ use fluent_result::expect::dbg::ExpectNone;
 use indexmap::IndexMap;
 
 use crate::errors::{CollectionError, Collision};
-use crate::{TryExtend, TryExtendSafe, TryFromIterator};
+use crate::impls::try_extend_basic;
+use crate::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 impl<K: Eq + Hash, V, I> TryFromIterator<I> for IndexMap<K, V>
 where
@@ -20,16 +21,12 @@ where
         Self: Sized,
     {
         let mut iter = into_iter.into_iter();
-        let size_guess = iter.size_hint().0;
+        let mut map = Self::with_capacity(iter.size_hint().0);
 
-        iter.try_fold(Self::with_capacity(size_guess), |mut map, (k, v)| match map.contains_key(&k) {
-            true => Err((map, (k, v))),
-            false => {
-                map.insert(k, v).expect_none("should not be occupied");
-                Ok(map)
-            }
-        })
-        .map_err(|(map, kvp)| CollectionError::collision(iter, map, kvp))
+        match try_extend_basic(&mut map, &mut iter) {
+            Ok(()) => Ok(map),
+            Err(err) => Err(CollectionError::new(iter, map, err)),
+        }
     }
 }
 
@@ -46,11 +43,7 @@ where
         let mut iter = iter.into_iter();
         self.reserve(iter.size_hint().0);
 
-        iter.try_for_each(|(key, value)| match self.contains_key(&key) {
-            true => Err((key, value)),
-            false => Ok(_ = self.insert(key, value)),
-        })
-        .map_err(|kvp| CollectionError::collision(iter, IndexMap::new(), kvp))
+        try_extend_basic(self, &mut iter).map_err(|err| CollectionError::new(iter, IndexMap::new(), err))
     }
 }
 
@@ -66,21 +59,18 @@ where
         let size_guess = iter.size_hint().0;
 
         iter.try_fold(IndexMap::with_capacity(size_guess), |mut map, (key, value)| match self.contains_key(&key) {
-            true => Err((map, (key, value))),
-            false => match map.contains_key(&key) {
-                true => Err((map, (key, value))),
-                false => {
-                    map.insert(key, value).expect_none("should not be occupied");
-                    Ok(map)
-                }
+            true => Err((map, Collision::new((key, value)))),
+            false => match map.try_extend_one((key, value)) {
+                Ok(()) => Ok(map),
+                Err(err) => Err((map, err)),
             },
         })
         .map(|map| self.extend(map))
-        .map_err(|(map, kvp)| CollectionError::collision(iter, map, kvp))
+        .map_err(|(map, err)| CollectionError::new(iter, map, err))
     }
 }
 
-impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne for IndexMap<K, V, S> {
+impl<K: Eq + Hash, V, S: BuildHasher> TryExtendOne for IndexMap<K, V, S> {
     type Item = (K, V);
     type Error = Collision<(K, V)>;
 
@@ -89,7 +79,7 @@ impl<K: Eq + Hash, V, S: BuildHasher> crate::TryExtendOne for IndexMap<K, V, S> 
         match self.contains_key(&key) {
             true => Err(Collision::new((key, value))),
             false => {
-                self.insert(key, value);
+                self.insert(key, value).expect_none("should not be occupied");
                 Ok(())
             }
         }

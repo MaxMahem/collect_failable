@@ -3,14 +3,8 @@ use alloc::collections::BTreeMap;
 use fluent_result::expect::dbg::ExpectNone;
 
 use crate::errors::{CollectionError, Collision};
+use crate::impls::try_extend_basic;
 use crate::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
-
-fn try_extend_basic<K: Ord, V, I>(map: &mut BTreeMap<K, V>, iter: &mut I) -> Result<(), Collision<(K, V)>>
-where
-    I: Iterator<Item = (K, V)>,
-{
-    iter.try_for_each(|kvp| map.try_extend_one(kvp))
-}
 
 impl<K: Ord, V, I> TryFromIterator<I> for BTreeMap<K, V>
 where
@@ -67,7 +61,7 @@ where
     }
 }
 
-impl<K: Ord, V> crate::TryExtendOne for BTreeMap<K, V> {
+impl<K: Ord, V> TryExtendOne for BTreeMap<K, V> {
     type Item = (K, V);
     type Error = Collision<(K, V)>;
 

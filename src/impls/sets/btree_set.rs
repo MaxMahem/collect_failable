@@ -3,7 +3,8 @@ use alloc::collections::BTreeSet;
 use fluent_result::bool::dbg::Expect;
 
 use crate::errors::{CollectionError, Collision};
-use crate::{TryExtend, TryExtendSafe, TryFromIterator};
+use crate::impls::try_extend_basic;
+use crate::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 
 impl<T: Ord, I> TryFromIterator<I> for BTreeSet<T>
 where
@@ -19,14 +20,11 @@ where
         Self: Sized,
     {
         let mut iter = into_iter.into_iter();
-        iter.try_fold(Self::new(), |mut set, value| match set.contains(&value) {
-            true => Err((set, value)),
-            false => {
-                set.insert(value).expect_true("should not be occupied");
-                Ok(set)
-            }
-        })
-        .map_err(|(set, value)| CollectionError::collision(iter, set, value))
+        let mut set = Self::new();
+        match try_extend_basic(&mut set, &mut iter) {
+            Ok(()) => Ok(set),
+            Err(err) => Err(CollectionError::new(iter, set, err)),
+        }
     }
 }
 
@@ -41,14 +39,7 @@ where
     /// See [trait level documentation](trait@TryExtend) for an example.
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
-        iter.try_for_each(|value| match self.contains(&value) {
-            true => Err(value),
-            false => {
-                self.insert(value).expect_true("Should not be occupied");
-                Ok(())
-            }
-        })
-        .map_err(|value| CollectionError::collision(iter, Self::new(), value))
+        try_extend_basic(self, &mut iter).map_err(|err| CollectionError::new(iter, Self::new(), err))
     }
 }
 
@@ -62,21 +53,18 @@ where
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
         iter.try_fold(Self::new(), |mut set, value| match self.contains(&value) {
-            true => Err((set, value)),
-            false => match set.contains(&value) {
-                true => Err((set, value)),
-                false => {
-                    set.insert(value).expect_true("should not be occupied");
-                    Ok(set)
-                }
+            true => Err((set, Collision::new(value))),
+            false => match set.try_extend_one(value) {
+                Ok(()) => Ok(set),
+                Err(err) => Err((set, err)),
             },
         })
         .map(|set| self.extend(set))
-        .map_err(|(set, value)| CollectionError::collision(iter, set, value))
+        .map_err(|(set, err)| CollectionError::new(iter, set, err))
     }
 }
 
-impl<T: Ord> crate::TryExtendOne for BTreeSet<T> {
+impl<T: Ord> TryExtendOne for BTreeSet<T> {
     type Item = T;
     type Error = Collision<T>;
 
@@ -84,7 +72,7 @@ impl<T: Ord> crate::TryExtendOne for BTreeSet<T> {
         match self.contains(&item) {
             true => Err(Collision::new(item)),
             false => {
-                self.insert(item);
+                self.insert(item).expect_true("should not be occupied");
                 Ok(())
             }
         }

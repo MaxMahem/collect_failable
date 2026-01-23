@@ -125,7 +125,7 @@ where
     ///
     /// # Panics
     ///
-    /// This method panics if the iterator's [`size_hint`](Iterator::size_hint) is invalid.
+    /// Panics if the iterator's [`size_hint`](Iterator::size_hint) is invalid.
     ///
     /// # Examples
     ///
