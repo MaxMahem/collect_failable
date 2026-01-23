@@ -1,86 +1,25 @@
 use core::hash::{BuildHasher, Hash};
 use std::collections::HashSet;
 
-use fluent_result::bool::dbg::Expect;
+crate::impls::macros::impl_try_from_iter_via_try_extend_one!(
+    type: HashSet<T> where [T: Eq + Hash] of T;
+    ctor: |iter| Self::with_capacity(iter.size_hint().0)
+);
 
-use crate::errors::{CollectionError, Collision};
-use crate::impls::try_extend_basic;
-use crate::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
+crate::impls::macros::impl_try_extend_via_try_extend_one!(
+    type: HashSet<T, S> where [T: Eq + Hash, S: BuildHasher + Clone] of T;
+    reserve: |iter, set| set.reserve(iter.size_hint().0);
+    build_empty_collection: |set: &mut HashSet<T, S>| HashSet::with_hasher(set.hasher().clone())
+);
 
-#[allow(clippy::implicit_hasher)]
-impl<T: Eq + Hash, I> TryFromIterator<I> for HashSet<T>
-where
-    I: IntoIterator<Item = T>,
-{
-    type Error = CollectionError<I::IntoIter, Self, Collision<T>>;
+crate::impls::macros::impl_try_extend_safe_for_colliding_type!(
+    type: HashSet<T, S> where [T: Eq + Hash, S: BuildHasher + Clone] of T;
+    build_staging: |set: &mut HashSet<T, S>, iter| HashSet::with_capacity_and_hasher(iter.size_hint().0, set.hasher().clone());
+    contains: |set, item| set.contains(item)
+);
 
-    /// Converts `iter` into a [`HashSet`], failing if a value would collide.
-    ///
-    /// See [trait level documentation](trait@TryFromIterator) for an example.
-    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
-    where
-        Self: Sized,
-    {
-        let mut iter = into_iter.into_iter();
-        let mut set = Self::with_capacity(iter.size_hint().0);
-
-        match try_extend_basic(&mut set, &mut iter) {
-            Ok(()) => Ok(set),
-            Err(err) => Err(CollectionError::new(iter, set, err)),
-        }
-    }
-}
-
-impl<T: Eq + Hash, S: BuildHasher, I> TryExtend<I> for HashSet<T, S>
-where
-    I: IntoIterator<Item = T>,
-{
-    type Error = CollectionError<I::IntoIter, HashSet<T>, Collision<T>>;
-
-    /// Extends the set with `iter`, failing if a value would collide, with a basic error guarantee.
-    ///
-    /// See [trait level documentation](trait@TryExtend) for an example.
-    fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
-        let mut iter = iter.into_iter();
-        self.reserve(iter.size_hint().0);
-        try_extend_basic(self, &mut iter).map_err(|err| CollectionError::new(iter, HashSet::new(), err))
-    }
-}
-
-impl<T: Eq + Hash, S: BuildHasher, I> TryExtendSafe<I> for HashSet<T, S>
-where
-    I: IntoIterator<Item = T>,
-{
-    /// Extends the set with `iter`, erroring if a value would collide, with a strong error guarantee.
-    ///
-    /// See [trait level documentation](trait@TryExtendSafe) for an example.
-    fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
-        let mut iter = iter.into_iter();
-        let size_guess = iter.size_hint().0;
-
-        iter.try_fold(HashSet::with_capacity(size_guess), |mut set, value| match self.contains(&value) {
-            true => Err((set, Collision::new(value))),
-            false => match set.try_extend_one(value) {
-                Ok(()) => Ok(set),
-                Err(err) => Err((set, err)),
-            },
-        })
-        .map(|set| self.extend(set))
-        .map_err(|(set, err)| CollectionError::new(iter, set, err))
-    }
-}
-
-impl<T: Eq + Hash, S: BuildHasher> TryExtendOne for HashSet<T, S> {
-    type Item = T;
-    type Error = Collision<T>;
-
-    fn try_extend_one(&mut self, item: T) -> Result<(), Self::Error> {
-        match self.contains(&item) {
-            true => Err(Collision::new(item)),
-            false => {
-                self.insert(item).expect_true("should not be occupied");
-                Ok(())
-            }
-        }
-    }
-}
+crate::impls::macros::impl_try_extend_one_for_colliding_type!(
+    type: HashSet<T, S> where [T: Eq + Hash, S: BuildHasher] of T;
+    contains: |set, item| set.contains(item);
+    insert: |set, item| { set.insert(item); }
+);
