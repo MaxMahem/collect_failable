@@ -159,10 +159,14 @@ where
 
 impl<T, const N: usize> crate::TryExtendOne for ArrayVec<T, N> {
     type Item = T;
-    type Error = arrayvec::CapacityError<T>;
+    type Error = CapacityError<T>;
 
     /// Forwards directly to [`ArrayVec::try_push`].
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CapacityError`] if the [`ArrayVec`] is full.
     fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error> {
-        self.try_push(item)
+        self.try_push(item).map_err(|e| CapacityError::overflowed(e.element()))
     }
 }

@@ -77,11 +77,10 @@ mod try_extend {
 
 mod try_extend_one {
     use super::super::collection_tests::try_extend_one;
-    use arrayvec::CapacityError;
     use collect_failable::TryExtendOne;
 
     use super::*;
 
     try_extend_one!(valid, TestArray::new(), 1, Ok(TestArray::from_iter(1..=1)));
-    try_extend_one!(collision, TestArray::from([1, 2]), 2, Err(CapacityError::new(2)));
+    try_extend_one!(collision, TestArray::from([1, 2]), 2, Err(CapacityError::overflowed(2)));
 }

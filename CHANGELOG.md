@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Breaking:** Renamed `Capacity` trait to `RemainingSize` and its `capacity_hint` method to `remaining_size`.
   - Migration: Update all references from `Capacity` to `RemainingSize` and from `capacity_hint()` to `remaining_size()`.
+- **Breaking:** Changed `ArrayVec::try_extend_one` to return `crate::errors::CapacityError` instead of `arrayvec::CapacityError`.
+  - Migration: Update error handling to expect `crate::errors::CapacityError`.
+- **Breaking:** Changed all hash and set implementations that can take a `S` (hasher) to require `S: BuildHasher + Default` instead of using the default hasher (`RandomState`). This breaks some type-inference.
+  - Migration: Specify the hasher type explicitly, e.g. `HashMap<K, V, RandomState>` or use `TryCollectEx`.
 
 ### Removed
 
