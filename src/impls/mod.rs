@@ -1,5 +1,5 @@
 #[cfg(feature = "unsafe")]
-mod r#unsafe;
+pub mod r#unsafe;
 
 #[cfg(feature = "arrayvec")]
 mod arrayvec;

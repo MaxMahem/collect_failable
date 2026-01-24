@@ -27,3 +27,12 @@ pub use result_collection_error::*;
 pub use tuple_extension_error::*;
 #[cfg(feature = "tuple")]
 pub use unzip_error::*;
+
+/// Types related to [`PartialArray`].
+#[cfg(feature = "unsafe")]
+pub mod partial_array {
+    pub use crate::impls::r#unsafe::{Drain, PartialArray};
+}
+
+#[cfg(feature = "unsafe")]
+pub use partial_array::PartialArray;

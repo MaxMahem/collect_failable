@@ -1,56 +1,115 @@
-use crate::collection_tests::panics;
-
-use super::collection_tests::try_collect;
+use crate::collection_tests::{panics, recover_iter_data, try_collect};
 
 use collect_failable::errors::CapacityError;
-use collect_failable::TryFromIterator;
+use collect_failable::{FixedCap, RemainingCap, TryCollectEx, TryFromIterator};
 use size_hinter::{InvalidIterator, SizeHint, SizeHinter};
+use tap::Pipe;
 
-// Note: CapacityError is now generic, so these need to be CapacityError<u32> or CapacityError<i32>
-const TOO_SHORT_HINT_ERR: CapacityError<u32> = CapacityError::bounds(SizeHint::exact(2), SizeHint::exact(1));
-const TOO_LONG_HINT_ERR: CapacityError<u32> = CapacityError::bounds(SizeHint::exact(2), SizeHint::exact(3));
-const TOO_SHORT_HIDDEN_ERR: CapacityError<u32> = CapacityError::underflow(SizeHint::exact(2), 1);
-// For overflow, we need to provide the rejected item, but in const context we can't.
-// So we'll test  it differently
+const BOUNDS_OVER_ERR: CapacityError<u32> = CapacityError::bounds(SizeHint::exact(5), SizeHint::exact(6));
+const BOUNDS_UNDER_ERR: CapacityError<u32> = CapacityError::bounds(SizeHint::exact(5), SizeHint::exact(4));
+const OVERFLOW_ERR: CapacityError<u32> = CapacityError::overflowed(6);
+const UNDERFLOW_ERR: CapacityError<u32> = CapacityError::underflow(SizeHint::exact(5), 4);
 
-try_collect!(valid_array, [u32; 2], 1..=2, Ok([1, 2]));
-try_collect!(too_long_data, [u32; 2], 1..=3, Err(TOO_LONG_HINT_ERR));
-try_collect!(too_short_data, [u32; 2], 1..=1, Err(TOO_SHORT_HINT_ERR));
-// Overflow requires a rejected item which can't be const, so just test manually
+type Array = [u32; 5];
+
+try_collect!(valid_array, Array, 1..=5, Ok([1, 2, 3, 4, 5]));
+try_collect!(too_long_data, Array, 1..=6, Err(BOUNDS_OVER_ERR));
+try_collect!(too_short_data, Array, 1..=4, Err(BOUNDS_UNDER_ERR));
+try_collect!(too_long_data_hidden, Array, (1..=6).hide_size(), Err(OVERFLOW_ERR));
+try_collect!(too_short_data_hidden, Array, (1..=4).hide_size(), Err(UNDERFLOW_ERR));
+
+panics!(panic_on_invalid_iterator, Array::try_from_iter(InvalidIterator::DEFAULT), "invalid size hint");
+
 #[test]
-fn too_long_data_hidden() {
-    let result = <[u32; 2]>::try_from_iter((1..=3).hide_size());
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    // Verify it's an overflow error by checking the error message
-    assert!(err.error.to_string().contains("exceeds capacity"));
+fn array_capacity() {
+    let array: [i32; 2] = [0; 2];
+    assert_eq!(array.remaining_cap(), SizeHint::exact(0));
+    assert_eq!(<[i32; 2] as FixedCap>::CAP, SizeHint::exact(2));
 }
 
-try_collect!(too_short_data_hidden, [u32; 2], (1..=1).hide_size(), Err(TOO_SHORT_HIDDEN_ERR));
+mod recover_iter {
+    use super::*;
 
-struct BadIter(usize);
+    recover_iter_data!(bounds, Array, 1..4, [0; 0][..], vec![1, 2, 3]);
+    recover_iter_data!(underflow, Array, (1..4).hide_size(), [1, 2, 3][..], vec![1, 2, 3]);
+    recover_iter_data!(overflow, Array, (1..=6).hide_size(), [1, 2, 3, 4, 5][..], vec![6, 1, 2, 3, 4, 5]);
+}
 
-// A non-fused iterator that can return Some after returning None
-impl Iterator for BadIter {
-    type Item = i32;
+mod partial_array_drop {
+    use super::*;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0 += 1;
-        match self.0 {
-            1 => Some(1),
-            2 => None,
-            3 => Some(2),
-            _ => None,
-        }
+    macro_rules! partial_array_drop {
+        ($name:ident, $dropcount:expr) => {
+            #[test]
+            fn $name() {
+                let (counters, viewers) = $dropcount;
+
+                counters
+                    .into_iter()
+                    .hide_size()
+                    .try_collect_ex::<[_; 5]>()
+                    .expect_err("should error")
+                    .into_data()
+                    .collected
+                    .pipe(drop);
+
+                viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Item should be dropped once"));
+            }
+        };
     }
+
+    partial_array_drop!(partial_array_drops_on_underflow, dropcount::new_vec(4));
+    partial_array_drop!(partial_array_drops_on_overflow, dropcount::new_vec(6));
 }
 
-try_collect!(non_fused_ok, [i32; 1], BadIter(0), Ok([1]));
-// Similar issue with overflow - test manually
 #[test]
-fn non_fused_err() {
-    let result = <[i32; 2]>::try_from_iter(BadIter(0));
-    assert!(result.is_err());
+fn partial_array_drain_drop() {
+    let (counters, viewers) = dropcount::new_vec(3);
+
+    counters
+        .into_iter()
+        .hide_size()
+        .try_collect_ex::<[_; 5]>()
+        .expect_err("should overflow")
+        .into_data()
+        .collected
+        .into_iter()
+        .pipe(drop);
+
+    viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Item should be dropped once"));
 }
 
-panics!(panic_on_invalid_iterator, <[(); 2]>::try_from_iter(InvalidIterator), "invalid size hint");
+#[test]
+fn partial_array_drain_drop_partial() {
+    let (counters, viewers) = dropcount::new_vec(3);
+
+    let mut drain = counters
+        .into_iter()
+        .hide_size()
+        .try_collect_ex::<[_; 5]>()
+        .expect_err("should overflow")
+        .into_data()
+        .collected
+        .into_iter();
+
+    assert!(drain.next().is_some());
+    assert!(drain.next().is_some());
+
+    drop(drain);
+
+    viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Item should be dropped once"));
+}
+
+#[test]
+fn partial_array_drain_next_back() {
+    let back = (1..=3)
+        .hide_size()
+        .try_collect_ex::<Array>()
+        .expect_err("should underflow")
+        .into_data()
+        .collected
+        .into_iter()
+        .next_back();
+
+    assert_eq!(back, Some(3));
+}

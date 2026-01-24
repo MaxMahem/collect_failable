@@ -32,15 +32,17 @@ sealed = "0.6.0"
 subdef = "0.1.2"
 fluent_result = "0.10.1"
 no_drop = "0.3.0"
-display_as_debug = "0.5.0"
+display_as_debug = "0.5.1"
 
 # Public Dependencies
 either = "1.15.0"
-size_hinter = "0.3.3"
+size_hinter = "0.4.0"
 
 [dev-dependencies]
 collect_failable = { path = ".", features = ["hashbrown", "indexmap", "arrayvec"] }
 criterion = { version = "0.8", features = ["html_reports"] }
+dropcount = "0.1.2"
+assert_unordered = { version = "0.3.5", default-features = false }
 
 [[bench]]
 name = "try_extend_comparison"

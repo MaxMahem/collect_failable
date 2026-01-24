@@ -1,9 +1,7 @@
-use alloc::vec::Vec;
-use core::mem::MaybeUninit;
-use tap::{Pipe, TryConv};
-
 use crate::errors::{CapacityError, CollectionError};
 use crate::{FixedCap, RemainingCap, SizeHint, TryFromIterator};
+
+use super::PartialArray;
 
 impl<const N: usize, T> RemainingCap for [T; N] {
     /// Always returns [`SizeHint::ZERO`], since arrays are fixed-size.
@@ -21,7 +19,7 @@ impl<const N: usize, T, I> TryFromIterator<I> for [T; N]
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionError<I::IntoIter, Vec<T>, CapacityError<T>>;
+    type Error = CollectionError<I::IntoIter, PartialArray<T, N>, CapacityError<T>>;
 
     /// Create an array from an [`IntoIterator`], failing if the [`IntoIterator::IntoIter`]
     /// produces fewer or more items than `N`.
@@ -52,29 +50,12 @@ where
     /// assert_eq!(too_many_err.into_iter().collect::<Vec<_>>(), vec![1, 2, 3, 4], "err should contain all items");
     /// ```
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
-        let mut array = [const { MaybeUninit::uninit() }; N];
         let mut into_iter = into_iter.into_iter();
-        try_from_iterator_erased(&mut into_iter, &mut array)
-            // SAFETY: all elements are initialized on success
-            .map(|()| unsafe { core::mem::transmute_copy(&array) }) // TODO: Use array_assume_init once stable
-            .map_err(|(items, error)| CollectionError::new(into_iter, items, error))
-    }
-}
 
-/// Internal implementation of [`TryFromIterator`] for arrays of any size. Implemented via this
-/// helper to avoid monomorphization for every different array size.
-///
-/// Assumes that all elements in the slice are unitialized
-fn try_from_iterator_erased<T>(iter: &mut impl Iterator<Item = T>, slice: &mut [MaybeUninit<T>]) -> Result<(), (Vec<T>, CapacityError<T>)> {
-    match (slice.len().pipe(SizeHint::exact), iter.size_hint().try_conv::<SizeHint>().expect("invalid size hint")) {
-        (capacity, hint) if hint.disjoint(capacity) => Err((Vec::new(), CapacityError::bounds(capacity, hint))),
-        (capacity, _) => {
-            let mut guard = super::SliceGuard::new(slice);
-            guard.extend(&mut *iter);
-            match iter.next() {
-                Some(reject) => Err((guard.drain(), CapacityError::overflow(capacity, reject))),
-                None => guard.disarm(),
-            }
+        let mut guard = PartialArray::new();
+        match guard.try_extend_basic(&mut into_iter) {
+            Ok(()) => guard.try_into_array().map_err(|(g, e)| CollectionError::new(into_iter, g, e)),
+            Err(error) => Err(CollectionError::new(into_iter, guard, error)),
         }
     }
 }

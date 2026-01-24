@@ -16,8 +16,8 @@ mod traits;
 
 pub use traits::*;
 
-#[cfg(feature = "tuple")]
 /// Re-export of the `Either` type from the `either` crate.
+#[cfg(feature = "tuple")]
 pub mod either {
     pub use either::Either;
 }
