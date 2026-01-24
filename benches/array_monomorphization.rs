@@ -1,6 +1,5 @@
 //! Benchmark comparing type-erased vs naive generic array TryFromIterator implementations.
 
-use core::mem::MaybeUninit;
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion, Throughput};
 use std::hint::black_box;
 

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `RemainingSize` trait (with `remaining_size` method) to expose dynamic remaining capacity from collection types.
 - Added `RemainingSize` and `MaxSize` implementations for `ArrayVec` and `Array`.
 - Added `Debug` implementations for `CollectionErrorData`, `ResultCollectionErrorData`, and `UnzipErrorData`.
+- `TryFromIterator` implementations for hash-based collections (`HashMap`, `HashSet`, `IndexMap`, `IndexSet`, and `hashbrown` variants) now support custom hashers via the `S: BuildHasher + Default` bound.
 
 ### Changed
 

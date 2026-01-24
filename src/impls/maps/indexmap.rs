@@ -1,26 +1,27 @@
 use core::hash::{BuildHasher, Hash};
 
+use fluent_result::expect::dbg::ExpectNone;
 use indexmap::IndexMap;
 
 crate::impls::macros::impl_try_from_iter_via_try_extend_one! (
-    type: IndexMap<K, V> where [K: Eq + Hash, V] of (K, V);
-    ctor: |iter| Self::with_capacity(iter.size_hint().0)
+    type: IndexMap<K, V, S> where [K: Eq + Hash, V, S: BuildHasher + Default] of (K, V);
+    ctor: |iter| IndexMap::with_capacity_and_hasher(iter.size_hint().0, S::default())
 );
 
 crate::impls::macros::impl_try_extend_via_try_extend_one! (
     type: IndexMap<K, V, S> where [K: Eq + Hash, V, S: BuildHasher + Clone] of (K, V);
-    reserve: |iter, map| map.reserve(iter.size_hint().0);
-    build_empty_collection: |map: &mut IndexMap<K, V, S>| { <IndexMap<K, V, S>>::with_hasher(map.hasher().clone()) }
+    reserve: |map, iter| map.reserve(iter.size_hint().0);
+    build_empty: |map| { <IndexMap<K, V, S>>::with_hasher(map.hasher().clone()) }
 );
 
 crate::impls::macros::impl_try_extend_safe_for_colliding_type! (
     type: IndexMap<K, V, S> where [K: Eq + Hash, V, S: BuildHasher + Clone] of (K, V);
-    build_staging: |map: &mut IndexMap<K, V, S>, iter| IndexMap::with_capacity_and_hasher(iter.size_hint().0, map.hasher().clone());
+    build_staging: |iter, map| IndexMap::with_capacity_and_hasher(iter.size_hint().0, map.hasher().clone());
     contains: |map, (key, _)| map.contains_key(key)
 );
 
 crate::impls::macros::impl_try_extend_one_for_colliding_type!(
     type: IndexMap<K, V, S> where [K: Eq + Hash, V, S: BuildHasher] of (K, V);
     contains: |map, (key, _)| map.contains_key(key);
-    insert: |map, (key, value)| { map.insert(key, value); }
+    insert: |map, (key, value)| map.insert(key, value).expect_none("should not be in map")
 );

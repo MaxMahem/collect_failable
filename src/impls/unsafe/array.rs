@@ -51,7 +51,6 @@ where
     /// let too_many_err = <[u32; 3]>::try_from_iter(1..=4).expect_err("should fail, too many items");
     /// assert_eq!(too_many_err.into_iter().collect::<Vec<_>>(), vec![1, 2, 3, 4], "err should contain all items");
     /// ```
-    #[inline]
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut array = [const { MaybeUninit::uninit() }; N];
         let mut into_iter = into_iter.into_iter();

@@ -1,25 +1,27 @@
 use core::hash::{BuildHasher, Hash};
 use std::collections::HashSet;
 
+use fluent_result::bool::dbg::Expect;
+
 crate::impls::macros::impl_try_from_iter_via_try_extend_one!(
-    type: HashSet<T> where [T: Eq + Hash] of T;
-    ctor: |iter| Self::with_capacity(iter.size_hint().0)
+    type: HashSet<T, S> where [T: Eq + Hash, S: BuildHasher + Default] of T;
+    ctor: |iter| HashSet::with_capacity_and_hasher(iter.size_hint().0, S::default())
 );
 
 crate::impls::macros::impl_try_extend_via_try_extend_one!(
     type: HashSet<T, S> where [T: Eq + Hash, S: BuildHasher + Clone] of T;
-    reserve: |iter, set| set.reserve(iter.size_hint().0);
-    build_empty_collection: |set: &mut HashSet<T, S>| HashSet::with_hasher(set.hasher().clone())
+    reserve: |set, iter| set.reserve(iter.size_hint().0);
+    build_empty: |set| HashSet::with_hasher(set.hasher().clone())
 );
 
 crate::impls::macros::impl_try_extend_safe_for_colliding_type!(
     type: HashSet<T, S> where [T: Eq + Hash, S: BuildHasher + Clone] of T;
-    build_staging: |set: &mut HashSet<T, S>, iter| HashSet::with_capacity_and_hasher(iter.size_hint().0, set.hasher().clone());
-    contains: |set, item| set.contains(item)
+    build_staging: |iter, set| HashSet::with_capacity_and_hasher(iter.size_hint().0, set.hasher().clone());
+    contains: HashSet::contains
 );
 
 crate::impls::macros::impl_try_extend_one_for_colliding_type!(
     type: HashSet<T, S> where [T: Eq + Hash, S: BuildHasher] of T;
-    contains: |set, item| set.contains(item);
-    insert: |set, item| { set.insert(item); }
+    contains: HashSet::contains;
+    insert: |set, item| set.insert(item).expect_true("insert should succeed after contains check")
 );

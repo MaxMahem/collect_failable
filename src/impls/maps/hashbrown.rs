@@ -8,14 +8,14 @@ use crate::errors::{CollectionError, Collision};
 use crate::{TryExtendOne, TryExtendSafe};
 
 crate::impls::macros::impl_try_from_iter_via_try_extend_one! (
-    type: HashMap<K, V> where [K: Eq + Hash, V] of (K, V);
-    ctor: |iter| Self::with_capacity(iter.size_hint().0)
+    type: HashMap<K, V, S> where [K: Eq + Hash, V, S: BuildHasher + Default] of (K, V);
+    ctor: |iter| HashMap::with_capacity_and_hasher(iter.size_hint().0, S::default())
 );
 
 crate::impls::macros::impl_try_extend_via_try_extend_one! (
     type: HashMap<K, V, S> where [K: Eq + Hash, V, S: BuildHasher + Clone] of (K, V);
-    reserve: |iter, map| map.reserve(iter.size_hint().0);
-    build_empty_collection: |map: &mut HashMap<K, V, S>| { <HashMap<K, V, S>>::with_hasher(map.hasher().clone()) }
+    reserve: |map, iter| map.reserve(iter.size_hint().0);
+    build_empty: |map| { <HashMap<K, V, S>>::with_hasher(map.hasher().clone()) }
 );
 
 impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtendSafe<I> for HashMap<K, V, S>
