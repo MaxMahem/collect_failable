@@ -84,7 +84,10 @@ impl<T, const N: usize> IntoIterator for PartialArray<T, N> {
 impl<T, const N: usize> Drop for PartialArray<T, N> {
     fn drop(&mut self) {
         // SAFETY: elements up to `initialized` are initialized
-        unsafe { self.array[..self.back].assume_init_drop() };
+        unsafe {
+            let slice = &mut self.array[..self.back] as *mut [MaybeUninit<T>] as *mut [T];
+            core::ptr::drop_in_place(slice);
+        }
     }
 }
 
@@ -128,7 +131,12 @@ impl<T, const N: usize> Drop for Drain<T, N> {
     fn drop(&mut self) {
         let back = self.guard.back;
         // SAFETY: elements between `next` and `back` are initialized
-        (self.next < back).then(|| unsafe { self.guard.array[self.next..back].assume_init_drop() });
+        if self.next < back {
+            unsafe {
+                let slice = &mut self.guard.array[self.next..back] as *mut [MaybeUninit<T>] as *mut [T];
+                core::ptr::drop_in_place(slice);
+            }
+        }
     }
 }
 
