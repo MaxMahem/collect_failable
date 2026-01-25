@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-01-25
+
+### Changed
+
+- **Breaking:** Removed `DoubleEndedIterator` implementation for `PartialArray`.
+  - Migration: Reverse the iterator before collecting if you need to fill from the back, or use `next_back()` explicitly if relying on double-endedness during collection (though `PartialArray` itself is no longer double-ended).
+- **Breaking:** Updated minimum supported Rust version (MSRV) to 1.83.0.
+
 ## [0.16.0] - 2026-01-25
 
 ### Added

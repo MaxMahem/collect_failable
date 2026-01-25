@@ -1,6 +1,6 @@
 [package]
 name = "collect_failable"
-version = "0.16.0"
+version = "0.17.0"
 edition = "2021"
 rust-version = "1.93"
 description = "A trait for collecting values into a container which has an invariant to uphold and whose construction may fail"
@@ -14,7 +14,6 @@ categories = ["data-structures", "rust-patterns"]
 
 [package.metadata.docs.rs]
 all-features = true
-
 
 [features]
 default = ["alloc", "std", "unsafe", "tuple"]
@@ -52,8 +51,3 @@ assert_unordered = { version = "0.3.5", default-features = false }
 [[bench]]
 name = "try_extend_comparison"
 harness = false
-
-[[bench]]
-name = "array_monomorphization"
-harness = false
-
