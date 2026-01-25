@@ -112,15 +112,6 @@ impl<T, const N: usize> Iterator for Drain<T, N> {
     }
 }
 
-impl<T, const N: usize> DoubleEndedIterator for Drain<T, N> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        (self.next < self.guard.back).then(|| {
-            self.guard.back -= 1;
-            unsafe { self.guard.array[self.guard.back].assume_init_read() }
-        })
-    }
-}
-
 impl<T, const N: usize> ExactSizeIterator for Drain<T, N> {}
 impl<T, const N: usize> FusedIterator for Drain<T, N> {}
 
