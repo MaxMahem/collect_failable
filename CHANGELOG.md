@@ -25,8 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Migration: Update error handling to expect `crate::errors::CapacityError`.
 - **Breaking:** Changed all hash and set implementations that can take a `S` (hasher) to require `S: BuildHasher + Default` instead of using the default hasher (`RandomState`). This breaks some type-inference.
   - Migration: Specify the hasher type explicitly, e.g. `HashMap<K, V, RandomState>` or use `TryCollectEx`.
-- **Breaking:** Changed `TryFromIterator` for `[T; N]` to return `CollectionError<I::IntoIter, SliceGuard<T, N>, CapacityError<T>>` instead of `Vec<T>`.
-  - Migration: Update error handling to expect `SliceGuard` in the `collected` field. You can use `SliceGuard::into_iter().collect::<Vec<_>>()` to get a `Vec`.
+- **Breaking:** Changed `TryFromIterator` for `[T; N]` to return `CollectionError<I::IntoIter, PartialArray<T, N>, CapacityError<T>>` instead of `Vec<T>`.
+  - Migration: Update error handling to expect `PartialArray` in the `collected` field. You can use `PartialArray::into_iter().collect::<Vec<_>>()` to get a `Vec`.
 
 ### Removed
 
