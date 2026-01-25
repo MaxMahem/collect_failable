@@ -1,6 +1,6 @@
 [package]
 name = "collect_failable"
-version = "0.15.0"
+version = "0.16.0"
 edition = "2021"
 description = "A trait for collecting values into a container which has an invariant to uphold and whose construction may fail"
 repository = "https://github.com/MaxMahem/collect_failable"
@@ -10,6 +10,10 @@ keywords = ["iterator", "collect", "container"]
 authors = ["Austin Stanley <maxtmahem@gmail>"]
 license = "MIT OR Apache-2.0"
 categories = ["data-structures", "rust-patterns"]
+
+[package.metadata.docs.rs]
+all-features = true
+
 
 [features]
 default = ["alloc", "std", "unsafe", "tuple"]

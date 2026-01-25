@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-01-25
+
 ### Added
 
 - Added `MaxSize` trait to expose static maximum capacity from collection types.
