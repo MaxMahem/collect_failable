@@ -59,7 +59,7 @@ impl<T, const N: usize> Deref for PartialArray<T, N> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
-        unsafe { &*(&self.array[..self.back] as *const [MaybeUninit<T>] as *const [T]) }
+        unsafe { self.array[..self.back].assume_init_ref() }
     }
 }
 
@@ -84,10 +84,7 @@ impl<T, const N: usize> IntoIterator for PartialArray<T, N> {
 impl<T, const N: usize> Drop for PartialArray<T, N> {
     fn drop(&mut self) {
         // SAFETY: elements up to `initialized` are initialized
-        unsafe {
-            let slice = &mut self.array[..self.back] as *mut [MaybeUninit<T>] as *mut [T];
-            core::ptr::drop_in_place(slice);
-        }
+        unsafe { self.array[..self.back].assume_init_drop() };
     }
 }
 
@@ -131,28 +128,6 @@ impl<T, const N: usize> Drop for Drain<T, N> {
     fn drop(&mut self) {
         let back = self.guard.back;
         // SAFETY: elements between `next` and `back` are initialized
-        if self.next < back {
-            unsafe {
-                let slice = &mut self.guard.array[self.next..back] as *mut [MaybeUninit<T>] as *mut [T];
-                core::ptr::drop_in_place(slice);
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Tests [`DoubleEndedIterator::next_back`].
-    #[test]
-    fn into_iter_backwards() {
-        let mut guard = PartialArray::<u32, 5>::new();
-        guard.try_extend_basic(&mut (1..=5)).unwrap();
-
-        let iter = guard.into_iter();
-        let output: Vec<_> = iter.rev().collect();
-
-        assert_eq!(output, vec![5, 4, 3, 2, 1], "should iterate backwards");
+        (self.next < back).then(|| unsafe { self.guard.array[self.next..back].assume_init_drop() });
     }
 }

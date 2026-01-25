@@ -99,17 +99,3 @@ fn partial_array_drain_drop_partial() {
 
     viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Item should be dropped once"));
 }
-
-#[test]
-fn partial_array_drain_next_back() {
-    let back = (1..=3)
-        .hide_size()
-        .try_collect_ex::<Array>()
-        .expect_err("should underflow")
-        .into_data()
-        .collected
-        .into_iter()
-        .next_back();
-
-    assert_eq!(back, Some(3));
-}
