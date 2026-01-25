@@ -1,8 +1,8 @@
 use arrayvec::ArrayVec;
 
 use crate::collection_tests::{panics, recover_iter_data};
-use collect_failable::errors::CapacityError;
 use collect_failable::TryFromIterator;
+use collect_failable::errors::CapacityError;
 use size_hinter::{InvalidIterator, SizeHint, SizeHinter};
 
 type TestArrayVec = ArrayVec<i32, 2>;

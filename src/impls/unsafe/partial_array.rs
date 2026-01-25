@@ -4,8 +4,8 @@ use core::ops::Deref;
 use size_hinter::SizeHint;
 use tap::TryConv;
 
-use crate::errors::CapacityError;
 use crate::FixedCap;
+use crate::errors::CapacityError;
 
 /// A guard that ensures that all elements in a slice are initialized
 #[derive(Debug)]

@@ -1,7 +1,7 @@
 use core::hash::{BuildHasher, Hash};
 
-use hashbrown::hash_map::RawEntryMut;
 use hashbrown::HashMap;
+use hashbrown::hash_map::RawEntryMut;
 
 use crate::errors::{CollectionError, Collision};
 

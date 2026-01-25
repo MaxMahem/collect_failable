@@ -3,9 +3,9 @@ use core::cell::RefCell;
 
 use tap::Pipe;
 
-use crate::errors::ResultCollectionError;
 use crate::SizeHint;
 use crate::TryFromIterator;
+use crate::errors::ResultCollectionError;
 
 /// Iterator adaptor that extracts [`Ok`] values from a [`Result`] [`Iterator`],
 /// storing the first encountered [`Err`] and remaining iterator for later retrieval.

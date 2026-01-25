@@ -1,7 +1,7 @@
 use collect_failable::errors::ResultCollectionError;
 use std::collections::HashSet;
 
-use crate::error_tests::{test_ctor, test_format, test_source, TestError};
+use crate::error_tests::{TestError, test_ctor, test_format, test_source};
 
 test_ctor!(
     new,

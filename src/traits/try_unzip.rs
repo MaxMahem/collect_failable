@@ -1,8 +1,8 @@
 use fluent_result::into::IntoResult;
 use no_drop::dbg::IntoNoDrop;
 
-use crate::errors::UnzipError;
 use crate::TryExtendOne;
+use crate::errors::UnzipError;
 
 /// Extends [`Iterator`] with a failable unzip method.
 ///
