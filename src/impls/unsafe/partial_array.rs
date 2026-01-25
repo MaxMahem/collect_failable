@@ -59,7 +59,7 @@ impl<T, const N: usize> Deref for PartialArray<T, N> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
-        unsafe { self.array[..self.back].assume_init_ref() }
+        unsafe { &*(&self.array[..self.back] as *const [MaybeUninit<T>] as *const [T]) }
     }
 }
 
