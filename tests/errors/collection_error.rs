@@ -1,6 +1,6 @@
 use collect_failable::errors::CollectionError;
 
-use crate::error_tests::{test_source, TestError};
+use crate::error_tests::{TestError, test_source};
 
 mod format {
     use super::*;
@@ -23,8 +23,8 @@ mod format {
 
 mod ctors {
     use super::*;
-    use collect_failable::errors::{CapacityError, Collision};
     use collect_failable::SizeHint;
+    use collect_failable::errors::{CapacityError, Collision};
 
     use crate::error_tests::test_ctor;
 

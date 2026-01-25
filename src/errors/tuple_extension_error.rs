@@ -12,8 +12,8 @@ use tap::Pipe;
 #[cfg(doc)]
 use crate::TryExtend;
 
-use crate::either::Either;
 use crate::TryExtendOne;
+use crate::either::Either;
 
 /// An error that occurs when extending a tuple of collections fails.
 ///

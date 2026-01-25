@@ -8,8 +8,8 @@ use display_as_debug::fmt::DebugStructExt;
 use display_as_debug::types::Short;
 use tap::Pipe;
 
-use crate::either::Either;
 use crate::TryExtendOne;
+use crate::either::Either;
 
 #[cfg(doc)]
 use crate::TryUnzip;

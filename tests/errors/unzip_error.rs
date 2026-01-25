@@ -1,8 +1,8 @@
 use std::array::IntoIter;
 use std::collections::HashSet;
 
-use collect_failable::errors::{Collision, UnzipError};
 use collect_failable::TryUnzip;
+use collect_failable::errors::{Collision, UnzipError};
 
 use crate::error_tests::{test_format, test_source};
 

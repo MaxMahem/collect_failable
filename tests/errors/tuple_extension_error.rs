@@ -1,7 +1,7 @@
-use collect_failable::errors::TupleExtensionError;
 use collect_failable::TryExtendOne;
+use collect_failable::errors::TupleExtensionError;
 
-use super::error_tests::{test_format, test_source, TestError};
+use super::error_tests::{TestError, test_format, test_source};
 
 const SIDE_A_ERROR: TestError = TestError::new("A side failed");
 const SIDE_B_ERROR: TestError = TestError::new("B side failed");

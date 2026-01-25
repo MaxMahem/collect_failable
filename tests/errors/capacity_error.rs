@@ -1,5 +1,5 @@
-use collect_failable::errors::{CapacityError, CapacityErrorKind};
 use collect_failable::SizeHint;
+use collect_failable::errors::{CapacityError, CapacityErrorKind};
 
 use crate::error_tests::test_ctor;
 
