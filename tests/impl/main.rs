@@ -2,12 +2,12 @@ mod array;
 mod array_safety;
 mod arrayvec;
 mod collection_tests;
-mod maps;
+mod collision_tests;
+
 mod result;
 mod sets;
 mod try_unzip;
 mod tuples;
-mod vec;
 
 #[path = "../utils/mod.rs"]
 mod utils;

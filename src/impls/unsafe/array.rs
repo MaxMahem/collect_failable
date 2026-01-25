@@ -1,18 +1,25 @@
-use alloc::vec::Vec;
-use core::mem::MaybeUninit;
-use tap::TryConv;
-
-use fluent_result::into::IntoResult;
-
 use crate::errors::{CapacityError, CollectionError};
-use crate::{SizeHint, TryFromIterator};
+use crate::{FixedCap, RemainingCap, SizeHint, TryFromIterator};
+
+use super::PartialArray;
+
+impl<const N: usize, T> RemainingCap for [T; N] {
+    /// Always returns [`SizeHint::ZERO`], since arrays are fixed-size.
+    fn remaining_cap(&self) -> SizeHint {
+        SizeHint::ZERO
+    }
+}
+
+impl<const N: usize, T> FixedCap for [T; N] {
+    const CAP: SizeHint = SizeHint::exact(N);
+}
 
 /// Create an array of size `N` from an iterator, failing if the iterator produces fewer or more items than `N`.
 impl<const N: usize, T, I> TryFromIterator<I> for [T; N]
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionError<I::IntoIter, Vec<T>, CapacityError<T>>;
+    type Error = CollectionError<I::IntoIter, PartialArray<T, N>, CapacityError<T>>;
 
     /// Create an array from an [`IntoIterator`], failing if the [`IntoIterator::IntoIter`]
     /// produces fewer or more items than `N`.
@@ -42,32 +49,13 @@ where
     /// let too_many_err = <[u32; 3]>::try_from_iter(1..=4).expect_err("should fail, too many items");
     /// assert_eq!(too_many_err.into_iter().collect::<Vec<_>>(), vec![1, 2, 3, 4], "err should contain all items");
     /// ```
-    #[inline]
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
-        let mut array = [const { MaybeUninit::uninit() }; N];
-        try_from_iterator_erased(into_iter.into_iter(), &mut array)
-            // SAFETY: all elements are initialized on success
-            .map(|()| unsafe { core::mem::transmute_copy(&array) }) // TODO: Use array_assume_init once stable
-    }
-}
+        let mut into_iter = into_iter.into_iter();
 
-/// Internal implementation of [`TryFromIterator`] for arrays of any size. Implemented via this
-/// helper to avoid monomorphization for every different array size.
-///
-/// Assumes that all elements in the slice are unitialized
-fn try_from_iterator_erased<T, I: Iterator<Item = T>>(
-    mut iter: I,
-    slice: &mut [MaybeUninit<T>],
-) -> Result<(), CollectionError<I, Vec<T>, CapacityError<T>>> {
-    match (SizeHint::exact(slice.len()), iter.size_hint().try_conv::<SizeHint>().expect("invalid size hint")) {
-        (capacity, hint) if hint.disjoint(capacity) => CollectionError::bounds(iter, capacity).into_err(),
-        (capacity, _) => {
-            let mut guard = super::SliceGuard::new(slice);
-            guard.extend(iter.by_ref());
-            match iter.next() {
-                Some(reject) => CollectionError::overflow(iter, guard.drain(), reject, capacity).into_err(),
-                None => guard.disarm().map_err(|items| CollectionError::<_, Vec<T>, _>::underflow(iter, items, capacity)),
-            }
+        let mut guard = PartialArray::new();
+        match guard.try_extend_basic(&mut into_iter) {
+            Ok(()) => guard.try_into_array().map_err(|(g, e)| CollectionError::new(into_iter, g, e)),
+            Err(error) => Err(CollectionError::new(into_iter, guard, error)),
         }
     }
 }

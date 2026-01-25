@@ -3,7 +3,9 @@ use core::fmt::{Debug, Display, Formatter};
 
 use alloc::boxed::Box;
 
-use display_as_debug::result::ResultDebugExt;
+use display_as_debug::fmt::DebugStructExt;
+use display_as_debug::types::Short;
+use display_as_debug::wrap::TypeNameResult;
 use tap::Pipe;
 
 /// An error that occurs when collecting an iterator of [`Result`]s fails.
@@ -73,12 +75,24 @@ impl<E, C, CErr, I> core::ops::Deref for ResultCollectionError<E, C, CErr, I> {
     }
 }
 
+#[doc(hidden)]
+#[allow(clippy::missing_fields_in_debug, reason = "All data is covered")]
+impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectionErrorData<E, C, CErr, I> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ResultCollectionErrorData")
+            .field("error", &self.error)
+            .field("result", &TypeNameResult::borrow::<Short>(&self.result))
+            .field_type::<I, Short>("iter")
+            .finish()
+    }
+}
+
 impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectionError<E, C, CErr, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ResultCollectionError")
             .field("error", &self.data.error)
-            .field("result", &self.data.result.debug_opaque())
-            .field("iter", &core::any::type_name::<I>())
+            .field("result", &TypeNameResult::borrow::<Short>(&self.data.result))
+            .field_type::<I, Short>("iter")
             .finish()
     }
 }

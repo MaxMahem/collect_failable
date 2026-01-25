@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-01-25
+
+### Added
+
+- Added `MaxSize` trait to expose static maximum capacity from collection types.
+- Added `RemainingSize` trait (with `remaining_size` method) to expose dynamic remaining capacity from collection types.
+- Added `RemainingSize` and `MaxSize` implementations for `ArrayVec` and `Array`.
+- Added `Debug` implementations for `CollectionErrorData`, `ResultCollectionErrorData`, and `UnzipErrorData`.
+- `TryFromIterator` implementations for hash-based collections (`HashMap`, `HashSet`, `IndexMap`, `IndexSet`, and `hashbrown` variants) now support custom hashers via the `S: BuildHasher + Default` bound.
+
+### Changed
+
+- **Breaking:** Renamed `Capacity` trait to `RemainingSize` and its `capacity_hint` method to `remaining_size`.
+  - Migration: Update all references from `Capacity` to `RemainingSize` and from `capacity_hint()` to `remaining_size()`.
+- **Breaking:** Changed `ArrayVec::try_extend_one` to return `crate::errors::CapacityError` instead of `arrayvec::CapacityError`.
+  - Migration: Update error handling to expect `crate::errors::CapacityError`.
+- **Breaking:** Changed all hash and set implementations that can take a `S` (hasher) to require `S: BuildHasher + Default` instead of using the default hasher (`RandomState`). This breaks some type-inference.
+  - Migration: Specify the hasher type explicitly, e.g. `HashMap<K, V, RandomState>` or use `TryCollectEx`.
+- **Breaking:** Changed `TryFromIterator` for `[T; N]` to return `CollectionError<I::IntoIter, PartialArray<T, N>, CapacityError<T>>` instead of `Vec<T>`.
+  - Migration: Update error handling to expect `PartialArray` in the `collected` field. You can use `PartialArray::into_iter().collect::<Vec<_>>()` to get a `Vec`.
+
+### Removed
+
+- **Breaking:** Removed `Capacity` trait implementations for `Vec`.
+
 ## [0.15.0] - 2026-01-14
 
 ### Added

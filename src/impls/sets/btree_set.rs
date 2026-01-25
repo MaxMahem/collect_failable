@@ -1,92 +1,25 @@
 use alloc::collections::BTreeSet;
-
 use fluent_result::bool::dbg::Expect;
 
-use crate::errors::{CollectionError, Collision};
-use crate::{TryExtend, TryExtendSafe, TryFromIterator};
+crate::impls::macros::impl_try_from_iter_via_try_extend_one!(
+    type: BTreeSet<T> where [T: Ord] of T;
+    ctor: |_| Self::new()
+);
 
-impl<T: Ord, I> TryFromIterator<I> for BTreeSet<T>
-where
-    I: IntoIterator<Item = T>,
-{
-    type Error = CollectionError<I::IntoIter, Self, Collision<T>>;
+crate::impls::macros::impl_try_extend_via_try_extend_one!(
+    type: BTreeSet<T> where [T: Ord] of T;
+    reserve: |_, _| ();
+    build_empty: |_| BTreeSet::new()
+);
 
-    /// Converts `iter` into a [`BTreeSet`], failing if a value would collide.
-    ///
-    /// See [trait level documentation](trait@TryFromIterator) for an example.
-    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
-    where
-        Self: Sized,
-    {
-        let mut iter = into_iter.into_iter();
-        iter.try_fold(Self::new(), |mut set, value| match set.contains(&value) {
-            true => Err((set, value)),
-            false => {
-                set.insert(value).expect_true("should not be occupied");
-                Ok(set)
-            }
-        })
-        .map_err(|(set, value)| CollectionError::collision(iter, set, value))
-    }
-}
+crate::impls::macros::impl_try_extend_safe_for_colliding_type!(
+    type: BTreeSet<T> where [T: Ord] of T;
+    build_staging: |_, _| BTreeSet::new();
+    contains: BTreeSet::contains
+);
 
-impl<T: Ord, I> TryExtend<I> for BTreeSet<T>
-where
-    I: IntoIterator<Item = T>,
-{
-    type Error = CollectionError<I::IntoIter, Self, Collision<T>>;
-
-    /// Extends the set with `iter`, failing if a value would collide, with a basic error guarantee.
-    ///
-    /// See [trait level documentation](trait@TryExtend) for an example.
-    fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
-        let mut iter = iter.into_iter();
-        iter.try_for_each(|value| match self.contains(&value) {
-            true => Err(value),
-            false => {
-                self.insert(value).expect_true("Should not be occupied");
-                Ok(())
-            }
-        })
-        .map_err(|value| CollectionError::collision(iter, Self::new(), value))
-    }
-}
-
-impl<T: Ord, I> TryExtendSafe<I> for BTreeSet<T>
-where
-    I: IntoIterator<Item = T>,
-{
-    /// Extends the set with `iter`, erroring if a value would collide, with a strong error guarantee.
-    ///
-    /// See [trait level documentation](trait@TryExtendSafe) for an example.
-    fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
-        let mut iter = iter.into_iter();
-        iter.try_fold(Self::new(), |mut set, value| match self.contains(&value) {
-            true => Err((set, value)),
-            false => match set.contains(&value) {
-                true => Err((set, value)),
-                false => {
-                    set.insert(value).expect_true("should not be occupied");
-                    Ok(set)
-                }
-            },
-        })
-        .map(|set| self.extend(set))
-        .map_err(|(set, value)| CollectionError::collision(iter, set, value))
-    }
-}
-
-impl<T: Ord> crate::TryExtendOne for BTreeSet<T> {
-    type Item = T;
-    type Error = Collision<T>;
-
-    fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error> {
-        match self.contains(&item) {
-            true => Err(Collision::new(item)),
-            false => {
-                self.insert(item);
-                Ok(())
-            }
-        }
-    }
-}
+crate::impls::macros::impl_try_extend_one_for_colliding_type!(
+    type: BTreeSet<T> where [T: Ord] of T;
+    contains: BTreeSet::contains;
+    insert: |set, item| set.insert(item).expect_true("insert should succeed after contains check")
+);

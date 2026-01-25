@@ -1,4 +1,4 @@
 mod array;
-mod slice_guard;
+mod partial_array;
 
-pub use slice_guard::SliceGuard;
+pub use partial_array::{Drain, PartialArray};

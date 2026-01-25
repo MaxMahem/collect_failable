@@ -3,6 +3,8 @@ use core::error::Error;
 use core::fmt::{Debug, Display, Formatter};
 use core::iter::Chain;
 use core::ops::Deref;
+use display_as_debug::fmt::DebugStructExt;
+use display_as_debug::wrap::Short;
 
 use tap::Pipe;
 
@@ -119,6 +121,18 @@ impl<I, C, E> Deref for CollectionError<I, C, E> {
 
     fn deref(&self) -> &Self::Target {
         &self.data
+    }
+}
+
+#[doc(hidden)]
+#[allow(clippy::missing_fields_in_debug, reason = "All data is covered")]
+impl<I, C, E: Debug> Debug for CollectionErrorData<I, C, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("CollectionErrorData")
+            .field_type::<I, Short>("iterator")
+            .field_type::<C, Short>("collected")
+            .field("error", &self.error)
+            .finish()
     }
 }
 

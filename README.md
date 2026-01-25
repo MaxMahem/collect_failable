@@ -51,24 +51,31 @@ This crate supports `no_std` environments when the `std` feature is disabled. Th
 Construct a container from an iterator, with errors for invalid input. This behaves like `FromIterator` but returns `Result<Self, E>` instead of panicking or ignoring failures.
 
 ```rust
+use std::collections::BTreeMap;
+use collect_failable::TryFromIterator;
+
+// try_from_iter is the core method - works on any TryFromIterator implementor
+let map = BTreeMap::try_from_iter([(1, "a"), (2, "b")]).expect("no duplicates");
+assert_eq!(map, BTreeMap::from([(1, "a"), (2, "b")]), "should contain all values");
+
+// duplicate keys produce an error containing the colliding item
+let err = BTreeMap::try_from_iter([(1, "a"), (2, "b"), (1, "c")]).expect_err("duplicate key");
+assert_eq!(err.error.item, (1, "c"), "should contain the colliding item");
+
+// errors contain all data needed to reconstruct the consumed iterator
+// order is: rejected item, then collected items, then remaining iterator
+let recovered: Vec<_> = err.into_iter().collect();
+assert_eq!(recovered, [(1, "c"), (1, "a"), (2, "b")]);
+```
+
+`TryCollectEx` provides a more convenient alternative, similar to `collect`
+
+```rust
 use std::collections::HashMap;
-use collect_failable::{TryFromIterator, TryCollectEx};
+use collect_failable::TryCollectEx;
 
-// can be called on any type that implements TryFromIterator
-let err = HashMap::try_from_iter([(1, 2), (2, 3), (1, 4), (3, 5)]).expect_err("should be Err");
-assert_eq!(err.error.item.0, 1); // err.error.item is the colliding (K, V) tuple
-
-// For `HashMap` the error contains all the data necessary to reconstruct the consumed iterator
-let all_items: Vec<_> = err.into_iter().collect();
-assert_eq!(all_items.len(), 4); // all 4 original items are present, though order is not guaranteed
-
-// or collected via the TryCollectEx trait a turbofish may be necessary to disambiguate
-let map = [(1, 2), (2, 3)].into_iter().try_collect_ex::<HashMap<_, _>>().expect("should be Ok");
-assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
-
-// or type ascription. Note the Result type can be inferred, just not the collection type.
-let map: HashMap<_, _> = [(1, 2), (2, 3)].into_iter().try_collect_ex().expect("should be Ok");
-assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
+let map: HashMap<_, _> = [(1, "a"), (2, "b")].into_iter().try_collect_ex().unwrap();
+assert_eq!(map, HashMap::from([(1, "a"), (2, "b")]));
 ```
 
 ### `TryExtend` and `TryExtendSafe`

@@ -1,5 +1,5 @@
 #[cfg(feature = "unsafe")]
-mod r#unsafe;
+pub mod r#unsafe;
 
 #[cfg(feature = "arrayvec")]
 mod arrayvec;
@@ -9,8 +9,8 @@ mod sets;
 
 #[cfg(feature = "alloc")]
 mod result;
-#[cfg(feature = "alloc")]
-mod vector;
 
 #[cfg(feature = "tuple")]
 mod tuples;
+
+pub mod macros;

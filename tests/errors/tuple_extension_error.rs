@@ -41,18 +41,18 @@ fn create_b_error_without_unevaluated() -> TupleExtensionError<TestColl, TestCol
     TupleExtensionError::new_b(SIDE_B_ERROR, None, remaining.into_iter())
 }
 
-const EXPECTED_DEBUG_A_WITH: &str = r#"TupleExtensionError { side: Left(Side { error: TestError { identity: "A side failed", _phantom: PhantomData<()> }, unevaluated: Some(..) }), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" }"#;
-const EXPECTED_DEBUG_A_WITHOUT: &str = r#"TupleExtensionError { side: Left(Side { error: TestError { identity: "A side failed", _phantom: PhantomData<()> }, unevaluated: None }), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" }"#;
-const EXPECTED_DEBUG_B_WITH: &str = r#"TupleExtensionError { side: Right(Side { error: TestError { identity: "B side failed", _phantom: PhantomData<()> }, unevaluated: Some(..) }), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" }"#;
-const EXPECTED_DEBUG_B_WITHOUT: &str = r#"TupleExtensionError { side: Right(Side { error: TestError { identity: "B side failed", _phantom: PhantomData<()> }, unevaluated: None }), remaining: "core::array::iter::IntoIter<(u32, u32), 3>" }"#;
+const EXPECTED_DEBUG_A_WITH_UNEVALUATED: &str = r#"TupleExtensionError { side: Left(Side { error: TestError("A side failed"), unevaluated: u32 }), remaining: IntoIter<(u32, u32), 3> }"#;
+const EXPECTED_DEBUG_A_WITHOUT_UNEVALUATED: &str = r#"TupleExtensionError { side: Left(Side { error: TestError("A side failed"), unevaluated: u32 }), remaining: IntoIter<(u32, u32), 3> }"#;
+const EXPECTED_DEBUG_B_WITH_UNEVALUATED: &str = r#"TupleExtensionError { side: Right(Side { error: TestError("B side failed"), unevaluated: u32 }), remaining: IntoIter<(u32, u32), 3> }"#;
+const EXPECTED_DEBUG_B_WITHOUT_UNEVALUATED: &str = r#"TupleExtensionError { side: Right(Side { error: TestError("B side failed"), unevaluated: u32 }), remaining: IntoIter<(u32, u32), 3> }"#;
 const EXPECTED_DISPLAY_A: &str = "Failed while extending first collection: Test error: A side failed";
 const EXPECTED_DISPLAY_B: &str = "Failed while extending second collection: Test error: B side failed";
 
 // Test Debug formatting
-test_format!(debug_a_with_unevaluated, create_a_error_with_unevaluated(), "{:?}", EXPECTED_DEBUG_A_WITH);
-test_format!(debug_a_without_unevaluated, create_a_error_without_unevaluated(), "{:?}", EXPECTED_DEBUG_A_WITHOUT);
-test_format!(debug_b_with_unevaluated, create_b_error_with_unevaluated(), "{:?}", EXPECTED_DEBUG_B_WITH);
-test_format!(debug_b_without_unevaluated, create_b_error_without_unevaluated(), "{:?}", EXPECTED_DEBUG_B_WITHOUT);
+test_format!(debug_a_with_unevaluated, create_a_error_with_unevaluated(), "{:?}", EXPECTED_DEBUG_A_WITH_UNEVALUATED);
+test_format!(debug_a_without_unevaluated, create_a_error_without_unevaluated(), "{:?}", EXPECTED_DEBUG_A_WITHOUT_UNEVALUATED);
+test_format!(debug_b_with_unevaluated, create_b_error_with_unevaluated(), "{:?}", EXPECTED_DEBUG_B_WITH_UNEVALUATED);
+test_format!(debug_b_without_unevaluated, create_b_error_without_unevaluated(), "{:?}", EXPECTED_DEBUG_B_WITHOUT_UNEVALUATED);
 
 // Test Display formatting
 test_format!(display_a, create_a_error_with_unevaluated(), "{}", EXPECTED_DISPLAY_A);

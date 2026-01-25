@@ -2,88 +2,25 @@ use alloc::collections::BTreeMap;
 
 use fluent_result::expect::dbg::ExpectNone;
 
-use crate::errors::{CollectionError, Collision};
-use crate::{TryExtend, TryExtendSafe, TryFromIterator};
+crate::impls::macros::impl_try_from_iter_via_try_extend_one! (
+    type: BTreeMap<K, V> where [K: Ord, V] of (K, V);
+    ctor: |_| Self::new()
+);
 
-impl<K: Ord, V, I> TryFromIterator<I> for BTreeMap<K, V>
-where
-    I: IntoIterator<Item = (K, V)>,
-{
-    type Error = CollectionError<I::IntoIter, Self, Collision<(K, V)>>;
+crate::impls::macros::impl_try_extend_via_try_extend_one! (
+    type: BTreeMap<K, V> where [K: Ord, V] of (K, V);
+    reserve: |_, _| {};
+    build_empty: |_| { <BTreeMap<K, V>>::new() }
+);
 
-    /// Converts `iter` into a [`BTreeMap`], failing if a key would collide.
-    ///
-    /// See [trait level documentation](trait@TryFromIterator) for an example.
-    fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
-        let mut iter = into_iter.into_iter();
-        iter.try_fold(Self::new(), |mut map, (k, v)| match map.contains_key(&k) {
-            true => Err((map, (k, v))),
-            false => {
-                map.insert(k, v).expect_none("should not be occupied");
-                Ok(map)
-            }
-        })
-        .map_err(|(map, kvp)| CollectionError::collision(iter, map, kvp))
-    }
-}
+crate::impls::macros::impl_try_extend_safe_for_colliding_type! (
+    type: BTreeMap<K, V> where [K: Ord, V] of (K, V);
+    build_staging: |_, _| BTreeMap::new();
+    contains: |map, (key, _)| map.contains_key(key)
+);
 
-impl<K: Ord, V, I> TryExtend<I> for BTreeMap<K, V>
-where
-    I: IntoIterator<Item = (K, V)>,
-{
-    type Error = CollectionError<I::IntoIter, Self, Collision<(K, V)>>;
-
-    /// Extends the map with `iter`, failing if a key would collide, with a basic error guarantee.
-    ///
-    /// See [trait level documentation](trait@TryExtend) for an example.
-    fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
-        let mut iter = iter.into_iter();
-        iter.try_for_each(|(key, value)| match self.contains_key(&key) {
-            true => Err((key, value)),
-            false => {
-                self.insert(key, value).expect_none("should not be occupied");
-                Ok(())
-            }
-        })
-        .map_err(|kvp| CollectionError::collision(iter, Self::new(), kvp))
-    }
-}
-
-impl<K: Ord, V, I> TryExtendSafe<I> for BTreeMap<K, V>
-where
-    I: IntoIterator<Item = (K, V)>,
-{
-    /// Extends the map with `iter`, erroring if a key would collide, with a strong error guarantee.
-    ///
-    /// See [trait level documentation](trait@TryExtendSafe) for an example.
-    fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
-        let mut iter = iter.into_iter();
-        iter.try_fold(Self::new(), |mut map, (key, value)| match self.contains_key(&key) {
-            true => Err((map, (key, value))),
-            false => match map.contains_key(&key) {
-                true => Err((map, (key, value))),
-                false => {
-                    map.insert(key, value).expect_none("should not be occupied");
-                    Ok(map)
-                }
-            },
-        })
-        .map(|map| self.extend(map))
-        .map_err(|(map, kvp)| CollectionError::collision(iter, map, kvp))
-    }
-}
-
-impl<K: Ord, V> crate::TryExtendOne for BTreeMap<K, V> {
-    type Item = (K, V);
-    type Error = Collision<(K, V)>;
-
-    fn try_extend_one(&mut self, (key, value): (K, V)) -> Result<(), Self::Error> {
-        match self.contains_key(&key) {
-            true => Err(Collision::new((key, value))),
-            false => {
-                self.insert(key, value).expect_none("should not be occupied");
-                Ok(())
-            }
-        }
-    }
-}
+crate::impls::macros::impl_try_extend_one_for_colliding_type!(
+    type: BTreeMap<K, V> where [K: Ord, V] of (K, V);
+    contains: |map, (key, _)| map.contains_key(key);
+    insert: |map, (key, value)| map.insert(key, value).expect_none("should not be in map")
+);

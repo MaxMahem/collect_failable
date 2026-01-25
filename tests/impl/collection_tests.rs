@@ -99,7 +99,6 @@ macro_rules! try_extend {
 /// Supports:
 /// - `try_extend_one!(name, initial_collection, item, Ok(expected))`
 /// - `try_extend_one!(name, initial_collection, item, Err(expected_item))`
-/// - `try_extend_one!(name, initial_collection, item, Err(expected_item) with |err| { custom assertions })`
 #[allow(unused_macros)]
 macro_rules! try_extend_one {
     ($name:ident, $initial:expr, $item:expr, Ok($expected:expr)) => {
@@ -123,8 +122,27 @@ macro_rules! try_extend_one {
     };
 }
 
+/// Macro for testing reconstructing iterator data from error
+///
+/// Supports:
+/// - `try_collect_recover_iter_data!(name, Type, iter, collected, data)`
+#[allow(unused_macros)]
+macro_rules! recover_iter_data {
+    ($name:ident, $type:ty, $iter:expr, $collected:expr, $data:expr) => {
+        #[test]
+        fn $name() {
+            let err = <$type>::try_from_iter($iter).expect_err("should fail");
+            assert_eq!(err.collected, $collected, "should match collected items");
+            let data: Vec<_> = err.into_iter().collect();
+            assert_eq!(data, $data, "should match reconstructed items");
+        }
+    };
+}
+
 #[allow(unused_imports)]
 pub(crate) use panics;
+#[allow(unused_imports)]
+pub(crate) use recover_iter_data;
 #[allow(unused_imports)]
 pub(crate) use try_collect;
 #[allow(unused_imports)]

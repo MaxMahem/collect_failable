@@ -35,8 +35,14 @@ pub trait TryFromIterator<I: IntoIterator>: Sized {
     /// ```rust
     /// use collect_failable::TryFromIterator;
     /// use std::collections::HashMap;
+    /// use std::collections::hash_map::RandomState;
     ///
-    /// let err = HashMap::try_from_iter([(1, 2), (1, 3)]).expect_err("should fail on collision");
+    /// // Success case - type inference works from return type
+    /// let map: HashMap<_, _> = HashMap::try_from_iter([(1, 2), (2, 3)]).expect("should succeed");
+    /// assert_eq!(map.len(), 2);
+    ///
+    /// // Error case - type annotation needed when only using the error
+    /// let err = HashMap::<i32, i32, RandomState>::try_from_iter([(1, 2), (1, 3)]).expect_err("should fail on collision");
     /// assert_eq!(err.error.item, (1, 3), "colliding item should be (1, 3)");
     /// ```    
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>;
