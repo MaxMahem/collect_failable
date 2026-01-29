@@ -28,7 +28,8 @@ fn gen_scalars(size: usize) -> Vec<usize> {
 fn bench_extend_comparison<C, V, F>(c: &mut Criterion, sizes: &[usize], generate_data: F)
 where
     C: Default + Extend<V> + TryExtend<Vec<V>> + TryExtendSafe<Vec<V>>,
-    C::Error: std::fmt::Debug,
+    <C as TryExtend<Vec<V>>>::Error: std::fmt::Debug,
+    <C as TryExtendSafe<Vec<V>>>::Error: std::fmt::Debug,
     F: Fn(usize) -> Vec<V>,
 {
     let mut group = c.benchmark_group(format!("{:?}", TypeName::<C>::SHORT));

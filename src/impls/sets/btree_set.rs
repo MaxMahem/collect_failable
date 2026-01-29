@@ -8,8 +8,7 @@ crate::impls::macros::impl_try_from_iter_via_try_extend_one!(
 
 crate::impls::macros::impl_try_extend_via_try_extend_one!(
     type: BTreeSet<T> where [T: Ord] of T;
-    reserve: |_, _| ();
-    build_empty: |_| BTreeSet::new()
+    reserve: |_, _| ()
 );
 
 crate::impls::macros::impl_try_extend_safe_for_colliding_type!(

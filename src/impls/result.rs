@@ -4,7 +4,8 @@ use core::cell::RefCell;
 use tap::Pipe;
 
 use crate::TryFromIterator;
-use crate::errors::{ResultCollectError, SizeHint};
+use crate::errors::ResultCollectError;
+use crate::errors::types::SizeHint;
 
 /// Iterator adaptor that extracts [`Ok`] values from a [`Result`] [`Iterator`],
 /// storing the first encountered [`Err`] and remaining iterator for later retrieval.
@@ -215,7 +216,9 @@ where
     /// use std::collections::BTreeSet;
     /// use tap::Conv;
     /// use collect_failable::TryCollectEx;
-    /// use collect_failable::errors::{ResultCollectErrorData, Either};
+    /// use collect_failable::errors::{ResultCollectError, CollectError};
+    /// use collect_failable::errors::types::Either;
+    /// use collect_failable::errors::capacity::CapacityError;
     ///
     /// let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
     /// let result: Result<Result<BTreeSet<_>, _>, _> = data.into_iter().try_collect_ex();

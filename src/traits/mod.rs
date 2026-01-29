@@ -1,11 +1,9 @@
-mod size;
 mod try_extend;
 mod try_from_iterator;
 
 #[cfg(feature = "tuple")]
 mod try_unzip;
 
-pub use size::*;
 pub use try_extend::*;
 pub use try_from_iterator::*;
 

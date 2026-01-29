@@ -10,8 +10,7 @@ crate::impls::macros::impl_try_from_iter_via_try_extend_one! (
 
 crate::impls::macros::impl_try_extend_via_try_extend_one! (
     type: IndexMap<K, V, S> where [K: Eq + Hash, V, S: BuildHasher + Clone] of (K, V);
-    reserve: |map, iter| map.reserve(iter.size_hint().0);
-    build_empty: |map| { <IndexMap<K, V, S>>::with_hasher(map.hasher().clone()) }
+    reserve: |map, iter| map.reserve(iter.size_hint().0)
 );
 
 crate::impls::macros::impl_try_extend_safe_for_colliding_type! (

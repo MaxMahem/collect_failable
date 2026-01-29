@@ -49,7 +49,7 @@ macro_rules! try_extend_safe {
             assert_eq!(collection, $initial, "should be unchanged on error");
             assert_eq!(parts.error, $expected_error, "should match expected error");
             assert_eq!(parts.collected, $expected_collected, "should match expected collected");
-            assert!(parts.iterator.eq($expected_iterator), "should match expected iterator");
+            assert!(parts.iter.eq($expected_iterator), "should match expected iterator");
         }
     };
 }
@@ -70,15 +70,14 @@ macro_rules! try_extend {
         }
     };
 
-    ($name:ident, $initial:expr, $extend:expr, Err($expected_error:expr, $expected_collected:expr, $expected_iterator:expr)) => {
+    ($name:ident, $initial:expr, $extend:expr, Err($expected_error:expr, $expected_iterator:expr)) => {
         #[test]
         fn $name() {
             let mut collection = $initial;
             let err = collection.try_extend($extend).expect_err("should fail to extend");
             let parts = err.into_data();
             assert_eq!(parts.error, $expected_error, "should match expected error");
-            assert_eq!(parts.collected, $expected_collected, "should match expected collected");
-            assert!(parts.iterator.eq($expected_iterator), "should match expected iterator");
+            assert!(parts.iter.eq($expected_iterator), "should match expected iterator");
         }
     };
 }

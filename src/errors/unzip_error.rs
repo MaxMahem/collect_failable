@@ -9,7 +9,7 @@ use display_as_debug::types::Short;
 use tap::Pipe;
 
 use crate::TryExtendOne;
-use crate::errors::Either;
+use crate::errors::types::Either;
 
 #[cfg(doc)]
 use crate::TryUnzip;

@@ -1,4 +1,5 @@
-use collect_failable::errors::{CapacityError, CapacityErrorKind, SizeHint};
+use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
+use collect_failable::errors::types::SizeHint;
 use size_hinter::InvalidIterator;
 
 use crate::error_tests::{test_ctor, test_failable};
@@ -15,21 +16,21 @@ test_ctor!(
     overflow,
     CapacityError::overflow(SizeHint::bounded(5, 10), 42),
     capacity => SizeHint::bounded(5, 10),
-    kind => CapacityErrorKind::Overflow { rejected: 42 }
+    kind => CapacityErrorKind::Overflow { overflow: 42 }
 );
 
 test_ctor!(
     collect_overflowed,
-    CapacityError::collect_overflowed::<[i32; 5]>(42),
+    CapacityError::collect_overflow::<[i32; 5]>(42),
     capacity => SizeHint::exact(5),
-    kind => CapacityErrorKind::Overflow { rejected: 42 }
+    kind => CapacityErrorKind::Overflow { overflow: 42 }
 );
 
 test_ctor!(
     extend_overflowed,
-    CapacityError::extend_overflowed(42),
+    CapacityError::extend_overflow(42),
     capacity => SizeHint::ZERO,
-    kind => CapacityErrorKind::Overflow { rejected: 42 }
+    kind => CapacityErrorKind::Overflow { overflow: 42 }
 );
 
 test_ctor!(
@@ -41,9 +42,16 @@ test_ctor!(
 
 test_ctor!(
     collect_underflowed,
-    CapacityError::<i32>::collect_underflowed::<[i32; 5]>(4),
+    CapacityError::<i32>::collect_underflow::<[i32; 5]>(4),
     capacity => SizeHint::exact(5),
     kind => CapacityErrorKind::Underflow { count: 4 }
+);
+
+test_ctor!(
+    from_arrayvec_capacity_error,
+    CapacityError::from(arrayvec::CapacityError::new(3)),
+    capacity => SizeHint::ZERO,
+    kind => CapacityErrorKind::Overflow { overflow: 3 }
 );
 
 mod error_item_provider {

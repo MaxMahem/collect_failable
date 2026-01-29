@@ -5,10 +5,10 @@ use core::ops::Deref;
 use fluent_result::into::IntoResult;
 use tap::Pipe;
 
-use crate::errors::{CapacityError, SizeHint};
-use crate::{FixedCap, RemainingCap};
+use crate::errors::capacity::{CapacityError, FixedCap, RemainingCap};
+use crate::errors::types::SizeHint;
 
-/// A guard that ensures that all elements in a slice are initialized
+/// A possibly partially initialized array that results from the failed collection of an array.
 #[derive(Debug)]
 pub struct PartialArray<T, const N: usize> {
     /// The array elements. Elements `array[..back]` are initialized,
@@ -92,14 +92,14 @@ pub struct IntoArrayError<T, const N: usize> {
 
 impl<T, const N: usize> IntoArrayError<T, N> {
     const fn new(partial_array: PartialArray<T, N>) -> Self {
-        let error = CapacityError::collect_underflowed::<[T; N]>(partial_array.back);
+        let error = CapacityError::collect_underflow::<[T; N]>(partial_array.back);
         Self { partial_array, error }
     }
 }
 
 /// Tries to convert the [`PartialArray`] into a full array `[T; N]`.
 ///
-/// This is generally only possible in an overflow error case, where the iterator was too long.
+/// This is only possible in an overflow error case, where the iterator was too long.
 impl<T, const N: usize> TryFrom<PartialArray<T, N>> for [T; N] {
     type Error = IntoArrayError<T, N>;
 

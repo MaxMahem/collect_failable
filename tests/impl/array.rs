@@ -1,8 +1,8 @@
 use crate::collection_tests::{recover_iter_data, try_collect};
 use crate::utils::panics;
 
-use collect_failable::errors::CapacityError;
-use collect_failable::{FixedCap, RemainingCap, TryCollectEx, TryFromIterator};
+use collect_failable::errors::capacity::{CapacityError, FixedCap, RemainingCap};
+use collect_failable::{TryCollectEx, TryFromIterator};
 
 use size_hinter::{InvalidIterator, SizeHint, SizeHinter};
 use tap::Pipe;

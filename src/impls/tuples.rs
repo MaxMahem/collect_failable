@@ -1,6 +1,6 @@
 use no_drop::dbg::IntoNoDrop;
 
-use crate::errors::TupleExtensionError;
+use crate::errors::TupleExtendError;
 use crate::{TryExtend, TryExtendOne};
 
 #[cfg(doc)]
@@ -17,7 +17,7 @@ where
     TryFromA: TryExtendOne + Default,
     TryFromB: TryExtendOne + Default,
 {
-    type Error = TupleExtensionError<TryFromA, TryFromB, I::IntoIter>;
+    type Error = TupleExtendError<TryFromA, TryFromB, I::IntoIter>;
 
     /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
     ///
@@ -48,10 +48,10 @@ where
         let mut iter = iter.into_iter();
         for (a, b) in iter.by_ref().map(|(a, b)| (a.no_drop(), b.no_drop())) {
             if let Err(error) = self.0.try_extend_one(a.unwrap()) {
-                return Err(TupleExtensionError::new_a(error, Some(b.unwrap()), iter));
+                return Err(TupleExtendError::new_a(error, Some(b.unwrap()), iter));
             }
             if let Err(error) = self.1.try_extend_one(b.unwrap()) {
-                return Err(TupleExtensionError::new_b(error, None, iter));
+                return Err(TupleExtendError::new_b(error, None, iter));
             }
         }
 

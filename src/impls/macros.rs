@@ -72,16 +72,15 @@ pub const fn infer_ctor<I: IntoIterator, C, F: Fn(&I::IntoIter) -> C>(f: F) -> F
 /// a failure during [`TryExtendOne::try_extend_one`] indicates the collection
 /// failed extension.
 ///
-/// Failed collections return a [`CollectError`] with the original iterator,
-/// an empty collection, and the error returned by [`TryExtendOne::try_extend_one`].
+/// Failed collections return an [`ExtendError`] with the remaining iterator
+/// and the error returned by [`TryExtendOne::try_extend_one`].
 /// Since [`TryExtend`] provides only a basic error guarantee, the collection
 /// will be mutated in the event of a failure.
 ///
 /// ```text
 /// impl_try_extend_via_try_extend_one!(
 ///     type: $type where [$($generics)*] of $item;
-///     reserve: $reserve;
-///     build_empty: $build_empty
+///     reserve: $reserve
 /// );
 /// ```
 ///
@@ -92,19 +91,16 @@ pub const fn infer_ctor<I: IntoIterator, C, F: Fn(&I::IntoIter) -> C>(f: F) -> F
 /// - `item`: The item type.
 /// - `reserve`: A function that reserves space in the collection.
 ///   - `fn(&mut Self, &I::IntoIter)`
-/// - `build_empty`: A function that builds an empty collection.
-///   - `fn(&mut Self) -> Self`
 macro_rules! impl_try_extend_via_try_extend_one {
     (
         type: $type:ty where [$($generics:tt)*] of $item:ty;
-        reserve: $reserve:expr;
-        build_empty: $build_empty:expr
+        reserve: $reserve:expr
     ) => {
         impl<$($generics)*, I> $crate::TryExtend<I> for $type
         where
             I: IntoIterator<Item = $item>,
         {
-            type Error = $crate::errors::CollectError<I::IntoIter, Self, <Self as $crate::TryExtendOne>::Error>;
+            type Error = $crate::errors::ExtendError<I::IntoIter, <Self as $crate::TryExtendOne>::Error>;
 
             fn try_extend(&mut self, into_iter: I) -> Result<(), Self::Error>
             where
@@ -115,11 +111,7 @@ macro_rules! impl_try_extend_via_try_extend_one {
                 $crate::impls::macros::infer_reserve::<I, Self, _>($reserve)(self, &mut iter);
 
                 $crate::impls::macros::try_extend_basic(self, &mut iter)
-                    .map_err(|err| $crate::errors::CollectError::new(
-                        iter,
-                        $crate::impls::macros::infer_build_empty::<Self, _>($build_empty)(self),
-                        err
-                    ))
+                    .map_err(|err| $crate::errors::ExtendError::new(iter, err))
             }
         }
     };
@@ -127,11 +119,6 @@ macro_rules! impl_try_extend_via_try_extend_one {
 
 /// Helper function to infer the type of the reserve function.
 pub const fn infer_reserve<I: IntoIterator, C, F: Fn(&mut C, &I::IntoIter)>(f: F) -> F {
-    f
-}
-
-/// Helper function to infer the type of the `build_empty` function.
-pub const fn infer_build_empty<C, F: Fn(&mut C) -> C>(f: F) -> F {
     f
 }
 
@@ -164,17 +151,18 @@ macro_rules! impl_try_extend_safe_for_colliding_type {
         where
             I: IntoIterator<Item = $item>,
         {
+            type Error = $crate::errors::CollectError<I::IntoIter, Self, <Self as $crate::TryExtendOne>::Error>;
+
             fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
                 let mut iter = iter.into_iter();
 
                 let staging = $crate::impls::macros::infer_build_staging::<Self, I, _>($build_staging)(&iter, self);
-
                 let contains = $crate::impls::macros::infer_contains::<Self, $item, _>($contains);
 
                 iter.try_fold(staging, |mut staging, item| {
                     // check for an entry in the main map
                     match contains(self, &item) {
-                        true => Err((staging, $crate::errors::Collision::new(item))),
+                        true => Err((staging, $crate::errors::collision::Collision::new(item))),
                         // try to add to the staging map
                         false => match $crate::TryExtendOne::try_extend_one(&mut staging, item) {
                             Ok(()) => Ok(staging),
@@ -226,12 +214,12 @@ macro_rules! impl_try_extend_one_for_colliding_type {
     ) => {
         impl<$($generics)*> $crate::TryExtendOne for $type {
             type Item = $item;
-            type Error = $crate::errors::Collision<$item>;
+            type Error = $crate::errors::collision::Collision<$item>;
 
             fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error> {
 
                 match $crate::impls::macros::infer_contains::<Self, $item, _>($contains)(self, &item) {
-                    true => Err($crate::errors::Collision::new(item)),
+                    true => Err($crate::errors::collision::Collision::new(item)),
                     false => {
                         $crate::impls::macros::infer_insert::<Self, $item, _>($insert)(self, item);
                         Ok(())

@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `collect_overflowed`
   - `collect_underflowed`
   - `extend_overflowed`
+- Added `ExtendError` type for `TryExtend` operations. Unlike `CollectError`, it has no `collected`
+  field because `TryExtend` adds items directly to the target collection (basic error guarantee).
+- Added `ExtendError::ensure_fits_into` helper for bounds checking in extend operations.
 
 - Implemented `TryFrom<PartialArray<T, N>>` for `[T; N]` to allow converting a full `PartialArray` (e.g. from an overflow error) into an array.
 
@@ -31,10 +34,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Breaking:** Renamed `CollectionError` to `CollectError`.
   - Migration: Update all references from `CollectionError` to `CollectError`.
+- **Breaking:** Renamed `CollectError::iterator` field to `CollectError::iter`.
+  - Migration: Update all references from `CollectError::iterator` to `CollectError::iter`.
 - **Breaking:** Changed `ArrayVec` `TryFromIterator` and `TryExtend` implementations to return `ArrayVec` instead of `Vec` in `CollectError`.
   - Migration: Update error handling to expect `ArrayVec` in the `collected` field.
 - **Breaking:** Changed `CollectError::overflowed` to `extend_overflowed`.
   - Migration: Update error handling to use `extend_overflowed` ctor.
+- **Breaking:** `TryExtend` implementations now return `ExtendError` instead of `CollectError`.
+  - `ExtendError` has no `collected` field (items go directly into the target collection).
+  - Migration: Update error handling to use `ExtendError` instead of `CollectError`.
+    The `error` and `iterator` fields are still available.
+- **Breaking:** Moved capacity related types (`CapacityError`, `CapacityErrorKind`, `FixedCap`, `RemainingCap`) from `errors` to `errors::capacity`.
+  - Migration: Update imports to `collect_failable::errors::capacity::*`.
+- **Breaking:** Moved collision related types (`Collision`) from `errors` to `errors::collision`.
+  - Migration: Update imports to `collect_failable::errors::collision::*`.
+- **Breaking:** Renamed `TupleExtensionError` to `TupleExtendError`.
+  - Migration: Update all references from `TupleExtensionError` to `TupleExtendError`.
 
 ### Fixed
 
@@ -48,6 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Migration: Update all references from `collect_failable::SizeHint` to `collect_failable::errors::SizeHint`.
 - **Breaking:** Moved `Either` export from crate root to `errors` module.
   - Migration: Update all references from `collect_failable::either::Either` to `collect_failable::errors::either::Either`.
+- **Breaking:** `TryExtendSafe` no longer extends `TryExtend`. It now has its own `Error` associated type.
+  - This reflects the semantic difference: `TryExtend::Error` may have an empty `collected` field
+    (items were added to target), while `TryExtendSafe::Error` includes rolled-back items.
+  - Migration: Update any manual `TryExtendSafe` implementations to add `type Error = ...`.
 
 ## [0.17.1] - 2026-01-25
 

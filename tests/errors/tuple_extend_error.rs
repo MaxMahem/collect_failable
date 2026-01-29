@@ -1,5 +1,5 @@
 use collect_failable::TryExtendOne;
-use collect_failable::errors::TupleExtensionError;
+use collect_failable::errors::TupleExtendError;
 
 use super::error_tests::{TestError, test_format, test_source};
 
@@ -21,24 +21,24 @@ impl TryExtendOne for TestColl {
     }
 }
 
-fn create_a_error_with_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
+fn create_a_error_with_unevaluated() -> TupleExtendError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtensionError::new_a(SIDE_A_ERROR, Some(20), remaining.into_iter())
+    TupleExtendError::new_a(SIDE_A_ERROR, Some(20), remaining.into_iter())
 }
 
-fn create_a_error_without_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
+fn create_a_error_without_unevaluated() -> TupleExtendError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtensionError::new_a(SIDE_A_ERROR, None, remaining.into_iter())
+    TupleExtendError::new_a(SIDE_A_ERROR, None, remaining.into_iter())
 }
 
-fn create_b_error_with_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
+fn create_b_error_with_unevaluated() -> TupleExtendError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtensionError::new_b(SIDE_B_ERROR, Some(10), remaining.into_iter())
+    TupleExtendError::new_b(SIDE_B_ERROR, Some(10), remaining.into_iter())
 }
 
-fn create_b_error_without_unevaluated() -> TupleExtensionError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
+fn create_b_error_without_unevaluated() -> TupleExtendError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
     let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtensionError::new_b(SIDE_B_ERROR, None, remaining.into_iter())
+    TupleExtendError::new_b(SIDE_B_ERROR, None, remaining.into_iter())
 }
 
 const EXPECTED_DEBUG_A_WITH_UNEVALUATED: &str = r#"TupleExtensionError { side: Left(Side { error: TestError("A side failed"), unevaluated: u32 }), remaining: IntoIter<(u32, u32), 3> }"#;

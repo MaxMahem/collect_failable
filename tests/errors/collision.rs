@@ -1,4 +1,4 @@
-use collect_failable::errors::Collision;
+use collect_failable::errors::collision::Collision;
 
 crate::error_tests::test_ctor!(
     new,

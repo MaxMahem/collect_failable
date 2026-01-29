@@ -1,47 +1,50 @@
 use fluent_result::into::IntoResult;
 
-use crate::errors::SizeHint;
-use crate::errors::{CapacityError, CollectError};
+use crate::TryFromIterator;
+use crate::errors::CollectError;
+use crate::errors::capacity::CapacityError;
+use crate::errors::capacity::{FixedCap, RemainingCap};
+use crate::errors::types::SizeHint;
 use crate::impls::r#unsafe::IntoArrayError;
-use crate::{FixedCap, RemainingCap, TryFromIterator};
 
 use super::PartialArray;
 
 impl<const N: usize, T> RemainingCap for [T; N] {
-    /// Always returns [`SizeHint::ZERO`], since arrays are fixed-size.
+    /// Always returns [`SizeHint::ZERO`].
     fn remaining_cap(&self) -> SizeHint {
         SizeHint::ZERO
     }
 }
 
 impl<const N: usize, T> FixedCap for [T; N] {
+    /// Always returns [`SizeHint::exact(N)`](SizeHint::exact).
     const CAP: SizeHint = SizeHint::exact(N);
 }
 
-/// Create an array of size `N` from an iterator, failing if the iterator produces fewer or more items than `N`.
+/// Create an array of size `N` from an iterator,
+/// failing if the iterator does not produce exactly `N` items.
 impl<const N: usize, T, I> TryFromIterator<I> for [T; N]
 where
     I: IntoIterator<Item = T>,
 {
     type Error = CollectError<I::IntoIter, PartialArray<T, N>, CapacityError<T>>;
 
-    /// Create an array from an [`IntoIterator`], failing if the [`IntoIterator::IntoIter`]
-    /// produces fewer or more items than `N`.
+    /// Create an array from `iter`, failing if `iter` does not produce exactly `N` items.
     ///
     /// # Errors
     ///
-    /// Returns [`CollectError`] if the [`IntoIterator::IntoIter`] produces more or fewer items
-    /// than `N`. All items from the iterator are preserved in the error, and can be retrieved using
+    /// Returns [`CollectError`] if `iter` does not produce exactly `N` items.
+    /// All items from `iter` are preserved in the error, and can be retrieved using
     /// [`CollectError::into_iter`].
     ///
     /// # Panics
     ///
-    /// This method panics if the iterator's [`size_hint`](Iterator::size_hint) is invalid.
+    /// Panics if the `iter`'s [`size_hint`](Iterator::size_hint) is invalid.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use collect_failable::errors::CapacityError;
+    /// use collect_failable::errors::capacity::CapacityError;
     /// use collect_failable::TryFromIterator;
     ///
     /// let array = <[_; 3]>::try_from_iter(1..=3).expect("should succeed");
@@ -55,19 +58,16 @@ where
     /// ```
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let mut iter = into_iter.into_iter();
+        let mut partial_array = PartialArray::new();
 
         match CapacityError::ensure_fits_in::<[T; N], _>(&iter) {
-            Err(err) => CollectError::new(iter, PartialArray::new(), err).into_err(),
-            Ok(()) => {
-                let mut partial_array = PartialArray::new();
-
-                match iter.try_for_each(|item| partial_array.try_push(item)) {
-                    Err(item) => CollectError::collect_overflowed(iter, partial_array, item).into_err(),
-                    Ok(()) => partial_array
-                        .try_into()
-                        .map_err(|IntoArrayError { partial_array, error }| CollectError::new(iter, partial_array, error)),
-                }
-            }
+            Err(err) => CollectError::new(iter, partial_array, err).into_err(),
+            Ok(()) => match iter.try_for_each(|item| partial_array.try_push(item)) {
+                Err(item) => CollectError::collect_overflow(iter, partial_array, item).into_err(),
+                Ok(()) => partial_array
+                    .try_into()
+                    .map_err(|IntoArrayError { partial_array, error }| CollectError::new(iter, partial_array, error)),
+            },
         }
     }
 }
