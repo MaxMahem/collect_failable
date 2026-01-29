@@ -34,6 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Breaking:** `TupleExtendError` is no longer generic over the `Left` and `Right` error types. `TryExtend::Error` for tuples is now `Either<TupleExtendError<...>, TupleExtendError<...>>`.
   - Migration: Remove explicit error type parameters if you were specifying them.
+- **Breaking:** `UnzipError` is no longer an enum with side-specific variants. It is now a struct `UnzipError<Failed, Partial, I>`. `TryUnzip` now returns `Either<UnzipError<FromA, FromB, Self>, UnzipError<FromB, FromA, Self>>`.
+  - Migration: Match on `Either` to determine which side failed, then access fields directly on the `UnzipError` struct.
+- **Breaking:** Renamed `UnzipError::successful` to `UnzipError::partial` to better reflect its purpose as a partial collection from the non-failing side.
+  - Migration: Rename usages of `err.successful` to `err.partial`.
+- **Breaking:** Renamed `unevaluated` field to `pending` in `UnzipError` and `TupleExtendError`.
+  - Migration: Rename `err.unevaluated` to `err.pending`.
+  - Note: `TupleExtendError` generic parameter `U` (Unevaluated) is now `P` (Pending).
 - **Breaking:** Renamed `CollectionError` to `CollectError`.
   - Migration: Update all references from `CollectionError` to `CollectError`.
 - **Breaking:** Renamed `CollectError::iterator` field to `CollectError::iter`.

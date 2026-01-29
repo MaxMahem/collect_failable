@@ -10,7 +10,7 @@ use tap::Pipe;
 
 /// An error that occurs when extending a tuple of collections fails.
 ///
-/// This error preserves the error from the side that failed, any unevaluated item from the other side,
+/// This error preserves the error from the side that failed, any pending item from the other side,
 /// and the remaining iterator for error recovery.
 ///
 /// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`]
@@ -20,66 +20,64 @@ use tap::Pipe;
 /// # Type Parameters
 ///
 /// - `E`: The error type from the failing collection.
-/// - `U`: The type of the unevaluated item from the other collection.
+/// - `P`: The type of the pending item from the other collection.
 /// - `I`: The type of the remaining iterator.
 #[subdef::subdef]
-pub struct TupleExtendError<E, U, I> {
+pub struct TupleExtendError<E, P, I> {
     #[cfg(doc)]
     /// The error that occurred during extension.
     pub error: E,
     #[cfg(doc)]
-    /// The unevaluated item from the other side, if any.
-    pub unevaluated: Option<U>,
+    /// The pending item from the other side, if any.
+    pub pending: Option<P>,
     #[cfg(doc)]
     /// The remaining iterator after the error occurred
     pub remaining: I,
 
     #[cfg(not(doc))]
-    data: Box<TupleExtendErrorData<E, U, I>>,
-    #[cfg(not(doc))]
-    _subdef: [(); {
+    data: [Box<TupleExtendErrorData<E, P, I>>; {
         /// The internal data of a [`TupleExtendError`].
         #[doc(hidden)]
-        pub struct TupleExtendErrorData<E, U, I> {
+        pub struct TupleExtendErrorData<E, P, I> {
             /// The error that occurred during extension.
             pub error: E,
-            /// The unevaluated item from the other side, if any.
-            pub unevaluated: Option<U>,
+            /// The pending item from the other side, if any.
+            pub pending: Option<P>,
             /// The remaining iterator after the error occurred
             pub remaining: I,
         }
     }],
 }
 
-impl<E, U, I> TupleExtendError<E, U, I> {
+impl<E, P, I> TupleExtendError<E, P, I> {
     /// Creates a new [`TupleExtendError`].
     #[doc(hidden)]
     #[must_use]
-    pub fn new(error: E, unevaluated: Option<U>, remaining: I) -> Self {
-        TupleExtendErrorData { error, unevaluated, remaining }.pipe(Box::new).pipe(|data| Self { data, _subdef: () })
+    pub fn new(error: E, pending: Option<P>, remaining: I) -> Self {
+        TupleExtendErrorData { error, pending, remaining }.pipe(Box::new).pipe(|data| Self { data })
     }
 
     /// Consumes the error, returning the data.
     #[must_use]
-    pub fn into_data(self) -> TupleExtendErrorData<E, U, I> {
+    pub fn into_data(self) -> TupleExtendErrorData<E, P, I> {
         *self.data
     }
 }
 
 #[doc(hidden)]
-impl<E, U, I> Deref for TupleExtendError<E, U, I> {
-    type Target = TupleExtendErrorData<E, U, I>;
+impl<E, P, I> Deref for TupleExtendError<E, P, I> {
+    type Target = TupleExtendErrorData<E, P, I>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
 
-impl<E: Debug, U, I> Debug for TupleExtendError<E, U, I> {
+impl<E: Debug, P, I> Debug for TupleExtendError<E, P, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("TupleExtendError")
             .field("error", &self.error)
-            .field_type::<U, Short>("unevaluated")
+            .field_type::<P, Short>("pending")
             .field_type::<I, Short>("remaining")
             .finish()
     }
@@ -87,27 +85,25 @@ impl<E: Debug, U, I> Debug for TupleExtendError<E, U, I> {
 
 #[doc(hidden)]
 #[allow(clippy::missing_fields_in_debug, reason = "All fields actually covered")]
-impl<E: Debug, U, I> Debug for TupleExtendErrorData<E, U, I> {
+impl<E: Debug, P, I> Debug for TupleExtendErrorData<E, P, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("TupleExtendErrorData")
             .field("error", &self.error)
-            .field_type::<U, Short>("unevaluated")
+            .field_type::<P, Short>("pending")
             .field_type::<I, Short>("remaining")
             .finish()
     }
 }
 
-impl<E: Display, U, I> Display for TupleExtendError<E, U, I> {
+impl<E: Display, P, I> Display for TupleExtendError<E, P, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "Error while extending collection: {}", self.error)
     }
 }
 
-impl<E, U, I> Error for TupleExtendError<E, U, I>
+impl<E, P, I> Error for TupleExtendError<E, P, I>
 where
     E: Error + 'static,
-    U: Debug,
-    I: Debug,
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.error)
