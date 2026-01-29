@@ -3,6 +3,7 @@ mod array_safety;
 mod arrayvec;
 mod collection_tests;
 mod collision_tests;
+mod partial_array;
 
 mod result;
 mod sets;

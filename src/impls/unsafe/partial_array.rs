@@ -19,12 +19,24 @@ pub struct PartialArray<T, const N: usize> {
 }
 
 impl<T, const N: usize> PartialArray<T, N> {
-    /// Creates a new guard for the given slice
-    pub(crate) const fn new() -> Self {
+    /// Creates a new guard for the given slice.
+    ///
+    /// # Note
+    ///
+    /// This is generally not needed for normal usage, but can be useful for testing [`CollectError`](crate::errors::CollectError)s.
+    #[must_use]
+    #[doc(hidden)]
+    pub const fn new() -> Self {
         Self { array: [const { MaybeUninit::uninit() }; N], back: 0 }
     }
 
-    pub(crate) const fn try_push(&mut self, item: T) -> Result<(), T> {
+    /// Pushes an item into the partial array, returning it if the array is full.
+    ///
+    /// # Errors
+    ///
+    /// Returns the item if the array is full.
+    #[doc(hidden)]
+    pub const fn try_push(&mut self, item: T) -> Result<(), T> {
         match self.back >= N {
             true => Err(item),
             false => {
@@ -34,7 +46,16 @@ impl<T, const N: usize> PartialArray<T, N> {
             }
         }
     }
+}
 
+#[doc(hidden)]
+impl<T, const N: usize> Default for PartialArray<T, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T, const N: usize> PartialArray<T, N> {
     fn initialized(&self) -> &[MaybeUninit<T>] {
         &self.array[..self.back]
     }

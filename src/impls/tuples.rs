@@ -1,7 +1,11 @@
+use fluent_result::into::IntoResult;
 use no_drop::dbg::IntoNoDrop;
+use tap::Pipe;
 
 use crate::errors::TupleExtendError;
 use crate::{TryExtend, TryExtendOne};
+
+use crate::errors::types::Either;
 
 #[cfg(doc)]
 use crate::TryUnzip;
@@ -17,7 +21,10 @@ where
     TryFromA: TryExtendOne + Default,
     TryFromB: TryExtendOne + Default,
 {
-    type Error = TupleExtendError<TryFromA, TryFromB, I::IntoIter>;
+    type Error = Either<
+        TupleExtendError<TryFromA::Error, TryFromB::Item, I::IntoIter>,
+        TupleExtendError<TryFromB::Error, TryFromA::Item, I::IntoIter>,
+    >;
 
     /// Extends an `(TryFromA, TryFromB)` collection with the contents of an iterator of `(A, B)`.
     ///
@@ -39,7 +46,7 @@ where
     ///
     /// let colliding_pairs = [((5, 5), (6, 6)), ((1, 10), (7, 7))];
     /// let extend_err = tuple_of_maps.try_extend(colliding_pairs).expect_err("should collide on second item");
-    /// let err_side = extend_err.side.as_ref().left().expect("should collide on left side");
+    /// let err_side = extend_err.as_ref().left().expect("should collide on left side");
     ///
     /// assert_eq!(err_side.error.item, (1, 10), "should contain colliding item");
     /// assert_eq!(tuple_of_maps.0[&1], 1, "value should not be modified");
@@ -48,10 +55,10 @@ where
         let mut iter = iter.into_iter();
         for (a, b) in iter.by_ref().map(|(a, b)| (a.no_drop(), b.no_drop())) {
             if let Err(error) = self.0.try_extend_one(a.unwrap()) {
-                return Err(TupleExtendError::new_a(error, Some(b.unwrap()), iter));
+                return TupleExtendError::new(error, Some(b.unwrap()), iter).pipe(Either::Left).into_err();
             }
             if let Err(error) = self.1.try_extend_one(b.unwrap()) {
-                return Err(TupleExtendError::new_b(error, None, iter));
+                return TupleExtendError::new(error, None, iter).pipe::<Self::Error>(Either::Right).into_err();
             }
         }
 

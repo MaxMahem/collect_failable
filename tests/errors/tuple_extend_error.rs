@@ -1,78 +1,48 @@
-use collect_failable::TryExtendOne;
+use crate::error_tests::{TestError, test_source};
+
 use collect_failable::errors::TupleExtendError;
 
-use super::error_tests::{TestError, test_format, test_source};
+mod format {
+    use super::*;
+    use crate::error_tests::test_format;
 
-const SIDE_A_ERROR: TestError = TestError::new("A side failed");
-const SIDE_B_ERROR: TestError = TestError::new("B side failed");
+    const EXPECTED_DEBUG: &str =
+        r#"TupleExtendError { error: TestError("test"), unevaluated: i32, remaining: RangeInclusive<i32> }"#;
+    const EXPECTED_DISPLAY: &str = "Error while extending collection: Test error: test";
+    const EXPECTED_DEBUG_DATA: &str =
+        r#"TupleExtendErrorData { error: TestError("test"), unevaluated: i32, remaining: RangeInclusive<i32> }"#;
 
-// Wrapper type to allow using TestError in tests
-#[derive(Debug)]
-#[allow(dead_code)]
-struct TestColl;
+    test_format!(debug, TupleExtendError::new(TestError::<i32>::new("test"), Some(20), 3..=5), "{:?}", EXPECTED_DEBUG);
 
-impl TryExtendOne for TestColl {
-    type Item = u32;
-    type Error = TestError;
+    test_format!(display, TupleExtendError::new(TestError::<i32>::new("test"), Some(20), 3..=5), "{}", EXPECTED_DISPLAY);
 
-    fn try_extend_one(&mut self, _item: u32) -> Result<(), TestError> {
-        // Not actually used in error construction tests
-        unimplemented!()
-    }
+    test_format!(
+        debug_data,
+        TupleExtendError::new(TestError::<i32>::new("test"), Some(20), 3..=5).into_data(),
+        "{:?}",
+        EXPECTED_DEBUG_DATA
+    );
 }
 
-fn create_a_error_with_unevaluated() -> TupleExtendError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
-    let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtendError::new_a(SIDE_A_ERROR, Some(20), remaining.into_iter())
+mod ctors {
+    use super::*;
+    use crate::error_tests::test_ctor;
+
+    test_ctor!(
+        new,
+        TupleExtendError::new(TestError::<i32>::new("test"), Some(20), 3..=5),
+        error => TestError::new("test"),
+        unevaluated => Some(20),
+        remaining => 3..=5
+    );
+
+    test_ctor!(
+        into_data,
+        TupleExtendError::new(TestError::<i32>::new("test"), Some(20), 3..=5).into_data(),
+        error => TestError::new("test"),
+        unevaluated => Some(20),
+        remaining => 3..=5
+    );
 }
 
-fn create_a_error_without_unevaluated() -> TupleExtendError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
-    let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtendError::new_a(SIDE_A_ERROR, None, remaining.into_iter())
-}
-
-fn create_b_error_with_unevaluated() -> TupleExtendError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
-    let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtendError::new_b(SIDE_B_ERROR, Some(10), remaining.into_iter())
-}
-
-fn create_b_error_without_unevaluated() -> TupleExtendError<TestColl, TestColl, std::array::IntoIter<(u32, u32), 3>> {
-    let remaining = [(3, 30), (4, 40), (5, 50)];
-    TupleExtendError::new_b(SIDE_B_ERROR, None, remaining.into_iter())
-}
-
-const EXPECTED_DEBUG_A_WITH_UNEVALUATED: &str = r#"TupleExtensionError { side: Left(Side { error: TestError("A side failed"), unevaluated: u32 }), remaining: IntoIter<(u32, u32), 3> }"#;
-const EXPECTED_DEBUG_A_WITHOUT_UNEVALUATED: &str = r#"TupleExtensionError { side: Left(Side { error: TestError("A side failed"), unevaluated: u32 }), remaining: IntoIter<(u32, u32), 3> }"#;
-const EXPECTED_DEBUG_B_WITH_UNEVALUATED: &str = r#"TupleExtensionError { side: Right(Side { error: TestError("B side failed"), unevaluated: u32 }), remaining: IntoIter<(u32, u32), 3> }"#;
-const EXPECTED_DEBUG_B_WITHOUT_UNEVALUATED: &str = r#"TupleExtensionError { side: Right(Side { error: TestError("B side failed"), unevaluated: u32 }), remaining: IntoIter<(u32, u32), 3> }"#;
-const EXPECTED_DISPLAY_A: &str = "Failed while extending first collection: Test error: A side failed";
-const EXPECTED_DISPLAY_B: &str = "Failed while extending second collection: Test error: B side failed";
-
-// Test Debug formatting
-test_format!(debug_a_with_unevaluated, create_a_error_with_unevaluated(), "{:?}", EXPECTED_DEBUG_A_WITH_UNEVALUATED);
-test_format!(debug_a_without_unevaluated, create_a_error_without_unevaluated(), "{:?}", EXPECTED_DEBUG_A_WITHOUT_UNEVALUATED);
-test_format!(debug_b_with_unevaluated, create_b_error_with_unevaluated(), "{:?}", EXPECTED_DEBUG_B_WITH_UNEVALUATED);
-test_format!(debug_b_without_unevaluated, create_b_error_without_unevaluated(), "{:?}", EXPECTED_DEBUG_B_WITHOUT_UNEVALUATED);
-
-// Test Display formatting
-test_format!(display_a, create_a_error_with_unevaluated(), "{}", EXPECTED_DISPLAY_A);
-test_format!(display_b, create_b_error_with_unevaluated(), "{}", EXPECTED_DISPLAY_B);
-
-// Test into_data method
-#[test]
-fn into_data() {
-    let error = create_a_error_with_unevaluated();
-    let data = error.into_data();
-
-    assert!(data.side.is_left());
-    assert_eq!(data.remaining.collect::<Vec<_>>(), vec![(3, 30), (4, 40), (5, 50)]);
-}
-
-#[test]
-fn deref_field_access() {
-    let error = create_a_error_with_unevaluated();
-    assert!(error.side.is_left());
-}
-
-test_source!(error_trait_source_a, create_a_error_with_unevaluated(), TestError);
-test_source!(error_trait_source_b, create_b_error_with_unevaluated(), TestError);
+test_source!(source, TupleExtendError::new(TestError::<i32>::new("test"), Some(20), 3..=5), TestError::<i32>);

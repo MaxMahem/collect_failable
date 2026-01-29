@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking:** `TupleExtendError` is no longer generic over the `Left` and `Right` error types. `TryExtend::Error` for tuples is now `Either<TupleExtendError<...>, TupleExtendError<...>>`.
+  - Migration: Remove explicit error type parameters if you were specifying them.
 - **Breaking:** Renamed `CollectionError` to `CollectError`.
   - Migration: Update all references from `CollectionError` to `CollectError`.
 - **Breaking:** Renamed `CollectError::iterator` field to `CollectError::iter`.
@@ -67,6 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - This reflects the semantic difference: `TryExtend::Error` may have an empty `collected` field
     (items were added to target), while `TryExtendSafe::Error` includes rolled-back items.
   - Migration: Update any manual `TryExtendSafe` implementations to add `type Error = ...`.
+- **Breaking:** Removed `TupleExtendError` new. This type is not intended for user construction.
+  - Migration: Do not internally construct `TupleExtendError`.
 
 ## [0.17.1] - 2026-01-25
 
