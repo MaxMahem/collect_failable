@@ -1,4 +1,8 @@
-use crate::SizeHint;
+use fluent_result::bool::Then;
+use tap::TryConv;
+
+use super::SizeHint;
+use crate::{FixedCap, RemainingCap};
 
 use super::ErrorItemProvider;
 
@@ -72,10 +76,9 @@ impl<T> CapacityError<T> {
     /// # Examples
     ///
     /// ```rust
-    /// use collect_failable::errors::{CapacityError, CapacityErrorKind};
-    /// use collect_failable::SizeHint;
-    ///
+    /// # use collect_failable::errors::{CapacityError, CapacityErrorKind, SizeHint};
     /// let err = CapacityError::<i32>::bounds(SizeHint::exact(5), SizeHint::exact(2));
+    ///
     /// assert_eq!(err.capacity, SizeHint::exact(5));
     /// assert_eq!(err.kind, CapacityErrorKind::Bounds { hint: SizeHint::exact(2) });
     /// ```
@@ -84,26 +87,130 @@ impl<T> CapacityError<T> {
         Self { capacity, kind: CapacityErrorKind::Bounds { hint } }
     }
 
+    /// Ensures `iterator`'s [`size_hint`](`Iterator::size_hint`) is compatible with `capacity`'s
+    /// size constraint.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`Bounds`](CapacityErrorKind::Bounds) [`CapacityError`] if the `hint` is disjoint
+    /// from the `capacity`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `hint` is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use collect_failable::errors::{CapacityError, CapacityErrorKind, SizeHint};
+    /// let err = CapacityError::<i32>::ensure_fits(SizeHint::exact(5), &(1..=3))
+    ///     .expect_err("bounds should be disjoint");
+    ///
+    /// assert_eq!(err.capacity, SizeHint::exact(5));
+    /// assert_eq!(err.kind, CapacityErrorKind::Bounds { hint: SizeHint::exact(3) });
+    /// ```
+    pub fn ensure_fits<I: Iterator>(capacity: SizeHint, iter: &I) -> Result<(), Self> {
+        let hint = iter.size_hint().try_conv::<SizeHint>().expect("Invalid size hint");
+        SizeHint::disjoint(capacity, hint).then_err(Self::bounds(capacity, hint))
+    }
+
+    /// Ensures `iter`'s [`size_hint`](`Iterator::size_hint`) is compatible with the
+    /// [fixed capacity][FixedCap] of `C`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`Bounds`](CapacityErrorKind::Bounds) [`CapacityError`] if the `hint` is disjoint
+    /// with the [fixed capacity][FixedCap] of `C`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `iter`'s [`size_hint`](`Iterator::size_hint`) is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use collect_failable::errors::{CapacityError, CapacityErrorKind, SizeHint};
+    /// let err = CapacityError::<i32>::ensure_fits_in::<[i32; 5], _>(&(1..=3))
+    ///     .expect_err("bounds should be disjoint");
+    ///
+    /// assert_eq!(err.capacity, SizeHint::exact(5));
+    /// assert_eq!(err.kind, CapacityErrorKind::Bounds { hint: SizeHint::exact(3) });
+    /// ```
+    pub fn ensure_fits_in<C: FixedCap, I: Iterator>(iter: &I) -> Result<(), Self> {
+        Self::ensure_fits(C::CAP, iter)
+    }
+
+    /// Ensures `iter`'s [`size_hint`](`Iterator::size_hint`) is compatible with the
+    /// [remaining capacity][RemainingCap] of `collection`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`Bounds`](CapacityErrorKind::Bounds) [`CapacityError`] if the `hint` is disjoint
+    /// with the [remaining capacity][RemainingCap] of `collection`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `iter`'s [`size_hint`](`Iterator::size_hint`) is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use collect_failable::errors::{CapacityError, CapacityErrorKind, SizeHint};
+    /// # use arrayvec::ArrayVec;
+    /// let err = CapacityError::<i32>::ensure_fits_into::<ArrayVec<i32, 5>, _>(&(1..=7), &ArrayVec::new())
+    ///     .expect_err("bounds should be disjoint");
+    ///
+    /// assert_eq!(err.capacity, SizeHint::at_most(5));
+    /// assert_eq!(err.kind, CapacityErrorKind::Bounds { hint: SizeHint::exact(7) });
+    /// ```
+    pub fn ensure_fits_into<C: RemainingCap, I: Iterator>(iter: &I, collection: &C) -> Result<(), Self> {
+        Self::ensure_fits(collection.remaining_cap(), iter)
+    }
+
     /// Creates a new [`CapacityError`] indicating that the iterator exceeded the maximum capacity.
     ///
     /// The number of excess items produced is implied to be at least one, but may be greater.
     ///
     /// Use this when you know the exact capacity constraint. For extension operations that fill
-    /// a collection to capacity, consider [`CapacityError::overflowed`] instead.
+    /// a collection to capacity, consider [`CapacityError::extend_overflowed`] instead.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use collect_failable::errors::{CapacityError, CapacityErrorKind};
-    /// use collect_failable::SizeHint;
-    ///
+    /// # use collect_failable::errors::{CapacityError, CapacityErrorKind, SizeHint};
     /// let err = CapacityError::overflow(SizeHint::exact(5), 2);
+    ///
     /// assert_eq!(err.capacity, SizeHint::exact(5));
     /// assert_eq!(err.kind, CapacityErrorKind::Overflow { rejected: 2 });
     /// ```
     #[must_use]
     pub const fn overflow(capacity: SizeHint, rejected: T) -> Self {
         Self { capacity, kind: CapacityErrorKind::Overflow { rejected } }
+    }
+
+    /// Creates a new [`CapacityError`] indicating that the iterator overflowed the maximum capacity
+    /// of a collection with fixed capacity `C`.
+    ///
+    /// The number of excess items produced is implied to be at least one, but may be greater.
+    ///
+    /// Use this for overflow errors on types with a fixed capacity constraint, where the collection
+    /// is left in an empty state.
+    ///
+    /// For extension operations that fill a collection to capacity, consider [`CapacityError::extend_overflowed`]
+    /// instead.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use collect_failable::errors::{CapacityError, CapacityErrorKind, SizeHint};
+    /// let err = CapacityError::collect_overflowed::<[i32; 5]>(2);
+    ///
+    /// assert_eq!(err.capacity, SizeHint::exact(5));
+    /// assert_eq!(err.kind, CapacityErrorKind::Overflow { rejected: 2 });
+    /// ```
+    #[must_use]
+    pub const fn collect_overflowed<C: FixedCap>(rejected: T) -> Self {
+        Self { capacity: C::CAP, kind: CapacityErrorKind::Overflow { rejected } }
     }
 
     /// Creates a new [`CapacityError`] indicating that the iterator overflowed the maximum capacity,
@@ -122,15 +229,14 @@ impl<T> CapacityError<T> {
     /// # Examples
     ///
     /// ```rust
-    /// use collect_failable::errors::{CapacityError, CapacityErrorKind};
-    /// use collect_failable::SizeHint;
+    /// # use collect_failable::errors::{CapacityError, CapacityErrorKind, SizeHint};
+    /// let err = CapacityError::extend_overflowed(2);
     ///
-    /// let err = CapacityError::overflowed(2);
     /// assert_eq!(err.capacity, SizeHint::ZERO);
     /// assert_eq!(err.kind, CapacityErrorKind::Overflow { rejected: 2 });
     /// ```
     #[must_use]
-    pub const fn overflowed(rejected: T) -> Self {
+    pub const fn extend_overflowed(rejected: T) -> Self {
         Self { capacity: SizeHint::ZERO, kind: CapacityErrorKind::Overflow { rejected } }
     }
 
@@ -140,16 +246,32 @@ impl<T> CapacityError<T> {
     /// # Examples
     ///
     /// ```rust
-    /// use collect_failable::errors::{CapacityError, CapacityErrorKind};
-    /// use collect_failable::SizeHint;
-    ///
+    /// # use collect_failable::errors::{CapacityError, CapacityErrorKind, SizeHint};
     /// let err = CapacityError::<i32>::underflow(SizeHint::exact(5), 2);
+    ///
     /// assert_eq!(err.capacity, SizeHint::exact(5));
     /// assert_eq!(err.kind, CapacityErrorKind::Underflow { count: 2 });
     /// ```
     #[must_use]
     pub const fn underflow(capacity: SizeHint, count: usize) -> Self {
         Self { capacity, kind: CapacityErrorKind::Underflow { count } }
+    }
+
+    /// Creates a new [`CapacityError`] indicating that the iterator produced fewer items than the
+    /// fixed capacity of [`C::CAP`](FixedCap::CAP).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use collect_failable::errors::{CapacityError, CapacityErrorKind, SizeHint};
+    /// let err = CapacityError::<i32>::collect_underflowed::<[i32; 5]>(2);
+    ///
+    /// assert_eq!(err.capacity, SizeHint::exact(5));
+    /// assert_eq!(err.kind, CapacityErrorKind::Underflow { count: 2 });
+    /// ```
+    #[must_use]
+    pub const fn collect_underflowed<C: FixedCap>(count: usize) -> Self {
+        Self { capacity: C::CAP, kind: CapacityErrorKind::Underflow { count } }
     }
 }
 

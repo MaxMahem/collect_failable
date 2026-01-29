@@ -1,13 +1,15 @@
-use crate::collection_tests::{panics, recover_iter_data, try_collect};
+use crate::collection_tests::{recover_iter_data, try_collect};
+use crate::utils::panics;
 
 use collect_failable::errors::CapacityError;
 use collect_failable::{FixedCap, RemainingCap, TryCollectEx, TryFromIterator};
+
 use size_hinter::{InvalidIterator, SizeHint, SizeHinter};
 use tap::Pipe;
 
 const BOUNDS_OVER_ERR: CapacityError<u32> = CapacityError::bounds(SizeHint::exact(5), SizeHint::exact(6));
 const BOUNDS_UNDER_ERR: CapacityError<u32> = CapacityError::bounds(SizeHint::exact(5), SizeHint::exact(4));
-const OVERFLOW_ERR: CapacityError<u32> = CapacityError::overflowed(6);
+const OVERFLOW_ERR: CapacityError<u32> = CapacityError::overflow(SizeHint::exact(5), 6);
 const UNDERFLOW_ERR: CapacityError<u32> = CapacityError::underflow(SizeHint::exact(5), 4);
 
 type Array = [u32; 5];
@@ -18,13 +20,13 @@ try_collect!(too_short_data, Array, 1..=4, Err(BOUNDS_UNDER_ERR));
 try_collect!(too_long_data_hidden, Array, (1..=6).hide_size(), Err(OVERFLOW_ERR));
 try_collect!(too_short_data_hidden, Array, (1..=4).hide_size(), Err(UNDERFLOW_ERR));
 
-panics!(panic_on_invalid_iterator, Array::try_from_iter(InvalidIterator::DEFAULT), "invalid size hint");
+panics!(panic_on_invalid_iterator, Array::try_from_iter(InvalidIterator::DEFAULT), "Invalid size hint: InvalidSizeHint");
 
 #[test]
 fn array_capacity() {
-    let array: [i32; 2] = [0; 2];
+    let array: Array = [0; 5];
     assert_eq!(array.remaining_cap(), SizeHint::exact(0));
-    assert_eq!(<[i32; 2] as FixedCap>::CAP, SizeHint::exact(2));
+    assert_eq!(<Array as FixedCap>::CAP, SizeHint::exact(5));
 }
 
 mod recover_iter {
@@ -64,38 +66,80 @@ mod partial_array_drop {
 
 #[test]
 fn partial_array_drain_drop() {
-    let (counters, viewers) = dropcount::new_vec(3);
+    for consume in 0..=6 {
+        let (counters, viewers) = dropcount::new_vec(6);
 
-    counters
-        .into_iter()
-        .hide_size()
-        .try_collect_ex::<[_; 5]>()
-        .expect_err("should overflow")
-        .into_data()
-        .collected
-        .into_iter()
-        .pipe(drop);
+        let mut drain = counters
+            .into_iter()
+            .hide_size()
+            .try_collect_ex::<[_; 5]>()
+            .expect_err("should overflow")
+            .into_data()
+            .collected
+            .into_iter();
 
-    viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Item should be dropped once"));
+        drain.by_ref().take(consume).for_each(drop);
+
+        drop(drain);
+
+        viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Items should be dropped once (consume={})", consume));
+    }
 }
 
-#[test]
-fn partial_array_drain_drop_partial() {
-    let (counters, viewers) = dropcount::new_vec(3);
+mod try_from {
+    use collect_failable::errors::partial_array::IntoArrayError;
 
-    let mut drain = counters
-        .into_iter()
-        .hide_size()
-        .try_collect_ex::<[_; 5]>()
-        .expect_err("should overflow")
-        .into_data()
-        .collected
-        .into_iter();
+    use super::*;
 
-    assert!(drain.next().is_some());
-    assert!(drain.next().is_some());
+    #[test]
+    fn try_from_partial_array_overflow() {
+        let partial = (1..=6).hide_size().try_collect_ex::<Array>().expect_err("should overflow").into_data().collected;
 
-    drop(drain);
+        let array: Array = partial.try_into().expect("should succeed since array is full");
 
-    viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Item should be dropped once"));
+        assert_eq!(array, [1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn try_from_partial_array_underflow() {
+        let partial = (1..=4).hide_size().try_collect_ex::<Array>().expect_err("should underflow").into_data().collected;
+
+        let IntoArrayError { partial_array, error } = Array::try_from(partial).expect_err("should fail since array is not full");
+
+        assert_eq!(error, UNDERFLOW_ERR);
+        assert_eq!(partial_array, [1, 2, 3, 4][..]);
+    }
+}
+
+mod eq {
+    use super::*;
+
+    #[test]
+    fn partial_array_eq_slice() {
+        let err = (1..=3).hide_size().try_collect_ex::<Array>().expect_err("should underflow");
+        let partial = err.into_data().collected;
+        assert_eq!(partial, [1, 2, 3][..]);
+        assert_ne!(partial, [1, 2][..]);
+        assert_ne!(partial, [1, 2, 3, 4][..]);
+    }
+
+    #[test]
+    fn partial_array_eq_slice_overflow() {
+        let err = (1..=6).hide_size().try_collect_ex::<Array>().expect_err("should overflow");
+        let partial = err.into_data().collected;
+        assert_eq!(partial, [1, 2, 3, 4, 5][..]);
+    }
+}
+
+mod iter {
+    use super::*;
+
+    #[test]
+    fn borrow() {
+        let partial = (1..=4).hide_size().try_collect_ex::<Array>().expect_err("should underflow").into_data().collected;
+
+        let collected: Vec<_> = (&partial).into_iter().copied().collect();
+
+        assert_eq!(collected, vec![1, 2, 3, 4]);
+    }
 }

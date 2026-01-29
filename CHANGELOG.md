@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added helper constructors for `CapacityError`:
+  - `ensure_fits`
+  - `ensure_fits_in`
+  - `ensure_fits_into`
+  - `collect_overflowed`
+  - `collect_underflowed`
+  - `extend_overflowed`
+- Added helper constructors for `CollectError`:
+  - `ensure_fits_in`
+  - `ensure_fits_into`
+  - `collect_overflowed`
+  - `collect_underflowed`
+  - `extend_overflowed`
+
+- Implemented `TryFrom<PartialArray<T, N>>` for `[T; N]` to allow converting a full `PartialArray` (e.g. from an overflow error) into an array.
+
+### Changed
+
+- **Breaking:** Renamed `CollectionError` to `CollectError`.
+  - Migration: Update all references from `CollectionError` to `CollectError`.
+- **Breaking:** Changed `ArrayVec` `TryFromIterator` and `TryExtend` implementations to return `ArrayVec` instead of `Vec` in `CollectError`.
+  - Migration: Update error handling to expect `ArrayVec` in the `collected` field.
+- **Breaking:** Changed `CollectError::overflowed` to `extend_overflowed`.
+  - Migration: Update error handling to use `extend_overflowed` ctor.
+
+### Fixed
+
+- Fixed incorrect `CapacityError` capacity reported when collecting into a fixed-size array overflows (via `PartialArray`). It now correctly reports the array's capacity instead of `SizeHint::ZERO`.
+
+### Removed
+
+- **Breaking:** Removed export of `PartialArray` type in the `errors` module. It is now only available under `errors::partial_array::PartialArray`.
+  - Migration: Update all references from `PartialArray` to `errors::partial_array::PartialArray`.
+- **Breaking:** Moved `SizeHint` export from crate root to `errors` module.
+  - Migration: Update all references from `collect_failable::SizeHint` to `collect_failable::errors::SizeHint`.
+- **Breaking:** Moved `Either` export from crate root to `errors` module.
+  - Migration: Update all references from `collect_failable::either::Either` to `collect_failable::errors::either::Either`.
+
 ## [0.17.1] - 2026-01-25
 
 ### Changed

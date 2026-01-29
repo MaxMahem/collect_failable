@@ -9,6 +9,10 @@
 
 A set of traits for collecting values into containers that must uphold invariants during construction or extension. These traits let you propagate structured errors instead of panicking or silently discarding data. Examples include preventing duplicate keys in a `HashMap` or respecting capacity limits in types like `ArrayVec`.
 
+## Installation
+
+It's on [crates.io](https://crates.io/crates/collect_failable).
+
 ## Traits
 
 This crate provides several complementary traits for failable collection:
@@ -18,13 +22,13 @@ This crate provides several complementary traits for failable collection:
 - `TryExtend` and `TryExtendSafe` – failably extend a container with an `IntoIterator`, with different error guarantees.
 - `TryExtendOne` – failable extend a container with a single item.
 - `TryUnzip` – failably unzip an `IntoIterator` of pairs into two containers (requires feature `tuple`, enabled by default).
-- `Capacity` - expose capacity size hints for collection types (e.g., `ArrayVec`).
+- `FixedCap` and `RemainingCap` - expose capacity size hints for fixed size collection types (e.g., `ArrayVec`).
 
 Additionally, several implementations are provided for common and popular containers. See the [implementations](#implementations) section for more details.
 
-## Installation
+## Error Recovery
 
-It's on [crates.io](https://crates.io/crates/collect_failable).
+Implementations from this crate make a special emphasis on being able to recover all data in the case of collection or extension failure. The `CollectError` type will contain both the (potentially partially iterated) iterator, the items collected up to the point of failure, and the item that caused the failure, and can be converted back into an iterator if desired.
 
 ## Features
 
@@ -38,11 +42,9 @@ This crate provides the following optional features:
 - `hashbrown` – Enables `TryFromIterator` and `TryExtend` implementations for `hashbrown::HashMap` and `hashbrown::HashSet`.
 - `indexmap` – Enables `TryFromIterator` and `TryExtend` implementations for `indexmap::IndexMap` and `indexmap::IndexSet`.
 
-### No-std Support
+### No-Std Support
 
-This crate supports `no_std` environments when the `std` feature is disabled. The `alloc` feature provides allocation-dependent functionality (`BTreeMap`, `BTreeSet`, etc.) without requiring the full standard library.
-
-**Note**: `HashMap` and `HashSet` require the `std` feature because they depend on the standard library's default hasher. For `no_std` environments, consider `BTreeMap`/`BTreeSet` (with `alloc`) or `hashbrown`/`indexmap` (with their respective features).
+This crate supports `no_std` environments when the `std` feature is disabled. The `alloc` feature provides allocation-dependent functionality (`BTreeMap`, `BTreeSet`, etc.) without requiring the full standard library. Note, both `HashMap` and `HashSet` require the `std` feature.
 
 ## Usage
 

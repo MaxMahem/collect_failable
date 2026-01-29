@@ -1,6 +1,6 @@
 use crate::collection_tests::try_extend_one;
 use assert_unordered::assert_eq_unordered;
-use collect_failable::errors::{CollectionError, Collision, ErrorItemProvider};
+use collect_failable::errors::{CollectError, Collision, ErrorItemProvider};
 use collect_failable::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 use tap::Pipe;
 
@@ -59,7 +59,7 @@ const SET_PARAMS: TestParams<u32> = TestParams {
 };
 
 fn check_collision_error<T, C, const N: usize>(
-    err: &CollectionError<std::array::IntoIter<T, N>, C, Collision<T>>,
+    err: &CollectError<std::array::IntoIter<T, N>, C, Collision<T>>,
     data: &CollisionData<T, N>,
     expected_collected: &C,
 ) where

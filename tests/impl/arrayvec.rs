@@ -1,6 +1,7 @@
-use arrayvec::ArrayVec;
+use crate::collection_tests::recover_iter_data;
+use crate::utils::panics;
 
-use crate::collection_tests::{panics, recover_iter_data};
+use arrayvec::ArrayVec;
 use collect_failable::TryFromIterator;
 use collect_failable::errors::CapacityError;
 use size_hinter::{InvalidIterator, SizeHint, SizeHinter};
@@ -29,14 +30,14 @@ mod try_extend_safe {
         bound_fail,
         TestArrayVec::from_iter(3..=3),
         1..=3,
-        Err(CapacityError::bounds(SizeHint::at_most(1), SizeHint::exact(3)), Vec::new(), 1..=3)
+        Err(CapacityError::bounds(SizeHint::at_most(1), SizeHint::exact(3)), TestArrayVec::new(), 1..=3)
     );
 
     try_extend_safe!(
         overflow,
         TestArrayVec::from_iter(3..=3),
         (1..=2).hide_size(),
-        Err(CapacityError::overflow(SizeHint::at_most(1), 2), vec![1], std::iter::empty())
+        Err(CapacityError::overflow(SizeHint::at_most(1), 2), TestArrayVec::from_iter([1]), std::iter::empty::<i32>())
     );
 
     panics!(invalid_iter, TestArrayVec::new().try_extend_safe(InvalidIterator::DEFAULT), "Invalid size hint");
@@ -52,14 +53,14 @@ mod try_extend {
         bounds_fail,
         TestArrayVec::from_iter(3..=3),
         1..=3,
-        Err(CapacityError::bounds(SizeHint::at_most(1), SizeHint::exact(3)), Vec::new(), 1..=3)
+        Err(CapacityError::bounds(SizeHint::at_most(1), SizeHint::exact(3)), TestArrayVec::new(), 1..=3)
     );
 
     try_extend!(
         overflow,
         TestArrayVec::from_iter(3..=3),
         (1..=2).hide_size(),
-        Err(CapacityError::overflow(SizeHint::ZERO, 2), Vec::new(), std::iter::empty())
+        Err(CapacityError::overflow(SizeHint::ZERO, 2), TestArrayVec::new(), std::iter::empty::<i32>())
     );
 
     panics!(invalid_iter, TestArrayVec::new().try_extend(InvalidIterator::DEFAULT), "Invalid size hint");
@@ -71,5 +72,5 @@ mod try_extend_one {
     use collect_failable::TryExtendOne;
 
     try_extend_one!(valid, TestArrayVec::new(), 1, Ok(TestArrayVec::from_iter(1..=1)));
-    try_extend_one!(collision, TestArrayVec::from([1, 2]), 2, Err(CapacityError::overflowed(2)));
+    try_extend_one!(collision, TestArrayVec::from([1, 2]), 2, Err(CapacityError::extend_overflowed(2)));
 }

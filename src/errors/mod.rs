@@ -5,7 +5,7 @@ mod collision;
 mod error_item_provider;
 
 #[cfg(feature = "alloc")]
-mod collection_error;
+mod collect_error;
 #[cfg(feature = "alloc")]
 mod result_collection_error;
 
@@ -19,7 +19,7 @@ pub use collision::*;
 pub use error_item_provider::*;
 
 #[cfg(feature = "alloc")]
-pub use collection_error::*;
+pub use collect_error::*;
 #[cfg(feature = "alloc")]
 pub use result_collection_error::*;
 
@@ -28,11 +28,15 @@ pub use tuple_extension_error::*;
 #[cfg(feature = "tuple")]
 pub use unzip_error::*;
 
-/// Types related to [`PartialArray`].
+/// Re-export of the `Either` type from the `either` crate.
+#[cfg(feature = "tuple")]
+pub use either::Either;
+
+/// Re-export of the [`SizeHint`] type from the `size_hinter` crate.
+pub use size_hinter::SizeHint;
+
+/// Types related to [`PartialArray`](crate::impls::unsafe::PartialArray).
 #[cfg(feature = "unsafe")]
 pub mod partial_array {
-    pub use crate::impls::r#unsafe::{Drain, PartialArray};
+    pub use crate::impls::r#unsafe::{Drain, IntoArrayError, PartialArray};
 }
-
-#[cfg(feature = "unsafe")]
-pub use partial_array::PartialArray;

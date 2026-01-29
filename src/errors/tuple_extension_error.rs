@@ -13,7 +13,7 @@ use tap::Pipe;
 use crate::TryExtend;
 
 use crate::TryExtendOne;
-use crate::either::Either;
+use crate::errors::Either;
 
 /// An error that occurs when extending a tuple of collections fails.
 ///

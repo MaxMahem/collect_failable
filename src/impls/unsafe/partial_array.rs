@@ -1,15 +1,18 @@
 use core::iter::FusedIterator;
 use core::mem::{ManuallyDrop, MaybeUninit};
 use core::ops::Deref;
-use size_hinter::SizeHint;
-use tap::TryConv;
 
-use crate::FixedCap;
-use crate::errors::CapacityError;
+use fluent_result::into::IntoResult;
+use tap::Pipe;
+
+use crate::errors::{CapacityError, SizeHint};
+use crate::{FixedCap, RemainingCap};
 
 /// A guard that ensures that all elements in a slice are initialized
 #[derive(Debug)]
 pub struct PartialArray<T, const N: usize> {
+    /// The array elements. Elements `array[..back]` are initialized,
+    /// Elements `array[back..]` are uninitialized
     array: [MaybeUninit<T>; N],
     /// Index of the first uninitialized element/length of the initialized array
     back: usize,
@@ -21,31 +24,9 @@ impl<T, const N: usize> PartialArray<T, N> {
         Self { array: [const { MaybeUninit::uninit() }; N], back: 0 }
     }
 
-    /// Disarms the guard, returning an error if the slice is not fully initialized.
-    pub(crate) const fn try_into_array(self) -> Result<[T; N], (Self, CapacityError<T>)> {
-        match (self.back, N) {
-            (init, len) if init != len => Err((self, CapacityError::underflow(SizeHint::exact(len), init))),
-            _ => {
-                let array = unsafe { core::ptr::read(self.array.as_ptr().cast::<[T; N]>()) };
-                core::mem::forget(self);
-                Ok(array)
-            }
-        }
-    }
-
-    pub(crate) fn try_extend_basic(&mut self, iter: &mut impl Iterator<Item = T>) -> Result<(), CapacityError<T>> {
-        let hint = iter.size_hint().try_conv::<SizeHint>().expect("invalid size hint");
-        let capacity = <[T; N]>::CAP;
-
-        match SizeHint::disjoint(hint, capacity) {
-            true => Err(CapacityError::bounds(capacity, hint)),
-            false => iter.try_for_each(|item| self.try_extend_one(item)),
-        }
-    }
-
-    const fn try_extend_one(&mut self, item: T) -> Result<(), CapacityError<T>> {
+    pub(crate) const fn try_push(&mut self, item: T) -> Result<(), T> {
         match self.back >= N {
-            true => Err(CapacityError::overflowed(item)),
+            true => Err(item),
             false => {
                 self.array[self.back].write(item);
                 self.back += 1;
@@ -53,14 +34,33 @@ impl<T, const N: usize> PartialArray<T, N> {
             }
         }
     }
+
+    fn initialized(&self) -> &[MaybeUninit<T>] {
+        &self.array[..self.back]
+    }
+
+    fn initialized_mut(&mut self) -> &mut [MaybeUninit<T>] {
+        &mut self.array[..self.back]
+    }
 }
 
 impl<T, const N: usize> Deref for PartialArray<T, N> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
-        unsafe { self.array[..self.back].assume_init_ref() }
+        // SAFETY: initialized elements are initialized
+        self.initialized().pipe_ref(|slice| unsafe { slice.assume_init_ref() })
     }
+}
+
+impl<T, const N: usize> RemainingCap for PartialArray<T, N> {
+    fn remaining_cap(&self) -> SizeHint {
+        SizeHint::at_most(N - self.back)
+    }
+}
+
+impl<T, const N: usize> FixedCap for PartialArray<T, N> {
+    const CAP: SizeHint = SizeHint::exact(N);
 }
 
 impl<T, U, const N: usize> PartialEq<[U]> for PartialArray<T, N>
@@ -72,26 +72,78 @@ where
     }
 }
 
+impl<T, const N: usize> Drop for PartialArray<T, N> {
+    fn drop(&mut self) {
+        // SAFETY: initialized elements are initialized
+        self.initialized_mut().pipe_ref_mut(|slice| unsafe { slice.assume_init_drop() });
+    }
+}
+
+/// Error returned when trying to convert a [`PartialArray`] into a full array.
+#[derive(Debug, thiserror::Error)]
+#[error("Not enough elements to fill the array: {error}")]
+pub struct IntoArrayError<T, const N: usize> {
+    /// The [`PartialArray`] that failed to convert.
+    pub partial_array: PartialArray<T, N>,
+    /// The error showing why the array was not full.
+    #[source]
+    pub error: CapacityError<T>,
+}
+
+impl<T, const N: usize> IntoArrayError<T, N> {
+    const fn new(partial_array: PartialArray<T, N>) -> Self {
+        let error = CapacityError::collect_underflowed::<[T; N]>(partial_array.back);
+        Self { partial_array, error }
+    }
+}
+
+/// Tries to convert the [`PartialArray`] into a full array `[T; N]`.
+///
+/// This is generally only possible in an overflow error case, where the iterator was too long.
+impl<T, const N: usize> TryFrom<PartialArray<T, N>> for [T; N] {
+    type Error = IntoArrayError<T, N>;
+
+    /// Performs the conversion.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`IntoArrayError`] if the array is not fully initialized.
+    fn try_from(partial_array: PartialArray<T, N>) -> Result<Self, Self::Error> {
+        match partial_array.back == N {
+            false => IntoArrayError::new(partial_array).into_err(),
+            true => ManuallyDrop::new(partial_array)
+                .array
+                .as_ptr()
+                .cast::<[T; N]>()
+                // SAFETY: all elements are initialized, read exactly once and never again
+                .pipe(|ptr| unsafe { core::ptr::read(ptr) })
+                .into_ok(),
+        }
+    }
+}
+
 impl<T, const N: usize> IntoIterator for PartialArray<T, N> {
     type Item = T;
     type IntoIter = Drain<T, N>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Drain { guard: ManuallyDrop::new(self), next: 0 }
+        Drain { partial_array: ManuallyDrop::new(self), next: 0 }
     }
 }
 
-impl<T, const N: usize> Drop for PartialArray<T, N> {
-    fn drop(&mut self) {
-        // SAFETY: elements up to `initialized` are initialized
-        unsafe { self.array[..self.back].assume_init_drop() };
+impl<'a, T, const N: usize> IntoIterator for &'a PartialArray<T, N> {
+    type Item = &'a T;
+    type IntoIter = core::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self[..].iter()
     }
 }
 
 /// An iterator that moves out of a [`PartialArray`].
 #[derive(Debug)]
 pub struct Drain<T, const N: usize> {
-    guard: ManuallyDrop<PartialArray<T, N>>,
+    partial_array: ManuallyDrop<PartialArray<T, N>>,
     next: usize,
 }
 
@@ -99,16 +151,15 @@ impl<T, const N: usize> Iterator for Drain<T, N> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        (self.next < self.guard.back).then(|| {
-            let item = unsafe { self.guard.array[self.next].assume_init_read() };
+        self.partial_array.get(self.next).map(|item| {
             self.next += 1;
-            item
+            // SAFETY: item is read once and never again
+            unsafe { core::ptr::read(item) }
         })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.guard.back - self.next;
-        (len, Some(len))
+        SizeHint::exact(self.partial_array.back - self.next).into()
     }
 }
 
@@ -117,8 +168,10 @@ impl<T, const N: usize> FusedIterator for Drain<T, N> {}
 
 impl<T, const N: usize> Drop for Drain<T, N> {
     fn drop(&mut self) {
-        let back = self.guard.back;
-        // SAFETY: elements between `next` and `back` are initialized
-        (self.next < back).then(|| unsafe { self.guard.array[self.next..back].assume_init_drop() });
+        let back = self.partial_array.back;
+
+        self.partial_array.array[self.next..back]
+            // SAFETY: elements between `next` and `back` are owned and initialized
+            .pipe_ref_mut(|slice| unsafe { slice.assume_init_drop() });
     }
 }

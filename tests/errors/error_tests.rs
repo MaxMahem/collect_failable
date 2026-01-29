@@ -44,21 +44,6 @@ macro_rules! test_format {
     };
 }
 
-/// Test that into_iterator produces the expected items (order-independent for HashSet)
-macro_rules! into_iterator {
-    ($name:ident, $setup:expr, expected_len = $len:expr, contains = [$($item:expr),* $(,)?]) => {
-        #[test]
-        fn $name() {
-            let items: Vec<_> = $setup.into_iter().collect();
-
-            assert_eq!(items.len(), $len);
-            $(
-                assert!(items.contains(&$item));
-            )*
-        }
-    };
-}
-
 /// Test that an error's source() method returns the expected error type
 ///
 /// - `test_source!(test_name, create_error(), ExpectedSourceType);`
@@ -91,7 +76,47 @@ macro_rules! test_ctor {
     };
 }
 
-pub(crate) use into_iterator;
+/// Test that a failable operation (Result) produces the expected Ok or Err variant
+///
+/// Usage:
+/// - `test_failable!(test_name, expr, Ok);`
+/// - `test_failable!(test_name, expr, Err field1 => expected1, field2 => expected2);`
+macro_rules! test_failable {
+    ($test_name:ident, $ctor:expr, Ok) => {
+        #[test]
+        fn $test_name() {
+            $ctor.expect("should be Ok");
+        }
+    };
+    ($test_name:ident, $ctor:expr, $( $field:ident => $expected:expr ),+ $(,)?) => {
+        #[test]
+        fn $test_name() {
+            let err = $ctor.expect_err("should be Err");
+            $(
+                assert_eq!(err.$field, $expected);
+            )+
+        }
+    };
+}
+
+/// Test that an error contains a specific item (or None)
+///
+/// Usage: `test_item_present!(test_name, error_expression, expected_option);`
+macro_rules! test_item_present {
+    ($name:ident, $ctor:expr, $expected:expr) => {
+        #[test]
+        fn $name() {
+            use collect_failable::errors::ErrorItemProvider;
+            let error = $ctor;
+            let expected: Option<_> = $expected;
+            assert_eq!(error.item(), expected.as_ref());
+            assert_eq!(error.into_item(), expected);
+        }
+    };
+}
+
 pub(crate) use test_ctor;
+pub(crate) use test_failable;
 pub(crate) use test_format;
+pub(crate) use test_item_present;
 pub(crate) use test_source;

@@ -1,5 +1,9 @@
-use crate::errors::{CapacityError, CollectionError};
-use crate::{FixedCap, RemainingCap, SizeHint, TryFromIterator};
+use fluent_result::into::IntoResult;
+
+use crate::errors::SizeHint;
+use crate::errors::{CapacityError, CollectError};
+use crate::impls::r#unsafe::IntoArrayError;
+use crate::{FixedCap, RemainingCap, TryFromIterator};
 
 use super::PartialArray;
 
@@ -19,16 +23,16 @@ impl<const N: usize, T, I> TryFromIterator<I> for [T; N]
 where
     I: IntoIterator<Item = T>,
 {
-    type Error = CollectionError<I::IntoIter, PartialArray<T, N>, CapacityError<T>>;
+    type Error = CollectError<I::IntoIter, PartialArray<T, N>, CapacityError<T>>;
 
     /// Create an array from an [`IntoIterator`], failing if the [`IntoIterator::IntoIter`]
     /// produces fewer or more items than `N`.
     ///
     /// # Errors
     ///
-    /// Returns [`CollectionError`] if the [`IntoIterator::IntoIter`] produces more or fewer items
+    /// Returns [`CollectError`] if the [`IntoIterator::IntoIter`] produces more or fewer items
     /// than `N`. All items from the iterator are preserved in the error, and can be retrieved using
-    /// [`CollectionError::into_iter`].
+    /// [`CollectError::into_iter`].
     ///
     /// # Panics
     ///
@@ -50,12 +54,20 @@ where
     /// assert_eq!(too_many_err.into_iter().collect::<Vec<_>>(), vec![1, 2, 3, 4], "err should contain all items");
     /// ```
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
-        let mut into_iter = into_iter.into_iter();
+        let mut iter = into_iter.into_iter();
 
-        let mut guard = PartialArray::new();
-        match guard.try_extend_basic(&mut into_iter) {
-            Ok(()) => guard.try_into_array().map_err(|(g, e)| CollectionError::new(into_iter, g, e)),
-            Err(error) => Err(CollectionError::new(into_iter, guard, error)),
+        match CapacityError::ensure_fits_in::<[T; N], _>(&iter) {
+            Err(err) => CollectError::new(iter, PartialArray::new(), err).into_err(),
+            Ok(()) => {
+                let mut partial_array = PartialArray::new();
+
+                match iter.try_for_each(|item| partial_array.try_push(item)) {
+                    Err(item) => CollectError::collect_overflowed(iter, partial_array, item).into_err(),
+                    Ok(()) => partial_array
+                        .try_into()
+                        .map_err(|IntoArrayError { partial_array, error }| CollectError::new(iter, partial_array, error)),
+                }
+            }
         }
     }
 }

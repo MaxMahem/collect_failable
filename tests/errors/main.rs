@@ -6,3 +6,6 @@ mod collision;
 mod result_collection_error;
 mod tuple_extension_error;
 mod unzip_error;
+
+#[path = "../utils/mod.rs"]
+mod utils;

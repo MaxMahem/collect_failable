@@ -15,7 +15,7 @@ where
 /// by element, and where a failure during [`TryExtendOne::try_extend_one`]
 /// indicates the collection failed construction.
 ///
-/// Failed collections return a [`CollectionError`] with the original iterator,
+/// Failed collections return a [`CollectError`] with the original iterator,
 /// the partially constructed collection, and the error returned by
 /// [`TryExtendOne::try_extend_one`].
 ///
@@ -42,7 +42,7 @@ macro_rules! impl_try_from_iter_via_try_extend_one {
         where
             I: IntoIterator<Item = $item>,
         {
-            type Error = $crate::errors::CollectionError<I::IntoIter, Self, <Self as $crate::TryExtendOne>::Error>;
+            type Error = $crate::errors::CollectError<I::IntoIter, Self, <Self as $crate::TryExtendOne>::Error>;
 
             fn try_from_iter(into_iter: I) -> Result<Self, Self::Error>
             where
@@ -54,7 +54,7 @@ macro_rules! impl_try_from_iter_via_try_extend_one {
 
                 match $crate::impls::macros::try_extend_basic(&mut collection, &mut iter) {
                     Ok(()) => Ok(collection),
-                    Err(err) => Err($crate::errors::CollectionError::new(iter, collection, err)),
+                    Err(err) => Err($crate::errors::CollectError::new(iter, collection, err)),
                 }
             }
         }
@@ -72,7 +72,7 @@ pub const fn infer_ctor<I: IntoIterator, C, F: Fn(&I::IntoIter) -> C>(f: F) -> F
 /// a failure during [`TryExtendOne::try_extend_one`] indicates the collection
 /// failed extension.
 ///
-/// Failed collections return a [`CollectionError`] with the original iterator,
+/// Failed collections return a [`CollectError`] with the original iterator,
 /// an empty collection, and the error returned by [`TryExtendOne::try_extend_one`].
 /// Since [`TryExtend`] provides only a basic error guarantee, the collection
 /// will be mutated in the event of a failure.
@@ -104,7 +104,7 @@ macro_rules! impl_try_extend_via_try_extend_one {
         where
             I: IntoIterator<Item = $item>,
         {
-            type Error = $crate::errors::CollectionError<I::IntoIter, Self, <Self as $crate::TryExtendOne>::Error>;
+            type Error = $crate::errors::CollectError<I::IntoIter, Self, <Self as $crate::TryExtendOne>::Error>;
 
             fn try_extend(&mut self, into_iter: I) -> Result<(), Self::Error>
             where
@@ -115,7 +115,7 @@ macro_rules! impl_try_extend_via_try_extend_one {
                 $crate::impls::macros::infer_reserve::<I, Self, _>($reserve)(self, &mut iter);
 
                 $crate::impls::macros::try_extend_basic(self, &mut iter)
-                    .map_err(|err| $crate::errors::CollectionError::new(
+                    .map_err(|err| $crate::errors::CollectError::new(
                         iter,
                         $crate::impls::macros::infer_build_empty::<Self, _>($build_empty)(self),
                         err
@@ -183,7 +183,7 @@ macro_rules! impl_try_extend_safe_for_colliding_type {
                     }
                 })
                 .map(|staging| ::core::iter::Extend::extend(self, staging))
-                .map_err(|(staging, err)| $crate::errors::CollectionError::new(iter, staging, err))
+                .map_err(|(staging, err)| $crate::errors::CollectError::new(iter, staging, err))
             }
         }
     };

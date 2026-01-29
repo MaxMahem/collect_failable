@@ -1,14 +1,3 @@
-#[allow(unused_macros)]
-macro_rules! panics {
-    ($name:ident, $expression:expr, $message:literal) => {
-        #[test]
-        #[should_panic(expected = $message)]
-        fn $name() {
-            _ = $expression;
-        }
-    };
-}
-
 /// Generalized macro that generates complete test functions for collection creation
 ///
 /// Supports both success and error cases for any collection type (arrays, ArrayVec, etc.):
@@ -139,8 +128,6 @@ macro_rules! recover_iter_data {
     };
 }
 
-#[allow(unused_imports)]
-pub(crate) use panics;
 #[allow(unused_imports)]
 pub(crate) use recover_iter_data;
 #[allow(unused_imports)]

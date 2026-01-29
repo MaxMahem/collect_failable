@@ -3,7 +3,7 @@ use core::hash::{BuildHasher, Hash};
 use hashbrown::HashMap;
 use hashbrown::hash_map::RawEntryMut;
 
-use crate::errors::{CollectionError, Collision};
+use crate::errors::{CollectError, Collision};
 
 use crate::{TryExtendOne, TryExtendSafe};
 
@@ -45,7 +45,7 @@ where
             }
         })
         .map(|staging_map| self.extend(staging_map))
-        .map_err(|(staging_map, kvp)| CollectionError::collision(iter, staging_map, kvp))
+        .map_err(|(staging_map, kvp)| CollectError::collision(iter, staging_map, kvp))
     }
 }
 
