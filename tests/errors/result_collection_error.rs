@@ -22,9 +22,9 @@ test_ctor!(
 const EXPECTED_DISPLAY_OK: &str = "Iterator error: Test error: iter error";
 const EXPECTED_DISPLAY_ERR: &str = "Iterator error: Test error: iter error; Collection error: Test error: collection error";
 const EXPECTED_DEBUG: &str =
-    "ResultCollectError { error: TestError(\"iter error\"), result: Ok(HashSet<i32>), iter: Range<i32> }";
+    r#"ResultCollectError { error: TestError("iter error"), result: Ok(HashSet<i32>), iter: core::ops::range::Range<i32> }"#;
 const EXPECTED_DEBUG_DATA: &str =
-    "ResultCollectErrorData { error: TestError(\"iter error\"), result: Ok(HashSet<i32>), iter: Range<i32> }";
+    r#"ResultCollectErrorData { error: TestError("iter error"), result: Ok(HashSet<i32>), iter: core::ops::range::Range<i32> }"#;
 
 test_format!(
     display_format_ok,

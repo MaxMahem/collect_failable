@@ -1,5 +1,4 @@
 use fluent_result::into::IntoResult;
-use no_drop::dbg::IntoNoDrop;
 use tap::Pipe;
 
 use crate::TryExtendOne;
@@ -15,7 +14,8 @@ use crate::errors::types::Either;
 pub trait TryUnzip {
     /// Tries to unzip the iterator into two collections.
     ///
-    /// Both containers are extended, element by element, in parallel.
+    /// Both containers are [extended](TryExtendOne::try_extend_one), element by element,
+    /// in parallel. This is similar to [`Iterator::unzip`], but the extensions may fail.
     ///
     /// # Type Parameters
     ///
@@ -25,8 +25,9 @@ pub trait TryUnzip {
     /// # Errors
     ///
     /// Returns an [`UnzipError`] wrapped in [`Either`] if either of the underlying
-    /// collections fail to extend. The error preserves the partially constructed
-    /// collection from the other side, along with the remaining unprocessed iterator.
+    /// collections fail to [extend](TryExtendOne::try_extend_one). The error preserves
+    /// the partially constructed collection from the other side, along with the remaining
+    /// unprocessed iterator.
     ///
     /// # Examples
     ///
@@ -78,48 +79,41 @@ pub trait TryUnzip {
 }
 
 /// Type alias for the result of [`TryUnzip::try_unzip`].
-pub type UnzipResult<FromA, FromB, I> = Result<(FromA, FromB), Either<UnzipError<FromA, FromB, I>, UnzipError<FromB, FromA, I>>>;
+pub type UnzipResult<FromA, FromB, I> = Result<
+    (FromA, FromB),
+    Either<
+        UnzipError<<FromA as TryExtendOne>::Error, FromA, FromB, <FromB as TryExtendOne>::Item, I>,
+        UnzipError<<FromB as TryExtendOne>::Error, FromB, FromA, <FromA as TryExtendOne>::Item, I>,
+    >,
+>;
 
-type EitherUnzipError<FromA, FromB, I> = Either<UnzipError<FromA, FromB, I>, UnzipError<FromB, FromA, I>>;
+type EitherUnzipError<FromA, FromB, I> = Either<
+    UnzipError<<FromA as TryExtendOne>::Error, FromA, FromB, <FromB as TryExtendOne>::Item, I>,
+    UnzipError<<FromB as TryExtendOne>::Error, FromB, FromA, <FromA as TryExtendOne>::Item, I>,
+>;
 
 #[sealed::sealed]
 impl<I: Iterator> TryUnzip for I {
-    fn try_unzip<FromA, FromB>(self) -> UnzipResult<FromA, FromB, Self>
+    fn try_unzip<FromA, FromB>(mut self) -> UnzipResult<FromA, FromB, Self>
     where
         FromA: Default + TryExtendOne,
         FromB: Default + TryExtendOne,
         Self: Iterator<Item = (FromA::Item, FromB::Item)> + Sized,
     {
-        let mut from = (FromA::default().no_drop(), FromB::default().no_drop());
-        let mut this = self.no_drop();
+        let mut from = (FromA::default(), FromB::default());
 
-        for (a, b) in this.by_ref().map(|(a, b)| (a.no_drop(), b.no_drop())) {
-            if let Err(error) = from.0.try_extend_one(a.unwrap()) {
-                return UnzipError::<FromA, FromB, Self>::new(
-                    error,
-                    from.0.unwrap(),
-                    from.1.unwrap(),
-                    Some(b.unwrap()),
-                    this.unwrap(),
-                )
-                .pipe(Either::Left)
-                .into_err();
+        for (a, b) in self.by_ref() {
+            if let Err(error) = from.0.try_extend_one(a) {
+                return UnzipError::new(error, from.0, from.1, Some(b), self).pipe(Either::Left).into_err();
             }
 
-            if let Err(error) = from.1.try_extend_one(b.unwrap()) {
-                return UnzipError::<FromB, FromA, Self>::new(
-                    error,
-                    from.1.unwrap(),
-                    from.0.unwrap(),
-                    None::<FromA::Item>,
-                    this.unwrap(),
-                )
-                .pipe::<EitherUnzipError<FromA, FromB, Self>>(Either::Right)
-                .into_err();
+            if let Err(error) = from.1.try_extend_one(b) {
+                return UnzipError::new(error, from.1, from.0, None::<FromA::Item>, self)
+                    .pipe::<EitherUnzipError<FromA, FromB, Self>>(Either::Right)
+                    .into_err();
             }
         }
 
-        this.forget();
-        (from.0.unwrap(), from.1.unwrap()).into_ok()
+        Ok(from)
     }
 }

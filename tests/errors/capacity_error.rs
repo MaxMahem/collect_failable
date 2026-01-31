@@ -1,115 +1,76 @@
-use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
+use std::ops::Range;
+
+use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind, FixedCap};
 use collect_failable::errors::types::SizeHint;
-use size_hinter::InvalidIterator;
 
-use crate::error_tests::{test_ctor, test_failable};
-use crate::utils::panics;
+const ARRAY_SIZE: usize = 5;
 
-test_ctor!(
-    bounds,
-    CapacityError::<i32>::bounds(SizeHint::bounded(5, 10), SizeHint::bounded(11, 15)),
-    capacity => SizeHint::bounded(5, 10),
-    kind => CapacityErrorKind::Bounds { hint: SizeHint::bounded(11, 15) }
-);
+type Collection = [i32; ARRAY_SIZE];
 
-test_ctor!(
-    overflow,
-    CapacityError::overflow(SizeHint::bounded(5, 10), 42),
-    capacity => SizeHint::bounded(5, 10),
-    kind => CapacityErrorKind::Overflow { overflow: 42 }
-);
+const COLLECTION_CAP: SizeHint = <Collection>::CAP;
+const DISJOINT_HINT: SizeHint = SizeHint::exact(4);
+const BOUNDS_ERR_KIND: CapacityErrorKind<i32> = CapacityErrorKind::Bounds { hint: DISJOINT_HINT };
 
-test_ctor!(
-    collect_overflowed,
-    CapacityError::collect_overflow::<[i32; 5]>(42),
-    capacity => SizeHint::exact(5),
-    kind => CapacityErrorKind::Overflow { overflow: 42 }
-);
+const OVERFLOW_VALUE: i32 = 42;
+const OVERFLOW_ERR_KIND: CapacityErrorKind<i32> = CapacityErrorKind::Overflow { overflow: OVERFLOW_VALUE };
 
-test_ctor!(
-    extend_overflowed,
-    CapacityError::extend_overflow(42),
-    capacity => SizeHint::ZERO,
-    kind => CapacityErrorKind::Overflow { overflow: 42 }
-);
+const UNDERFLOW_COUNT: usize = 4;
+const UNDERFLOW_ERR_KIND: CapacityErrorKind<i32> = CapacityErrorKind::Underflow { count: UNDERFLOW_COUNT };
 
-test_ctor!(
-    underflow,
-    CapacityError::<i32>::underflow(SizeHint::bounded(5, 10), 4),
-    capacity => SizeHint::bounded(5, 10),
-    kind => CapacityErrorKind::Underflow { count: 4 }
-);
+const OVERLAPPING_ITER: Range<i32> = 1..6;
+const DISJOINT_ITER: Range<i32> = 1..5;
 
-test_ctor!(
-    collect_underflowed,
-    CapacityError::<i32>::collect_underflow::<[i32; 5]>(4),
-    capacity => SizeHint::exact(5),
-    kind => CapacityErrorKind::Underflow { count: 4 }
-);
+mod ctors {
+    use super::*;
+    use crate::error_tests::{INVALID_ITER, test_ctor};
+    use crate::utils::panics;
 
-test_ctor!(
-    from_arrayvec_capacity_error,
-    CapacityError::from(arrayvec::CapacityError::new(3)),
-    capacity => SizeHint::ZERO,
-    kind => CapacityErrorKind::Overflow { overflow: 3 }
-);
+    test_ctor!(
+        bounds,
+        CapacityError::<i32>::bounds(COLLECTION_CAP, DISJOINT_HINT),
+        capacity => COLLECTION_CAP,
+        kind => BOUNDS_ERR_KIND
+    );
+
+    test_ctor!(
+        overflow,
+        CapacityError::overflow(COLLECTION_CAP, OVERFLOW_VALUE),
+        capacity => COLLECTION_CAP,
+        kind => OVERFLOW_ERR_KIND
+    );
+
+    test_ctor!(
+        underflow,
+        CapacityError::<i32>::underflow(COLLECTION_CAP, UNDERFLOW_COUNT),
+        capacity => COLLECTION_CAP,
+        kind => UNDERFLOW_ERR_KIND
+    );
+
+    test_ctor!(
+        from_arrayvec_capacity_error,
+        CapacityError::from(arrayvec::CapacityError::new(OVERFLOW_VALUE)),
+        capacity => SizeHint::ZERO,
+        kind => OVERFLOW_ERR_KIND
+    );
+
+    mod ensure_fits {
+        use super::*;
+        use crate::error_tests::test_ctor;
+
+        test_ctor!(pass, CapacityError::<i32>::ensure_fits(&OVERLAPPING_ITER, COLLECTION_CAP).expect("should be Ok"));
+        test_ctor!(fail, CapacityError::<i32>::ensure_fits(&DISJOINT_ITER, COLLECTION_CAP).expect_err("should be Err"),
+            capacity => COLLECTION_CAP,
+            kind => BOUNDS_ERR_KIND
+        );
+
+        panics!(panic, CapacityError::<i32>::ensure_fits(&INVALID_ITER, COLLECTION_CAP), "Invalid size hint");
+    }
+}
 
 mod error_item_provider {
     use super::*;
     use crate::error_tests::test_item_present;
 
-    test_item_present!(present, CapacityError::overflow(SizeHint::bounded(5, 10), 42), Some(42));
-    test_item_present!(absent, CapacityError::<i32>::bounds(SizeHint::bounded(5, 10), SizeHint::bounded(11, 15)), None);
-}
-
-mod ensure_fits {
-    use super::*;
-
-    test_failable!(pass, CapacityError::<i32>::ensure_fits(SizeHint::bounded(5, 10), &(1..7)), Ok);
-    test_failable!(fail, CapacityError::<i32>::ensure_fits(SizeHint::bounded(5, 10), &(1..=11)),
-        capacity => SizeHint::bounded(5, 10),
-        kind => CapacityErrorKind::Bounds { hint: SizeHint::exact(11) }
-    );
-
-    panics!(
-        panic,
-        CapacityError::<i32>::ensure_fits(SizeHint::bounded(5, 10), &InvalidIterator::<i32>::DEFAULT),
-        "Invalid size hint"
-    );
-}
-
-mod ensure_fits_in {
-    use super::*;
-
-    test_failable!(pass, CapacityError::<i32>::ensure_fits_in::<[i32; 5], _>(&(1..=5)), Ok);
-    test_failable!(fail, CapacityError::<i32>::ensure_fits_in::<[i32; 5], _>(&(1..=6)),
-        capacity => SizeHint::exact(5),
-        kind => CapacityErrorKind::Bounds { hint: SizeHint::exact(6) }
-    );
-
-    panics!(panic, CapacityError::<i32>::ensure_fits_in::<[i32; 5], _>(&InvalidIterator::<i32>::DEFAULT), "Invalid size hint");
-}
-
-mod ensure_fits_into {
-    use super::*;
-    use arrayvec::ArrayVec;
-
-    #[test]
-    fn pass() {
-        CapacityError::<i32>::ensure_fits_into(&(1..=5), &ArrayVec::<i32, 5>::new()).expect("Should not fail");
-    }
-
-    #[test]
-    fn fail() {
-        let err = CapacityError::<i32>::ensure_fits_into(&(1..=6), &ArrayVec::<i32, 5>::new()).expect_err("Should fail");
-
-        assert_eq!(err.capacity, SizeHint::at_most(5));
-        assert_eq!(err.kind, CapacityErrorKind::Bounds { hint: SizeHint::exact(6) });
-    }
-
-    panics!(
-        panic,
-        CapacityError::<i32>::ensure_fits_into(&InvalidIterator::<i32>::DEFAULT, &ArrayVec::<i32, 5>::new()),
-        "Invalid size hint"
-    );
+    test_item_present!(present, CapacityError::overflow(COLLECTION_CAP, OVERFLOW_VALUE), Some(OVERFLOW_VALUE));
+    test_item_present!(absent, CapacityError::<i32>::bounds(COLLECTION_CAP, DISJOINT_HINT), None);
 }

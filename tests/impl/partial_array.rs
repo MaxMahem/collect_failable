@@ -13,7 +13,7 @@ fn default() {
 
     assert_eq!(partial.len(), 0);
     assert_eq!(partial.remaining_cap(), SizeHint::at_most(5));
-    assert_eq!(partial, [][..]);
+    assert_eq!(partial, [0; 0][..]);
 }
 
 #[test]
@@ -142,7 +142,7 @@ mod iter {
 #[test]
 fn capacity() {
     let mut partial = TestPartialArray::new();
-    assert_eq!(TestPartialArray::CAP, SizeHint::exact(5));
+    assert_eq!(TestPartialArray::CAP, SizeHint::at_most(5));
     assert_eq!(partial.remaining_cap(), SizeHint::at_most(5));
 
     _ = (0..=5).try_for_each(|i| {

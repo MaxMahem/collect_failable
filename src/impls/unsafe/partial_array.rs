@@ -81,7 +81,7 @@ impl<T, const N: usize> RemainingCap for PartialArray<T, N> {
 }
 
 impl<T, const N: usize> FixedCap for PartialArray<T, N> {
-    const CAP: SizeHint = SizeHint::exact(N);
+    const CAP: SizeHint = SizeHint::at_most(N);
 }
 
 impl<T, U, const N: usize> PartialEq<[U]> for PartialArray<T, N>
@@ -113,7 +113,7 @@ pub struct IntoArrayError<T, const N: usize> {
 
 impl<T, const N: usize> IntoArrayError<T, N> {
     const fn new(partial_array: PartialArray<T, N>) -> Self {
-        let error = CapacityError::collect_underflow::<[T; N]>(partial_array.back);
+        let error = CapacityError::underflow(<[T; N]>::CAP, partial_array.back);
         Self { partial_array, error }
     }
 }

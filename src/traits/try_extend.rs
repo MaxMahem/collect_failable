@@ -46,7 +46,7 @@ pub trait TryExtend<I: IntoIterator> {
     /// assert_eq!(err.error.item, (1, 5), "item should be the colliding item");
     /// assert_eq!(map[&1], 2, "colliding value should not be changed");
     ///
-    /// let remaining: Vec<_> = err.into_data().iter.collect();
+    /// let remaining: Vec<_> = err.into_data().remain.collect();
     /// assert_eq!(remaining, vec![(3, 4)], "Error should contain the remaining items");
     /// ```
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error>;

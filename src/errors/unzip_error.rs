@@ -5,8 +5,9 @@ use core::ops::Deref;
 use alloc::boxed::Box;
 
 use display_as_debug::fmt::DebugStructExt;
-use display_as_debug::types::Short;
+use display_as_debug::types::{Full, Short};
 use display_as_debug::wrap::TypeNameOption;
+use nameof::name_of;
 use tap::Pipe;
 
 use crate::TryExtendOne;
@@ -22,18 +23,16 @@ use crate::TryExtendOne;
 ///
 /// # Type Parameters
 ///
+/// - `E`: The error type from the failing collection.
 /// - `Failed`: The type of the collection that failed to extend.
 /// - `Partial`: The type of the collection that successfully extended.
+/// - `Pending`: The type of the pending item from the successful side.
 /// - `I`: The type of the remaining iterator.
 #[subdef::subdef]
-pub struct UnzipError<Failed, Partial, I>
-where
-    Failed: TryExtendOne,
-    Partial: TryExtendOne,
-{
+pub struct UnzipError<E, Failed, Partial, Pending, I> {
     #[cfg(doc)]
     /// The error that occurred during extension.
-    pub error: Failed::Error,
+    pub error: E,
     #[cfg(doc)]
     /// The partial collection from the failed side.
     pub failed: Failed,
@@ -42,59 +41,50 @@ where
     pub partial: Partial,
     #[cfg(doc)]
     /// The pending item from the successful side, if any.
-    pub pending: Option<Partial::Item>,
+    pub pending: Option<Pending>,
     #[cfg(doc)]
     /// The remaining iterator after the error occurred
     pub remaining: I,
 
     #[cfg(not(doc))]
-    data: [Box<UnzipErrorData<Failed, Partial, I>>; {
+    data: [Box<UnzipErrorData<E, Failed, Partial, Pending, I>>; {
         /// The internal data of an [`UnzipError`].
         #[doc(hidden)]
-        pub struct UnzipErrorData<Failed, Partial, I>
-        where
-            Failed: TryExtendOne,
-            Partial: TryExtendOne,
-        {
+        pub struct UnzipErrorData<E, Failed, Partial, Pending, I> {
             /// The error that occurred during extension.
-            pub error: Failed::Error,
+            pub error: E,
             /// The partial collection from the failed side.
             pub failed: Failed,
             /// The incomplete collection from the successful side.
             pub partial: Partial,
             /// The pending item from the successful side, if any.
-            pub pending: Option<Partial::Item>,
+            pub pending: Option<Pending>,
             /// The remaining iterator after the error occurred
             pub remaining: I,
         }
     }],
 }
 
-impl<Failed, Partial, I> UnzipError<Failed, Partial, I>
-where
-    Failed: TryExtendOne,
-    Partial: TryExtendOne,
-{
-    /// Creates a new [`UnzipError`].
-    #[doc(hidden)]
-    pub fn new(error: Failed::Error, failed: Failed, partial: Partial, pending: Option<Partial::Item>, remaining: I) -> Self {
-        UnzipErrorData { error, failed, partial, pending, remaining }.pipe(Box::new).pipe(|data| Self { data })
-    }
-
+impl<E, Failed, Partial, Pending, I> UnzipError<E, Failed, Partial, Pending, I> {
     /// Consumes the error, returning the data.
     #[must_use]
-    pub fn into_data(self) -> UnzipErrorData<Failed, Partial, I> {
+    pub fn into_data(self) -> UnzipErrorData<E, Failed, Partial, Pending, I> {
         *self.data
     }
 }
 
 #[doc(hidden)]
-impl<Failed, Partial, I> Deref for UnzipError<Failed, Partial, I>
-where
-    Failed: TryExtendOne,
-    Partial: TryExtendOne,
-{
-    type Target = UnzipErrorData<Failed, Partial, I>;
+impl<Failed: TryExtendOne, Partial: TryExtendOne, I: Iterator> UnzipError<Failed::Error, Failed, Partial, Partial::Item, I> {
+    #[doc(hidden)]
+    /// Creates a new [`UnzipError`].
+    pub fn new(error: Failed::Error, failed: Failed, partial: Partial, pending: Option<Partial::Item>, remaining: I) -> Self {
+        UnzipErrorData { error, failed, partial, pending, remaining }.pipe(Box::new).pipe(|data| Self { data })
+    }
+}
+
+#[doc(hidden)]
+impl<E, Failed, Partial, Pending, I> Deref for UnzipError<E, Failed, Partial, Pending, I> {
+    type Target = UnzipErrorData<E, Failed, Partial, Pending, I>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
@@ -103,57 +93,50 @@ where
 
 #[doc(hidden)]
 #[allow(clippy::missing_fields_in_debug, reason = "All data is covered")]
-impl<Failed, Partial, I> Debug for UnzipErrorData<Failed, Partial, I>
-where
-    Failed: TryExtendOne,
-    Partial: TryExtendOne,
-    Failed::Error: Debug,
-{
+impl<E: Debug, Failed, Partial, Pending, I> Debug for UnzipErrorData<E, Failed, Partial, Pending, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("UnzipErrorData")
-            .field("error", &self.error)
-            .field_type::<Failed, Short>("failed")
-            .field_type::<Partial, Short>("partial")
-            .field("pending", &TypeNameOption::borrow::<Short>(&self.pending))
-            .field_type::<I, Short>("remaining")
+            .field(name_of!(error in Self), &self.error)
+            .field_type::<Failed, Short>(name_of!(failed in Self))
+            .field_type::<Partial, Short>(name_of!(partial in Self))
+            .field(name_of!(pending in Self), &TypeNameOption::borrow::<Short>(&self.pending))
+            .field_type::<I, Full>(name_of!(remaining in Self))
             .finish()
     }
 }
 
-impl<Failed, Partial, I> Debug for UnzipError<Failed, Partial, I>
-where
-    Failed: TryExtendOne,
-    Partial: TryExtendOne,
-    Failed::Error: Debug,
-{
+impl<E: Debug, Failed, Partial, Pending, I> Debug for UnzipError<E, Failed, Partial, Pending, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("UnzipError")
-            .field("error", &self.error)
-            .field_type::<Failed, Short>("failed")
-            .field_type::<Partial, Short>("partial")
-            .field("pending", &TypeNameOption::borrow::<Short>(&self.pending))
-            .field_type::<I, Short>("remaining")
+            .field(name_of!(error in Self), &self.error)
+            .field_type::<Failed, Short>(name_of!(failed in Self))
+            .field_type::<Partial, Short>(name_of!(partial in Self))
+            .field(name_of!(pending in Self), &TypeNameOption::borrow::<Short>(&self.pending))
+            .field_type::<I, Full>(name_of!(remaining in Self))
             .finish()
     }
 }
 
-impl<Failed, Partial, I> Display for UnzipError<Failed, Partial, I>
-where
-    Failed: TryExtendOne,
-    Partial: TryExtendOne,
-    Failed::Error: Display,
-{
+impl<E: Display, Failed, Partial, Pending, I> Display for UnzipError<E, Failed, Partial, Pending, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "Failed while unzipping collection: {}", self.error)
     }
 }
 
-impl<Failed, Partial, I> Error for UnzipError<Failed, Partial, I>
-where
-    Failed: TryExtendOne,
-    Partial: TryExtendOne,
-    Failed::Error: Error + 'static,
-{
+impl<E: Error + 'static, Failed, Partial, Pending, Remaining> Error for UnzipError<E, Failed, Partial, Pending, Remaining> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.error)
+    }
+}
+#[doc(hidden)]
+impl<E: Display, Failed, Partial, Pending, I> Display for UnzipErrorData<E, Failed, Partial, Pending, I> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Failed while unzipping collection: {}", self.error)
+    }
+}
+
+#[doc(hidden)]
+impl<E: Error + 'static, Failed, Partial, Pending, I> Error for UnzipErrorData<E, Failed, Partial, Pending, I> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.error)
     }

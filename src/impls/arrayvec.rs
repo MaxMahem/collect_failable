@@ -1,5 +1,6 @@
 use arrayvec::ArrayVec;
 
+use fluent_result::into::IntoResult;
 use tap::Pipe;
 
 use crate::TryExtendOne;
@@ -49,12 +50,12 @@ where
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let iter = into_iter.into_iter();
 
-        CollectError::ensure_fits_in(iter).and_then(|mut iter| {
+        CollectError::ensure_fits_in::<Self>(iter).and_then(|mut iter| {
             let array_vec = iter.by_ref().take(N).collect::<Self>();
 
             match iter.ensure_empty() {
                 Ok(()) => Ok(array_vec),
-                Err(NotEmpty { iter, item }) => Err(CollectError::collect_overflow(iter, array_vec, item)),
+                Err(NotEmpty { iter, item }) => CollectError::collect_overflow::<Self>(iter, array_vec, item).into_err(),
             }
         })
     }
@@ -147,10 +148,9 @@ where
 
         CollectError::ensure_fits_into(iter, self).and_then(|mut iter| {
             let len = self.len();
-            let cap = self.remaining_cap();
 
             iter.try_for_each(|item| self.try_push(item))
-                .map_err(|err| CollectError::overflow(iter, self.drain(len..).collect(), err.element(), cap))
+                .map_err(|err| CollectError::overflow_remaining_cap(iter, self.drain(len..).collect(), err.element(), self))
         })
     }
 }

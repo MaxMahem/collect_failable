@@ -9,14 +9,14 @@ use crate::errors::collision::error::Collision;
 ///
 /// # Type Parameters
 ///
-/// - `I`: The type of the [Iterator] that was used to collect the values.
+/// - `I`: The type of the [Iterator] that was used to iterate the values.
 /// - `C`: The type of the collection that was used to collect the values.
 ///
 /// # Data Recovery
 ///
 /// If `C` implements [`IntoIterator`], this type implements [`IntoIterator`],
 /// as well, allowing the data in the original iterator to be reconstructed from
-/// [`CollectError::iter`], [`CollectError::collected`], and the colliding item.
+/// [`CollectError::remain`], [`CollectError::collected`], and the colliding item.
 ///
 /// # Examples
 ///
@@ -49,7 +49,7 @@ impl<I: Iterator, C> CollectError<I, C, Collision<I::Item>> {
     /// # use std::collections::HashSet;
     /// let error = CollectError::<_, HashSet<_>, _>::collision(1..=3, HashSet::from([1, 2]), 3);
     ///
-    /// assert_eq!(error.iter, 1..=3);
+    /// assert_eq!(error.remain, 1..=3);
     /// assert_eq!(error.collected, HashSet::from([1, 2]));
     /// assert_eq!(error.error.item, 3);
     /// ```

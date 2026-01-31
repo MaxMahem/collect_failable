@@ -1,5 +1,4 @@
 use fluent_result::into::IntoResult;
-use no_drop::dbg::IntoNoDrop;
 use tap::Pipe;
 
 use crate::errors::TupleExtendError;
@@ -53,11 +52,11 @@ where
     /// ```
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
-        for (a, b) in iter.by_ref().map(|(a, b)| (a.no_drop(), b.no_drop())) {
-            if let Err(error) = self.0.try_extend_one(a.unwrap()) {
-                return TupleExtendError::new(error, Some(b.unwrap()), iter).pipe(Either::Left).into_err();
+        for (a, b) in iter.by_ref() {
+            if let Err(error) = self.0.try_extend_one(a) {
+                return TupleExtendError::new(error, Some(b), iter).pipe(Either::Left).into_err();
             }
-            if let Err(error) = self.1.try_extend_one(b.unwrap()) {
+            if let Err(error) = self.1.try_extend_one(b) {
                 return TupleExtendError::new(error, None, iter).pipe::<Self::Error>(Either::Right).into_err();
             }
         }
@@ -65,5 +64,3 @@ where
         Ok(())
     }
 }
-
-// todo! implementations for more tuple types

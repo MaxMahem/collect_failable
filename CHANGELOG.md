@@ -43,8 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Note: `TupleExtendError` generic parameter `U` (Unevaluated) is now `P` (Pending).
 - **Breaking:** Renamed `CollectionError` to `CollectError`.
   - Migration: Update all references from `CollectionError` to `CollectError`.
-- **Breaking:** Renamed `CollectError::iterator` field to `CollectError::iter`.
-  - Migration: Update all references from `CollectError::iterator` to `CollectError::iter`.
+- **Breaking:** Renamed `CollectError::iterator` field to `CollectError::remain`.
+  - Migration: Update all references from `CollectError::iterator` to `CollectError::remain`.
 - **Breaking:** Changed `ArrayVec` `TryFromIterator` and `TryExtend` implementations to return `ArrayVec` instead of `Vec` in `CollectError`.
   - Migration: Update error handling to expect `ArrayVec` in the `collected` field.
 - **Breaking:** Changed `CollectError::overflowed` to `extend_overflowed`.
@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking:** `TryExtend` implementations now return `ExtendError` instead of `CollectError`.
   - `ExtendError` has no `collected` field (items go directly into the target collection).
   - Migration: Update error handling to use `ExtendError` instead of `CollectError`.
-    The `error` and `iterator` fields are still available.
+    The `error` and `remain` fields are still available.
 - **Breaking:** Moved capacity related types (`CapacityError`, `CapacityErrorKind`, `FixedCap`, `RemainingCap`) from `errors` to `errors::capacity`.
   - Migration: Update imports to `collect_failable::errors::capacity::*`.
 - **Breaking:** Moved collision related types (`Collision`) from `errors` to `errors::collision`.
@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Added missing `alloc` feature dependency to several features (`unsafe`, `tuple`, `hashbrown`, `indexmap`, `arrayvec`) whose error types require allocation.
 - Fixed incorrect `CapacityError` capacity reported when collecting into a fixed-size array overflows (via `PartialArray`). It now correctly reports the array's capacity instead of `SizeHint::ZERO`.
 
 ### Removed

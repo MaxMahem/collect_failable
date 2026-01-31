@@ -5,7 +5,8 @@ use core::ops::Deref;
 use alloc::boxed::Box;
 
 use display_as_debug::fmt::DebugStructExt;
-use display_as_debug::types::Short;
+use display_as_debug::types::{Full, Short};
+use nameof::name_of;
 use tap::Pipe;
 
 /// An error that occurs when extending a tuple of collections fails.
@@ -76,9 +77,9 @@ impl<E, P, I> Deref for TupleExtendError<E, P, I> {
 impl<E: Debug, P, I> Debug for TupleExtendError<E, P, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("TupleExtendError")
-            .field("error", &self.error)
-            .field_type::<P, Short>("pending")
-            .field_type::<I, Short>("remaining")
+            .field(name_of!(error in Self), &self.error)
+            .field_type::<P, Short>(name_of!(pending in Self))
+            .field_type::<I, Full>(name_of!(remaining in Self))
             .finish()
     }
 }
@@ -88,9 +89,9 @@ impl<E: Debug, P, I> Debug for TupleExtendError<E, P, I> {
 impl<E: Debug, P, I> Debug for TupleExtendErrorData<E, P, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("TupleExtendErrorData")
-            .field("error", &self.error)
-            .field_type::<P, Short>("pending")
-            .field_type::<I, Short>("remaining")
+            .field(name_of!(error in Self), &self.error)
+            .field_type::<P, Short>(name_of!(pending in Self))
+            .field_type::<I, Full>(name_of!(remaining in Self))
             .finish()
     }
 }
@@ -101,10 +102,21 @@ impl<E: Display, P, I> Display for TupleExtendError<E, P, I> {
     }
 }
 
-impl<E, P, I> Error for TupleExtendError<E, P, I>
-where
-    E: Error + 'static,
-{
+impl<E: Error + 'static, P, I> Error for TupleExtendError<E, P, I> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.error)
+    }
+}
+
+#[doc(hidden)]
+impl<E: Display, P, I> Display for TupleExtendErrorData<E, P, I> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Error while extending collection: {}", self.error)
+    }
+}
+
+#[doc(hidden)]
+impl<E: Error + 'static, P, I> Error for TupleExtendErrorData<E, P, I> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.error)
     }

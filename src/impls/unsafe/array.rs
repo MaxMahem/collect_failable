@@ -57,17 +57,15 @@ where
     /// assert_eq!(too_many_err.into_iter().collect::<Vec<_>>(), vec![1, 2, 3, 4], "err should contain all items");
     /// ```
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
-        let mut iter = into_iter.into_iter();
         let mut partial_array = PartialArray::new();
 
-        match CapacityError::ensure_fits_in::<[T; N], _>(&iter) {
-            Err(err) => CollectError::new(iter, partial_array, err).into_err(),
-            Ok(()) => match iter.try_for_each(|item| partial_array.try_push(item)) {
-                Err(item) => CollectError::collect_overflow(iter, partial_array, item).into_err(),
+        CollectError::ensure_fits_in::<Self>(into_iter.into_iter()).and_then(|mut iter| {
+            match iter.try_for_each(|item| partial_array.try_push(item)) {
+                Err(item) => CollectError::collect_overflow::<[T; N]>(iter, partial_array, item).into_err(),
                 Ok(()) => partial_array
                     .try_into()
                     .map_err(|IntoArrayError { partial_array, error }| CollectError::new(iter, partial_array, error)),
-            },
-        }
+            }
+        })
     }
 }

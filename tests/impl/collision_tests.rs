@@ -69,7 +69,7 @@ fn check_collision_error<T, C, const N: usize>(
     assert_eq!(&err.collected, expected_collected);
     assert_eq!(err.error, data.colliding_error());
     assert_eq!(err.error.item(), data.colliding_item());
-    assert_eq!(err.iter.clone().collect::<Vec<_>>(), data.remaining().collect::<Vec<_>>());
+    assert_eq!(err.remain.clone().collect::<Vec<_>>(), data.remaining().collect::<Vec<_>>());
 }
 
 fn check_extend_error<T, const N: usize>(err: &ExtendError<std::array::IntoIter<T, N>, Collision<T>>, data: &CollisionData<T, N>)
@@ -78,7 +78,7 @@ where
 {
     assert_eq!(err.error, data.colliding_error());
     assert_eq!(err.error.item(), data.colliding_item());
-    assert_eq!(err.iter.clone().collect::<Vec<_>>(), data.remaining().collect::<Vec<_>>());
+    assert_eq!(err.remain.clone().collect::<Vec<_>>(), data.remaining().collect::<Vec<_>>());
 }
 
 macro_rules! generate_collision_tests {

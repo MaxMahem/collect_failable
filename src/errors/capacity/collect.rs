@@ -10,7 +10,8 @@ use crate::errors::capacity::CapacityErrorKind;
 
 /// Specialization of [`CollectError`] for [`CapacityError`].
 ///
-/// This type is for collection or extension errors due to a collection's capacity constraints.
+/// This type is for errors that occur during collection or extension because
+/// the operation violates the collection's capacity constraints.
 /// [`CapacityError::kind`] identifies the specific failure.
 ///
 /// # Types
@@ -30,14 +31,16 @@ use crate::errors::capacity::CapacityErrorKind;
 ///
 /// # Type Parameters
 ///
-/// - `I`: The type of the iterator that was used to produce the values.
+/// - `I`: The type of the [`Iterator`] that was used to iterate the values.
 /// - `C`: The type of the collection that was used to collect the values.
+///   Note the collection type may not be the same as the type that was being
+///   extended or collected into.
 ///
 /// # Data Recovery
 ///
 /// If `C` implements [`IntoIterator`], this type implements [`IntoIterator`]
 /// as well, allowing the data in the original iterator to be reconstructed
-/// from [`CollectError::iter`], [`CollectError::collected`], and any
+/// from [`CollectError::remain`], [`CollectError::collected`], and any
 /// overflowing items.
 ///
 /// # Examples
@@ -73,7 +76,7 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// # use collect_failable::errors::CollectError;
     /// let error = CollectError::<_, Vec<()>, _>::bounds(1..=3, SizeHint::exact(2));
     ///
-    /// assert_eq!(error.iter, 1..=3);
+    /// assert_eq!(error.remain, 1..=3);
     /// assert_eq!(error.collected, vec![]);
     /// assert_eq!(error.error.capacity, SizeHint::exact(2));
     /// assert_eq!(error.error.kind, CapacityErrorKind::Bounds { hint: SizeHint::exact(3) });
@@ -87,12 +90,20 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
         Self::new(iter, C::default(), CapacityError::bounds(cap, hint))
     }
 
-    /// Ensures `C`'s [`FixedCap::CAP`] [`overlaps`](SizeHint::overlaps) `iter`'s
+    /// Ensures `Col`'s [`FixedCap::CAP`] [`overlaps`](SizeHint::overlaps) `iter`'s
     /// [`size_hint`](`Iterator::size_hint`).
+    ///
+    /// Note that success on this method does not guarantee that `iter` will fit
+    /// in `Col`'s [`FixedCap::CAP`], only that the [`size_hint`](`Iterator::size_hint`)
+    /// does not indicate that it will not fit.
     ///
     /// # Arguments
     ///
     /// * `iter` - The [`Iterator`] to check
+    ///
+    /// # Type Parameters
+    ///
+    /// * `Col` - The collection type to check
     ///
     /// # Errors
     ///
@@ -110,26 +121,32 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// # use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
     /// # use collect_failable::errors::types::SizeHint;
     /// # use collect_failable::errors::CollectError;
-    /// let error = CollectError::<_, [i32; 5], _>::ensure_fits_in(1..=3)
-    ///     .expect_err("Should fail bounds check");
+    /// CollectError::<_, [i32; 5], _>::ensure_fits_in::<[i32; 5]>(1..=5).expect("Should fit");
     ///
-    /// assert_eq!(error.iter, 1..=3);
+    /// let error = CollectError::<_, [i32; 5], _>::ensure_fits_in::<[i32; 5]>(1..=3)
+    ///     .expect_err("Should not fit");
+    ///
+    /// assert_eq!(error.remain, 1..=3);
     /// assert_eq!(error.collected, [0, 0, 0, 0, 0]);
     /// assert_eq!(error.error.capacity, SizeHint::exact(5));
     /// assert_eq!(error.error.kind, CapacityErrorKind::Bounds { hint: SizeHint::exact(3) });
     /// ```
-    pub fn ensure_fits_in(iter: I) -> Result<I, Self>
+    pub fn ensure_fits_in<Col: FixedCap>(iter: I) -> Result<I, Self>
     where
-        C: Default + FixedCap,
+        C: Default,
     {
-        match CapacityError::ensure_fits_in::<C, _>(&iter) {
-            Ok(()) => Ok(iter),
+        match CapacityError::ensure_fits(&iter, Col::CAP) {
             Err(error) => Self::new(iter, C::default(), error).into_err(),
+            Ok(()) => Ok(iter),
         }
     }
 
     /// Ensures `collection`'s [`remaining_cap`](RemainingCap::remaining_cap)
     /// [`overlaps`](SizeHint::overlaps) `iter`'s [`size_hint`](Iterator::size_hint).
+    ///
+    /// Note that success on this method does not guarantee that `iter` will fit
+    /// in `collection`'s [`remaining_cap`](RemainingCap::remaining_cap), only that the
+    /// [`size_hint`](`Iterator::size_hint`) does not indicate that it will not fit.
     ///
     /// # Arguments
     ///
@@ -158,7 +175,7 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// let error = CollectError::ensure_fits_into(1..=6, &array)
     ///     .expect_err("Should fail bounds check");
     ///
-    /// assert_eq!(error.iter, 1..=6);
+    /// assert_eq!(error.remain, 1..=6);
     /// assert_eq!(error.collected, ArrayVec::<i32, 5>::new());
     /// assert_eq!(error.error.capacity, SizeHint::at_most(5));
     /// assert_eq!(error.error.kind, CapacityErrorKind::Bounds { hint: SizeHint::exact(6) });
@@ -167,9 +184,9 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     where
         C: RemainingCap + Default,
     {
-        match CapacityError::ensure_fits_into(&iter, collection) {
-            Ok(()) => Ok(iter),
+        match CapacityError::ensure_fits(&iter, collection.remaining_cap()) {
             Err(error) => Self::new(iter, C::default(), error).into_err(),
+            Ok(()) => Ok(iter),
         }
     }
 
@@ -178,7 +195,7 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     ///
     /// # Arguments
     ///
-    /// * `iter` - The remaining [Iterator] after overflow occurred
+    /// * `remain` - The remaining [Iterator] after overflow occurred
     /// * `collected` - The values that were collected before overflow
     /// * `overflow` - The overflow item that was consumed but couldn't be added to the collection
     /// * `cap` - The allowed capacity of the collection
@@ -191,19 +208,50 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// # use collect_failable::errors::CollectError;
     /// let error = CollectError::overflow(1..=3, vec![1, 2], 3, SizeHint::exact(2));
     ///
-    /// assert_eq!(error.iter, 1..=3);
+    /// assert_eq!(error.remain, 1..=3);
     /// assert_eq!(error.collected, vec![1, 2]);
     /// assert_eq!(error.error.capacity, SizeHint::exact(2));
     /// assert_eq!(error.error.kind, CapacityErrorKind::Overflow { overflow: 3 });
     /// ```
     #[must_use]
-    pub fn overflow(iter: I, collected: C, overflow: I::Item, cap: SizeHint) -> Self {
-        Self::new(iter, collected, CapacityError::overflow(cap, overflow))
+    pub fn overflow(remain: I, collected: C, overflow: I::Item, cap: SizeHint) -> Self {
+        Self::new(remain, collected, CapacityError::overflow(cap, overflow))
     }
 
     /// Creates a new [`Overflow`](CapacityErrorKind::Overflow) [`CollectError`]
     /// for collection failures when `iter` produced more items than the
-    /// [`FixedCap::CAP`] of an empty collection of type `C`.
+    /// [`remaining_cap`](RemainingCap::remaining_cap) of `collection`.
+    ///
+    /// # Arguments
+    ///
+    /// * `remain` - The remaining [Iterator] after overflow occurred
+    /// * `collected` - The values that were collected before overflow
+    /// * `overflow` - The overflow item that was consumed but couldn't be added to the collection
+    /// * `collection` - The collection that overflowed
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
+    /// # use collect_failable::errors::types::SizeHint;
+    /// # use collect_failable::errors::CollectError;
+    /// # use arrayvec::ArrayVec;
+    /// let collection = ArrayVec::<_, 5>::from_iter([1, 2]);
+    /// let error = CollectError::overflow_remaining_cap(1..=3, [1, 2], 3, &collection);
+    ///
+    /// assert_eq!(error.remain, 1..=3);
+    /// assert_eq!(error.collected, [1, 2]);
+    /// assert_eq!(error.error.capacity, SizeHint::at_most(3));
+    /// assert_eq!(error.error.kind, CapacityErrorKind::Overflow { overflow: 3 });
+    /// ```
+    #[must_use]
+    pub fn overflow_remaining_cap<Col: RemainingCap>(remain: I, collected: C, overflow: I::Item, collection: &Col) -> Self {
+        Self::overflow(remain, collected, overflow, collection.remaining_cap())
+    }
+
+    /// Creates a new [`Overflow`](CapacityErrorKind::Overflow) [`CollectError`]
+    /// for collection failures when `iter` produced more items than the
+    /// [`FixedCap::CAP`] of an empty collection of type `Col`.
     ///
     /// # Arguments
     ///
@@ -212,25 +260,26 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// * `overflow` - The overflow item that was consumed but couldn't be added
     ///   to the collection
     ///
+    /// # Type Arguments
+    ///
+    /// * `Col` - The type of the collection that overflowed.
+    ///
     /// # Examples
     ///
     /// ```rust
     /// # use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
     /// # use collect_failable::errors::types::SizeHint;
     /// # use collect_failable::errors::CollectError;
-    /// let error = CollectError::collect_overflow(1..=3, [1, 2], 3);
+    /// let error = CollectError::collect_overflow::<[i32; 2]>(1..=3, [1, 2], 3);
     ///
-    /// assert_eq!(error.iter, 1..=3);
+    /// assert_eq!(error.remain, 1..=3);
     /// assert_eq!(error.collected, [1, 2]);
     /// assert_eq!(error.error.capacity, SizeHint::exact(2));
     /// assert_eq!(error.error.kind, CapacityErrorKind::Overflow { overflow: 3 });
     /// ```
     #[must_use]
-    pub fn collect_overflow(iter: I, collected: C, overflow: I::Item) -> Self
-    where
-        C: FixedCap,
-    {
-        Self::overflow(iter, collected, overflow, C::CAP)
+    pub fn collect_overflow<Col: FixedCap>(iter: I, collected: C, overflow: I::Item) -> Self {
+        Self::overflow(iter, collected, overflow, Col::CAP)
     }
 
     /// Creates a new [`Underflow`](CapacityErrorKind::Underflow) [`CollectError`]
@@ -249,11 +298,11 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// # use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
     /// # use collect_failable::errors::types::SizeHint;
     /// # use collect_failable::errors::CollectError;
-    /// let error = CollectError::<_, Vec<_>, _>::underflow(1..=3, vec![1, 2], SizeHint::exact(2));
+    /// let error = CollectError::<_, Vec<_>, _>::underflow(1..=3, vec![1, 2], SizeHint::exact(3));
     ///
-    /// assert_eq!(error.iter, 1..=3);
+    /// assert_eq!(error.remain, 1..=3);
     /// assert_eq!(error.collected, vec![1, 2]);
-    /// assert_eq!(error.error.capacity, SizeHint::exact(2));
+    /// assert_eq!(error.error.capacity, SizeHint::exact(3));
     /// assert_eq!(error.error.kind, CapacityErrorKind::Underflow { count: 2 });
     /// ```
     #[must_use]
@@ -263,40 +312,5 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     {
         let count = (&collected).into_iter().len();
         Self::new(iter, collected, CapacityError::underflow(cap, count))
-    }
-
-    /// Creates a new [`Underflow`](CapacityErrorKind::Underflow) [`CollectError`] for
-    /// collection failures when `iter` produced fewer items than the
-    /// [fixed capacity](FixedCap::CAP) of the `collected` type.
-    ///
-    /// # Arguments
-    ///
-    /// * `iter` - The remaining [Iterator] after underflow occurred
-    /// * `collected` - The values that were collected before underflow,
-    ///   also provides the count of collected items
-    ///
-    /// Note: Due to limitations of rust's type inference, it may be necessary to explicitly
-    /// specify the type of `collected` when using this method.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
-    /// # use collect_failable::errors::types::SizeHint;
-    /// # use collect_failable::errors::CollectError;
-    /// let error = CollectError::<_, [i32; 5], _>::collect_underflow(1..=3, [1, 2, 3, 4, 5]);
-    ///
-    /// assert_eq!(error.iter, 1..=3);
-    /// assert_eq!(error.collected, [1, 2, 3, 4, 5]);
-    /// assert_eq!(error.error.capacity, SizeHint::exact(5));
-    /// assert_eq!(error.error.kind, CapacityErrorKind::Underflow { count: 5 });
-    /// ```
-    #[must_use]
-    pub fn collect_underflow(iter: I, collected: C) -> Self
-    where
-        for<'a> &'a C: IntoIterator<IntoIter: ExactSizeIterator>,
-        C: FixedCap,
-    {
-        Self::underflow(iter, collected, C::CAP)
     }
 }

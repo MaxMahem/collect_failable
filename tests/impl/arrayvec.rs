@@ -72,5 +72,5 @@ mod try_extend_one {
     use collect_failable::TryExtendOne;
 
     try_extend_one!(valid, TestArrayVec::new(), 1, Ok(TestArrayVec::from_iter(1..=1)));
-    try_extend_one!(collision, TestArrayVec::from([1, 2]), 2, Err(CapacityError::extend_overflow(2)));
+    try_extend_one!(collision, TestArrayVec::from([1, 2]), 2, Err(CapacityError::overflow(SizeHint::ZERO, 2)));
 }

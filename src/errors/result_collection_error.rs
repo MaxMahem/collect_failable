@@ -4,7 +4,7 @@ use core::fmt::{Debug, Display, Formatter};
 use alloc::boxed::Box;
 
 use display_as_debug::fmt::DebugStructExt;
-use display_as_debug::types::Short;
+use display_as_debug::types::{Full, Short};
 use display_as_debug::wrap::TypeNameResult;
 use tap::Pipe;
 
@@ -53,6 +53,8 @@ pub struct ResultCollectError<E, C, CErr, I> {
 
 impl<E, C, CErr, I> ResultCollectError<E, C, CErr, I> {
     /// Creates a new [`ResultCollectError`] from an iterator error and collection result.
+    #[must_use]
+    #[doc(hidden)]
     pub fn new(error: E, result: Result<C, CErr>, iter: I) -> Self {
         ResultCollectErrorData { error, result, iter }.pipe(Box::new).pipe(|data| Self { data })
     }
@@ -82,7 +84,7 @@ impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectErrorData<E, C, CErr, I
         f.debug_struct("ResultCollectErrorData")
             .field("error", &self.error)
             .field("result", &TypeNameResult::borrow::<Short>(&self.result))
-            .field_type::<I, Short>("iter")
+            .field_type::<I, Full>("iter")
             .finish()
     }
 }
@@ -92,7 +94,7 @@ impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectError<E, C, CErr, I> {
         f.debug_struct("ResultCollectError")
             .field("error", &self.data.error)
             .field("result", &TypeNameResult::borrow::<Short>(&self.data.result))
-            .field_type::<I, Short>("iter")
+            .field_type::<I, Full>("iter")
             .finish()
     }
 }

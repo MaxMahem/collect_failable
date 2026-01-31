@@ -6,23 +6,40 @@ use collect_failable::errors::{Collision, UnzipError};
 use crate::error_tests::test_source;
 
 // Define a type alias for the collection to make signatures cleaner
-type Collection = HashSet<u32>;
+type Collection = HashSet<i32>;
 
-fn sample_error() -> UnzipError<Collection, Collection, IntoIter<(u32, u32), 1>> {
-    UnzipError::new(Collision { item: 1 }, HashSet::from([1, 2]), HashSet::from([10, 20]), Some(30), [(3, 40)].into_iter())
+const COLLISION_ERROR: Collision<i32> = Collision { item: 1 };
+
+fn failed_collection() -> Collection {
+    HashSet::from([1, 2])
+}
+
+fn partial_collection() -> Collection {
+    HashSet::from([10, 20])
+}
+
+const PENDING_ITEM: Option<i32> = Some(30);
+
+fn remaining_iterator() -> IntoIter<(i32, i32), 1> {
+    [(3, 40)].into_iter()
+}
+
+fn sample_error() -> UnzipError<Collision<i32>, Collection, Collection, i32, IntoIter<(i32, i32), 1>> {
+    UnzipError::new(COLLISION_ERROR, failed_collection(), partial_collection(), PENDING_ITEM, remaining_iterator())
 }
 
 mod format {
     use super::*;
     use crate::error_tests::test_format;
 
-    const EXPECTED_DEBUG: &str = r#"UnzipError { error: Collision { item: 1 }, failed: HashSet<u32>, partial: HashSet<u32>, pending: Some(u32), remaining: IntoIter<(u32, u32), 1> }"#;
-    const EXPECTED_DEBUG_DATA: &str = r#"UnzipErrorData { error: Collision { item: 1 }, failed: HashSet<u32>, partial: HashSet<u32>, pending: Some(u32), remaining: IntoIter<(u32, u32), 1> }"#;
+    const EXPECTED_DEBUG: &str = r#"UnzipError { error: Collision { item: 1 }, failed: HashSet<i32>, partial: HashSet<i32>, pending: Some(i32), remaining: core::array::iter::IntoIter<(i32, i32), 1> }"#;
+    const EXPECTED_DEBUG_DATA: &str = r#"UnzipErrorData { error: Collision { item: 1 }, failed: HashSet<i32>, partial: HashSet<i32>, pending: Some(i32), remaining: core::array::iter::IntoIter<(i32, i32), 1> }"#;
     const EXPECTED_DISPLAY: &str = "Failed while unzipping collection: item collision";
 
     test_format!(debug, sample_error(), "{:?}", EXPECTED_DEBUG);
     test_format!(debug_data, sample_error().into_data(), "{:?}", EXPECTED_DEBUG_DATA);
     test_format!(display, sample_error(), "{}", EXPECTED_DISPLAY);
+    test_format!(display_data, sample_error().into_data(), "{}", EXPECTED_DISPLAY);
 }
 
 mod ctors {
@@ -32,19 +49,19 @@ mod ctors {
     test_ctor!(
         into_data,
         sample_error().into_data(),
-        error => Collision { item: 1 },
-        failed => HashSet::from([1, 2]),
-        partial => HashSet::from([10, 20]),
-        pending => Some(30),
+        error => COLLISION_ERROR,
+        failed => failed_collection(),
+        partial => partial_collection(),
+        pending => PENDING_ITEM,
     );
 
     test_ctor!(
         new,
         sample_error(),
-        error => Collision { item: 1 },
-        failed => HashSet::from([1, 2]),
-        partial => HashSet::from([10, 20]),
-        pending => Some(30),
+        error => COLLISION_ERROR,
+        failed => failed_collection(),
+        partial => partial_collection(),
+        pending => PENDING_ITEM,
     );
 
     #[test]
@@ -54,4 +71,5 @@ mod ctors {
     }
 }
 
-test_source!(source, sample_error(), Collision<u32>);
+test_source!(source, sample_error(), Collision<i32>);
+test_source!(source_data, sample_error().into_data(), Collision<i32>);

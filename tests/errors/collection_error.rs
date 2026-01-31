@@ -1,154 +1,159 @@
-use crate::error_tests::{TestError, test_source};
-use crate::utils::panics;
+use std::ops::Range;
 
 use collect_failable::errors::CollectError;
-use collect_failable::errors::capacity::CapacityError;
+use collect_failable::errors::capacity::{CapacityError, FixedCap};
 use collect_failable::errors::collision::Collision;
 use collect_failable::errors::types::SizeHint;
+
+use crate::error_tests::{INVALID_ITER, TEST_ERROR, TestError, test_ctor, test_into_iter, test_source};
+use crate::utils::panics;
+
+const COLLECTED_LEN: usize = 2;
+type Collection = [i32; COLLECTED_LEN];
+
+const REMAIN_ITER: Range<i32> = 3..5;
+const COLLECTED: Collection = [1, 2];
+const COLLECTED_CAP: SizeHint = Collection::CAP;
+
+const OVERFLOW_VALUE: i32 = 99;
+const OVERFLOW_ERR: CapacityError<i32> = CapacityError::overflow(COLLECTED_CAP, OVERFLOW_VALUE);
+const OVERFLOW_ERR_ZERO: CapacityError<i32> = CapacityError::overflow(SizeHint::ZERO, OVERFLOW_VALUE);
+
+const UNDERFLOW_CAP: SizeHint = SizeHint::exact(5);
+const UNDERFLOW_ERR: CapacityError<i32> = CapacityError::underflow(UNDERFLOW_CAP, COLLECTED_LEN);
+
+const COLLISION_VALUE: i32 = 99;
+const COLLISION_ERR: Collision<i32> = Collision::new(COLLISION_VALUE);
+
+const ALL_VALUES: [i32; 4] = [1, 2, 3, 4];
 
 mod format {
     use super::*;
     use crate::error_tests::test_format;
 
-    const EXPECTED_DEBUG: &str = r#"CollectError { iter: RangeInclusive<i32>, collected: Vec<i32>, error: TestError("test") }"#;
+    const EXPECTED_DEBUG: &str =
+        r#"CollectError { remain: core::ops::range::Range<i32>, collected: [i32; 2], error: TestError("test") }"#;
     const EXPECTED_DISPLAY: &str = "Collection Error: Test error: test";
     const EXPECTED_DEBUG_DATA: &str =
-        r#"CollectErrorData { iter: RangeInclusive<i32>, collected: Vec<i32>, error: TestError("test") }"#;
+        r#"CollectErrorData { remain: core::ops::range::Range<i32>, collected: [i32; 2], error: TestError("test") }"#;
 
-    test_format!(debug, CollectError::new(1..=2, vec![3, 4], TestError::<i32>::new("test")), "{:?}", EXPECTED_DEBUG);
-    test_format!(display, CollectError::new(1..=2, vec![3, 4], TestError::<i32>::new("test")), "{}", EXPECTED_DISPLAY);
-    test_format!(
-        debug_data,
-        CollectError::new(1..=2, vec![3, 4], TestError::<i32>::new("test")).into_data(),
-        "{:?}",
-        EXPECTED_DEBUG_DATA
-    );
+    test_format!(debug, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR), "{:?}", EXPECTED_DEBUG);
+    test_format!(display, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR), "{}", EXPECTED_DISPLAY);
+    test_format!(debug_data, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR).into_data(), "{:?}", EXPECTED_DEBUG_DATA);
+    test_format!(display_data, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR).into_data(), "{}", EXPECTED_DISPLAY);
 }
 
 mod ctors {
     use super::*;
-    use size_hinter::InvalidIterator;
-
-    use crate::error_tests::test_ctor;
 
     test_ctor!(
         new,
-        CollectError::new(1..=2, vec![3, 4], TestError::<i32>::new("test")),
-        iter => 1..=2,
-        collected => vec![3, 4],
-        error => TestError::new("test")
+        CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR),
+        remain => REMAIN_ITER,
+        collected => COLLECTED,
+        error => TEST_ERROR
     );
 
     test_ctor!(
         bounds,
-        CollectError::<_, Vec<i32>, _>::bounds(1..=2, SizeHint::exact(5)),
-        iter => 1..=2,
-        collected => Vec::<i32>::new(),
+        CollectError::<_, Collection, _>::bounds(REMAIN_ITER, SizeHint::exact(5)),
+        remain => REMAIN_ITER,
+        collected => Collection::default(),
         error => CapacityError::bounds(SizeHint::exact(5), SizeHint::exact(2))
     );
 
     test_ctor!(
         overflow,
-        CollectError::overflow(3..=4, vec![1, 2], 99, SizeHint::exact(2)),
-        iter => 3..=4,
-        collected => vec![1, 2],
-        error => CapacityError::overflow(SizeHint::exact(2), 99)
+        CollectError::overflow(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, COLLECTED_CAP),
+        remain => REMAIN_ITER,
+        collected => COLLECTED,
+        error => OVERFLOW_ERR
     );
 
     test_ctor!(
         collect_overflowed,
-        CollectError::collect_overflow(1..=3, [1, 2], 99),
-        iter => 1..=3,
-        collected => [1, 2],
-        error => CapacityError::overflow(SizeHint::exact(2), 99)
+        CollectError::collect_overflow::<Collection>(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE),
+        remain => REMAIN_ITER,
+        collected => COLLECTED,
+        error => OVERFLOW_ERR
     );
 
     test_ctor!(
-        underflow,
-        CollectError::<_, Vec<i32>, _>::underflow(1..=2, vec![1, 2], SizeHint::exact(5)),
-        iter => 1..=2,
-        collected => vec![1, 2],
-        error => CapacityError::underflow(SizeHint::exact(5), 2)
+        overflow_remaining_cap,
+        CollectError::overflow_remaining_cap(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, &COLLECTED),
+        remain => REMAIN_ITER,
+        collected => COLLECTED,
+        error => OVERFLOW_ERR_ZERO
     );
 
-    test_ctor!(
-        collect_underflowed,
-        CollectError::<_, [i32; 2], _>::collect_underflow(1..=2, [1, 2]),
-        iter => 1..=2,
-        collected => [1, 2],
-        error => CapacityError::underflow(SizeHint::exact(2), 2)
+    test_ctor!(underflow, CollectError::<_, Collection, _>::underflow(REMAIN_ITER, COLLECTED, UNDERFLOW_CAP),
+        remain => REMAIN_ITER,
+        collected => COLLECTED,
+        error => UNDERFLOW_ERR
     );
 
-    test_ctor!(
-        collision,
-        CollectError::collision(3..=4, [1, 2], 99),
-        collected => [1, 2],
-        error => Collision::new(99)
+    test_ctor!(collision, CollectError::collision(REMAIN_ITER, COLLECTED, COLLISION_VALUE),
+        remain => REMAIN_ITER,
+        collected => COLLECTED,
+        error => COLLISION_ERR
     );
 
     test_ctor!(
         into_data,
-        CollectError::new(1..=2, vec![3, 4], TestError::<i32>::new("test")).into_data(),
-        iter => 1..=2,
-        collected => vec![3, 4],
-        error => TestError::new("test")
+        CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR).into_data(),
+        remain => REMAIN_ITER,
+        collected => COLLECTED,
+        error => TEST_ERROR
     );
 
-    panics!(
-        panic_bounds,
-        CollectError::<_, Vec<i32>, _>::bounds(InvalidIterator::<i32>::DEFAULT, SizeHint::exact(5)),
-        "Invalid size hint"
-    );
+    panics!(panic_bounds, CollectError::<_, Collection, _>::bounds(INVALID_ITER, SizeHint::exact(5)), "Invalid size hint");
 }
 
-test_source!(source, CollectError::new(1..=2, vec![3, 4], TestError::<i32>::new("test")), TestError<i32>);
+test_source!(source, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR), TestError<i32>);
+test_source!(source_data, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR).into_data(), TestError<i32>);
 
-#[test]
-fn into_iter() {
-    let items: Vec<_> = CollectError::new(1..=2, vec![3, 4], TestError::<i32>::new("test")).into_iter().collect();
-
-    assert_unordered::assert_eq_unordered!(items, vec![1, 2, 3, 4]);
-}
+test_into_iter!(into_iter, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR), ALL_VALUES.to_vec());
+test_into_iter!(into_iter_data, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR).into_data(), ALL_VALUES.to_vec());
 
 mod ensure_fits_in {
     use super::*;
-    use crate::error_tests::test_failable;
 
-    test_failable!(pass, CollectError::<_, [i32; 5], _>::ensure_fits_in(1..=5), Ok);
+    type ToLargeCollection = [i32; 5];
+    const TO_LARGE_COLLECTION_CAP: SizeHint = ToLargeCollection::CAP;
+    const BOUNDS_ERR: CapacityError<i32> = CapacityError::bounds(TO_LARGE_COLLECTION_CAP, COLLECTED_CAP);
 
-    test_failable!(
+    test_ctor!(pass, CollectError::<_, Collection, _>::ensure_fits_in::<Collection>(REMAIN_ITER).expect("should be Ok"));
+
+    test_ctor!(
         fail,
-        CollectError::<_, [i32; 5], _>::ensure_fits_in(1..=6),
-        iter => 1..=6,
-        collected => [0; 5],
-        error => CapacityError::bounds(SizeHint::exact(5), SizeHint::exact(6))
+        CollectError::<_, Collection, _>::ensure_fits_in::<ToLargeCollection>(REMAIN_ITER).expect_err("should be Err"),
+        remain => REMAIN_ITER,
+        collected => Collection::default(),
+        error => BOUNDS_ERR
     );
 
-    panics!(
-        panic,
-        CollectError::<_, [i32; 5], _>::ensure_fits_in(size_hinter::InvalidIterator::<i32>::DEFAULT),
-        "Invalid size hint"
-    );
+    panics!(panic, CollectError::<_, Collection, _>::ensure_fits_in::<Collection>(INVALID_ITER), "Invalid size hint");
 }
 
 mod ensure_fits_into {
     use super::*;
-    use crate::error_tests::test_failable;
-    use arrayvec::ArrayVec;
 
-    test_failable!(pass, CollectError::ensure_fits_into(1..=5, &ArrayVec::<i32, 5>::new()), Ok);
+    type ArrayVec = arrayvec::ArrayVec<i32, 5>;
+    const ARRAYVEC_CAP: SizeHint = ArrayVec::CAP;
 
-    test_failable!(
+    const TO_LARGE_ITER: Range<i32> = 1..7;
+    const TO_LARGE_ITER_CAP: SizeHint = SizeHint::exact(6);
+    const BOUNDS_ERR: CapacityError<i32> = CapacityError::bounds(ARRAYVEC_CAP, TO_LARGE_ITER_CAP);
+
+    test_ctor!(pass, CollectError::ensure_fits_into(REMAIN_ITER, &ArrayVec::new()).expect("should be Ok"));
+
+    test_ctor!(
         fail,
-        CollectError::ensure_fits_into(1..=6, &ArrayVec::<i32, 5>::new()),
-        iter => 1..=6,
-        collected => ArrayVec::<i32, 5>::new(),
-        error => CapacityError::bounds(SizeHint::at_most(5), SizeHint::exact(6))
+        CollectError::ensure_fits_into(TO_LARGE_ITER, &ArrayVec::new()).expect_err("should be Err"),
+        remain => TO_LARGE_ITER,
+        collected => ArrayVec::new(),
+        error => BOUNDS_ERR
     );
 
-    panics!(
-        panic,
-        CollectError::ensure_fits_into(size_hinter::InvalidIterator::<i32>::DEFAULT, &ArrayVec::<i32, 5>::new()),
-        "Invalid size hint"
-    );
+    panics!(panic, CollectError::ensure_fits_into(INVALID_ITER, &ArrayVec::new()), "Invalid size hint");
 }
