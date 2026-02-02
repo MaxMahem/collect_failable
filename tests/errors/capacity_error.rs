@@ -13,9 +13,11 @@ const BOUNDS_ERR_KIND: CapacityErrorKind<i32> = CapacityErrorKind::Bounds { hint
 
 const OVERFLOW_VALUE: i32 = 42;
 const OVERFLOW_ERR_KIND: CapacityErrorKind<i32> = CapacityErrorKind::Overflow { overflow: OVERFLOW_VALUE };
+const UNBOUNDED_CAP: SizeHint = SizeHint::unbounded(0);
 
 const UNDERFLOW_COUNT: usize = 4;
 const UNDERFLOW_ERR_KIND: CapacityErrorKind<i32> = CapacityErrorKind::Underflow { count: UNDERFLOW_COUNT };
+const UNDERFLOW_COUNT_TOO_LARGE: usize = 10;
 
 const OVERLAPPING_ITER: Range<i32> = 1..6;
 const DISJOINT_ITER: Range<i32> = 1..5;
@@ -32,6 +34,12 @@ mod ctors {
         kind => BOUNDS_ERR_KIND
     );
 
+    panics!(
+        bounds_overlap_panics,
+        CapacityError::<i32>::bounds(COLLECTION_CAP, OVERLAPPING_ITER.size_hint().try_into().unwrap()),
+        "Bounds must not overlap"
+    );
+
     test_ctor!(
         overflow,
         CapacityError::overflow(COLLECTION_CAP, OVERFLOW_VALUE),
@@ -39,11 +47,36 @@ mod ctors {
         kind => OVERFLOW_ERR_KIND
     );
 
+    panics!(
+        overflow_no_upper_bound_panics,
+        CapacityError::overflow(UNBOUNDED_CAP, OVERFLOW_VALUE),
+        "Capacity must have an upper bound to overflow"
+    );
+
     test_ctor!(
         underflow,
         CapacityError::<i32>::underflow(COLLECTION_CAP, UNDERFLOW_COUNT),
         capacity => COLLECTION_CAP,
         kind => UNDERFLOW_ERR_KIND
+    );
+
+    panics!(
+        underflow_count_too_large_panics,
+        CapacityError::<i32>::underflow(COLLECTION_CAP, UNDERFLOW_COUNT_TOO_LARGE),
+        "count must be less than capacity"
+    );
+
+    test_ctor!(
+        underflow_of,
+        CapacityError::<i32>::underflow_of::<Collection>(UNDERFLOW_COUNT),
+        capacity => COLLECTION_CAP,
+        kind => UNDERFLOW_ERR_KIND
+    );
+
+    panics!(
+        underflow_of_count_too_large_panics,
+        CapacityError::<i32>::underflow_of::<Collection>(10),
+        "count must be less than capacity"
     );
 
     test_ctor!(

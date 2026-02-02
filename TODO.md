@@ -1,6 +1,13 @@
 # TODO
 
-- [ ] Explore `no_alloc` support for `CollectError` to allow `ArrayVec` extensions to be used in strictly `no_std` environments (without `alloc`).
-  - Currently `CollectError` uses `Box` to minimize stack size.
-  - We might need a feature flag or a generic strategy to allow unboxed errors or alternative storage.
+- [X] Explore `no_alloc` support for `CollectError` to allow `ArrayVec` extensions to be used in environments without `alloc`.
+  - Now when not using `alloc` errors are not boxed.
 - [ ] Explore adding `TryUnzip` for more than two collections.
+- [ ] Explore adding `TryExtend` for more than two collections.
+- [ ] Explore a safe method of collecting into an array.
+- [X] Explore not panicking on invalid size hints.
+  - Decided to panic on invalid size hints, and other logic errors.
+- [ ] Consider spinning of Capacity trait into its own crate, or as a part of `size_hinter` crate.
+- [ ] Add more implementations.
+  - `TinyVec`
+  

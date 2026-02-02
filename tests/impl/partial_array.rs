@@ -19,11 +19,11 @@ fn default() {
 #[test]
 fn try_push() {
     let mut partial = TestPartialArray::new();
-    assert_eq!(partial.try_push(1), Ok(()));
-    assert_eq!(partial.try_push(2), Ok(()));
-    assert_eq!(partial.try_push(3), Ok(()));
-    assert_eq!(partial.try_push(4), Ok(()));
-    assert_eq!(partial.try_push(5), Ok(()));
+    assert_eq!(partial.try_push(1), Ok(&mut 1));
+    assert_eq!(partial.try_push(2), Ok(&mut 2));
+    assert_eq!(partial.try_push(3), Ok(&mut 3));
+    assert_eq!(partial.try_push(4), Ok(&mut 4));
+    assert_eq!(partial.try_push(5), Ok(&mut 5));
     assert_eq!(partial.try_push(6), Err(6));
     assert_eq!(partial[..], [1, 2, 3, 4, 5]);
 }
@@ -31,51 +31,40 @@ fn try_push() {
 mod drop {
     use super::*;
 
-    #[test]
-    fn drops_on_underflow() {
-        let (counters, viewers) = dropcount::new_vec(4);
+    macro_rules! drop_test {
+        ($name:ident, $ctor:expr, $len:expr) => {
+            #[test]
+            fn $name() {
+                let (counters, viewers) = dropcount::new_vec($len);
 
-        {
-            let mut partial = PartialArray::<_, 5>::new();
-            for counter in counters {
-                partial.try_push(counter).ok();
+                {
+                    let mut partial = $ctor;
+                    _ = counters.into_iter().try_for_each(|counter| partial.try_push(counter).map(drop));
+                }
+
+                viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Item should be dropped once"));
             }
-        }
-
-        viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Item should be dropped once"));
+        };
     }
 
-    #[test]
-    fn drops_on_overflow() {
-        let (counters, viewers) = dropcount::new_vec(6);
-
-        {
-            let mut partial = PartialArray::<_, 5>::new();
-            for counter in counters {
-                partial.try_push(counter).ok();
-            }
-        }
-
-        viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Item should be dropped once"));
-    }
+    drop_test!(underflow, PartialArray::<_, 5>::new(), 4);
+    drop_test!(overflow, PartialArray::<_, 5>::new(), 6);
 }
 
 #[test]
 fn drain_drop() {
-    for consume in 0..=5 {
+    (0..=5).for_each(|consume| {
         let (counters, viewers) = dropcount::new_vec(5);
 
         let mut partial = PartialArray::<_, 5>::new();
-        for counter in counters {
-            partial.try_push(counter).ok();
-        }
+        counters.into_iter().try_for_each(|counter| partial.try_push(counter).map(drop)).expect("should succeed");
 
         let drain = partial.into_iter();
 
         drain.take(consume).for_each(drop);
 
         viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Items should be dropped once (consume={})", consume));
-    }
+    });
 }
 
 mod try_from {
@@ -147,7 +136,7 @@ fn capacity() {
 
     _ = (0..=5).try_for_each(|i| {
         assert_eq!(partial.remaining_cap(), SizeHint::at_most(5 - i as usize));
-        partial.try_push(i)
+        partial.try_push(i).map(drop)
     });
     assert_eq!(partial.remaining_cap(), SizeHint::at_most(0));
 }

@@ -11,8 +11,8 @@ extern crate std;
 extern crate alloc;
 
 pub mod errors;
-mod impls;
+#[doc(hidden)]
+pub mod impls;
 mod traits;
-mod utils;
 
 pub use traits::*;

@@ -4,10 +4,10 @@ use fluent_result::into::IntoResult;
 use tap::Pipe;
 
 use crate::TryExtendOne;
-use crate::errors::capacity::{CapacityError, FixedCap, RemainingCap};
+use crate::errors::capacity::{FixedCap, RemainingCap};
 use crate::errors::types::SizeHint;
-use crate::errors::{CollectError, ExtendError};
-use crate::utils::{EnsureEmpty, NotEmpty};
+use crate::errors::{CapacityError, CollectError, ExtendError};
+use crate::impls::ensure_empty::{EnsureEmpty, NotEmpty};
 use crate::{TryExtend, TryExtendSafe, TryFromIterator};
 
 impl<T, const N: usize> RemainingCap for ArrayVec<T, N> {
@@ -69,14 +69,14 @@ where
 {
     type Error = ExtendError<I::IntoIter, CapacityError<T>>;
 
-    /// Appends `iter` to the [`ArrayVec`], failing if `iter` produces more items than
-    /// [`ArrayVec::remaining_capacity`].
+    /// Appends `iter` to the [`ArrayVec`], failing if `iter` produces more
+    /// items than [`ArrayVec::remaining_capacity`].
     ///
     /// # Errors
     ///
     /// Returns an [`ExtendError`] if `iter` produces more items than [`ArrayVec::remaining_capacity`]. The [`CapacityError::capacity`] in that error will reflect
-    /// the capacity of the [`ArrayVec`] after any mutations. This method provides a **basic error
-    /// guarantee**. If the method returns an error, the `ArrayVec` is valid, but may be modified.
+    /// This method provides a **basic error guarantee**. If the method returns
+    /// an error, the [`ArrayVec`] is valid, but may be modified.
     ///
     /// # Panics
     ///
@@ -112,14 +112,14 @@ where
     I: IntoIterator<Item = T>,
 {
     type Error = CollectError<I::IntoIter, Self, CapacityError<T>>;
-    /// Appends `iter` to the [`ArrayVec`], failing if `iter` produces more items than
-    /// [`ArrayVec::remaining_capacity`].
+    /// Appends `iter` to the [`ArrayVec`], failing if `iter` produces more
+    /// items than [`ArrayVec::remaining_capacity`].
     ///
     /// # Errors
     ///
     /// Returns a [`CollectError`] if `iter` produces more items than [`ArrayVec::remaining_capacity`].
-    /// This method provides a **strong error guarantee**. In the case of an error, the [`ArrayVec`]
-    /// is not modified.
+    /// This method provides a **strong error guarantee**. In the case of an
+    /// error, the [`ArrayVec`] is not modified.
     ///
     /// # Panics
     ///

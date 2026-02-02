@@ -48,6 +48,12 @@ mod ctors {
 
     panics!(panic_bounds, ExtendError::<_, CapacityError<i32>>::bounds(INVALID_ITER, CAP), "Invalid size hint");
 
+    panics!(
+        panic_bounds_overlap,
+        ExtendError::<_, CapacityError<i32>>::bounds(ITER, ITER.size_hint().try_into().unwrap()),
+        "Bounds must not overlap"
+    );
+
     test_ctor!(
         overflow,
         ExtendError::overflow(ITER, OVERFLOW_VALUE),
@@ -60,6 +66,12 @@ mod ctors {
         ExtendError::overflow_remaining_cap(ITER, OVERFLOW_VALUE, &arrayvec::ArrayVec::<i32, 5>::new()),
         remain => ITER,
         error => CapacityError::overflow(SizeHint::at_most(5), OVERFLOW_VALUE)
+    );
+
+    panics!(
+        overflow_remaining_cap_no_upper_bound,
+        ExtendError::overflow_remaining_cap(ITER, OVERFLOW_VALUE, &vec![1]),
+        "Capacity must have an upper bound to overflow"
     );
 
     test_ctor!(
@@ -106,4 +118,10 @@ mod ensure_fits_into {
     );
 
     panics!(panic, ExtendError::ensure_fits_into(INVALID_ITER, &ArrayVec::new()), "Invalid size hint");
+
+    panics!(
+        panic_overflow_unbounded,
+        ExtendError::overflow_remaining_cap(ITER, super::OVERFLOW_VALUE, &Vec::<i32>::new()),
+        "Capacity must have an upper bound to overflow"
+    );
 }

@@ -1,7 +1,8 @@
+#[cfg(feature = "alloc")]
+use alloc::boxed::Box;
+
 use core::error::Error;
 use core::fmt::{Debug, Display, Formatter};
-
-use alloc::boxed::Box;
 
 use display_as_debug::fmt::DebugStructExt;
 use display_as_debug::types::{Full, Short};
@@ -36,35 +37,57 @@ pub struct ResultCollectError<E, C, CErr, I> {
     /// The remaining [`Iterator`] (items not yet consumed when the error occurred)
     pub iter: I,
 
-    #[cfg(not(doc))]
-    data: [Box<ResultCollectErrorData<E, C, CErr, I>>; {
-        /// The internal data of a [`ResultCollectError`].
-        #[doc(hidden)]
-        pub struct ResultCollectErrorData<E, C, CErr, I> {
-            /// The first [`Err`] encountered from the [`Result`] [`Iterator`]
-            pub error: E,
-            /// The partial collection result ([`Ok`] with partial collection, or [`Err`] with collection error)
-            pub result: Result<C, CErr>,
-            /// The remaining [`Iterator`] (items not yet consumed when the error occurred)
-            pub iter: I,
-        }
-    }],
+    #[cfg(all(not(doc), feature = "alloc"))]
+    data: Box<ResultCollectErrorData<E, C, CErr, I>>,
+    #[cfg(all(not(doc), not(feature = "alloc")))]
+    data: ResultCollectErrorData<E, C, CErr, I>,
 }
 
+/// The internal data of a [`ResultCollectError`].
+#[doc(hidden)]
+pub struct ResultCollectErrorData<E, C, CErr, I> {
+    /// The first [`Err`] encountered from the [`Result`] [`Iterator`]
+    pub error: E,
+    /// The partial collection result ([`Ok`] with partial collection, or [`Err`] with collection error)
+    pub result: Result<C, CErr>,
+    /// The remaining [`Iterator`] (items not yet consumed when the error occurred)
+    pub iter: I,
+}
+
+#[doc(hidden)]
 impl<E, C, CErr, I> ResultCollectError<E, C, CErr, I> {
     /// Creates a new [`ResultCollectError`] from an iterator error and collection result.
     #[must_use]
-    #[doc(hidden)]
+    #[cfg(feature = "alloc")]
     pub fn new(error: E, result: Result<C, CErr>, iter: I) -> Self {
         ResultCollectErrorData { error, result, iter }.pipe(Box::new).pipe(|data| Self { data })
+    }
+
+    /// Creates a new [`ResultCollectError`] from an iterator error and collection result.
+    #[must_use]
+    #[cfg(not(feature = "alloc"))]
+    pub fn new(error: E, result: Result<C, CErr>, iter: I) -> Self {
+        ResultCollectErrorData { error, result, iter }.pipe(|data| Self { data })
+    }
+}
+
+impl<E, C, CErr, I> ResultCollectError<E, C, CErr, I> {
+    /// Consumes the error, returning a `ResultCollectErrorData` containing the
+    /// [`ResultCollectError::error`], [`ResultCollectError::result`],
+    /// and [`ResultCollectError::iter`].
+    #[must_use]
+    #[cfg(feature = "alloc")]
+    pub fn into_data(self) -> ResultCollectErrorData<E, C, CErr, I> {
+        *self.data
     }
 
     /// Consumes the error, returning a `ResultCollectErrorData` containing the
     /// [`ResultCollectError::error`], [`ResultCollectError::result`],
     /// and [`ResultCollectError::iter`].
     #[must_use]
+    #[cfg(not(feature = "alloc"))]
     pub fn into_data(self) -> ResultCollectErrorData<E, C, CErr, I> {
-        *self.data
+        self.data
     }
 }
 

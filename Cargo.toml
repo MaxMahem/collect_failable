@@ -1,6 +1,6 @@
 [package]
 name = "collect_failable"
-version = "0.17.1"
+version = "0.18.0"
 edition = "2024"
 rust-version = "1.93"
 description = "A trait for collecting values into a container which has an invariant to uphold and whose construction may fail"
@@ -16,14 +16,14 @@ categories = ["data-structures", "rust-patterns"]
 all-features = true
 
 [features]
-default = ["alloc", "std", "unsafe", "tuple"]
+default = ["alloc", "std", "unsafe", "tuples"]
 alloc = []
 std = ["alloc"]
-unsafe = ["alloc"]
-tuple = ["alloc"]
+unsafe = []
+tuples = [ "dep:either" ]
 hashbrown = [ "alloc", "dep:hashbrown" ]
 indexmap = [ "alloc", "dep:indexmap" ]
-arrayvec = [ "alloc", "dep:arrayvec" ]
+arrayvec = [ "dep:arrayvec" ]
 
 [dependencies]
 tap = { version = "1.0.1" }
@@ -40,7 +40,7 @@ display_as_debug = "0.5.1"
 nameof = "1.3.0"
 
 # Public Dependencies
-either = "1.15.0"
+either = { version = "1.15.0", optional = true }
 size_hinter = "0.4.1"
 
 [dev-dependencies]

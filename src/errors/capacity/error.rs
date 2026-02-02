@@ -1,3 +1,4 @@
+use crate::errors::capacity::FixedCap;
 use crate::errors::types::SizeHint;
 
 use crate::errors::ErrorItemProvider;
@@ -65,6 +66,10 @@ impl<T> CapacityError<T> {
     /// * `capacity` - the capacity of the collection
     /// * `hint` - the size hint of the iterator
     ///
+    /// # Panics
+    ///
+    /// Panics if `capacity` and `hint` overlap.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -77,7 +82,7 @@ impl<T> CapacityError<T> {
     /// ```
     #[must_use]
     pub const fn bounds(capacity: SizeHint, hint: SizeHint) -> Self {
-        debug_assert!(SizeHint::disjoint(capacity, hint), "Bounds must not overlap");
+        assert!(SizeHint::disjoint(capacity, hint), "Bounds must not overlap");
         Self { capacity, kind: CapacityErrorKind::Bounds { hint } }
     }
 
@@ -129,6 +134,10 @@ impl<T> CapacityError<T> {
     /// * `capacity` - The capacity that overflowed.
     /// * `overflow` - The item that overflowed `capacity`.
     ///
+    /// # Panics
+    ///
+    /// Panics if `capacity` is not bounded.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -141,31 +150,61 @@ impl<T> CapacityError<T> {
     /// ```
     #[must_use]
     pub const fn overflow(capacity: SizeHint, overflow: T) -> Self {
-        debug_assert!(capacity.upper().is_some(), "Capacity must have an upper bound to overflow");
+        assert!(capacity.upper().is_some(), "Capacity must have an upper bound to overflow");
         Self { capacity, kind: CapacityErrorKind::Overflow { overflow } }
     }
 
-    /// Creates a new [`CapacityError`] indicating that the iterator produced
-    /// fewer items than the minimum required by `capacity`.
+    /// Creates a new [`CapacityError`] indicating that fewer items were produced
+    /// than the minimum required by `capacity`.
     ///
     /// # Arguments
     ///
     /// * `capacity` - The capacity that was underflowed.
     /// * `count` - The number of items that were produced.
     ///
+    /// # Panics
+    ///
+    /// Panics if `count` is greater than or equal to `capacity.lower()`.
+    ///
     /// # Examples
     ///
     /// ```rust
     /// # use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
-    /// use collect_failable::errors::types::SizeHint;
+    /// # use collect_failable::errors::types::SizeHint;
     /// let err = CapacityError::<i32>::underflow(SizeHint::exact(5), 2);
     ///
     /// assert_eq!(err.capacity, SizeHint::exact(5));
     /// assert_eq!(err.kind, CapacityErrorKind::Underflow { count: 2 });
+    /// ```
     #[must_use]
     pub const fn underflow(capacity: SizeHint, count: usize) -> Self {
-        debug_assert!(count < capacity.lower(), "count must be less than capacity.lower()");
+        assert!(count < capacity.lower(), "count must be less than capacity");
         Self { capacity, kind: CapacityErrorKind::Underflow { count } }
+    }
+
+    /// Creates a new [`CapacityError`] indicating that fewer items were produced
+    /// than the minimum required by `C`'s [`FixedCap::CAP`].
+    ///
+    /// # Arguments
+    ///
+    /// * `count` - The number of items that were produced.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `C` - A collection with a fixed capaciy.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
+    /// # use collect_failable::errors::types::SizeHint;
+    /// let err = CapacityError::<i32>::underflow_of::<[i32; 5]>(2);
+    ///
+    /// assert_eq!(err.capacity, SizeHint::exact(5));
+    /// assert_eq!(err.kind, CapacityErrorKind::Underflow { count: 2 });
+    #[must_use]
+    pub const fn underflow_of<C: FixedCap>(count: usize) -> Self {
+        Self::underflow(C::CAP, count)
     }
 }
 

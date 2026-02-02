@@ -1,8 +1,9 @@
+#[cfg(feature = "alloc")]
+use alloc::boxed::Box;
+
 use core::error::Error;
 use core::fmt::{Debug, Display, Formatter};
 use core::ops::Deref;
-
-use alloc::boxed::Box;
 
 use display_as_debug::fmt::DebugStructExt;
 use display_as_debug::types::{Full, Short};
@@ -35,33 +36,53 @@ pub struct TupleExtendError<E, P, I> {
     /// The remaining iterator after the error occurred
     pub remaining: I,
 
-    #[cfg(not(doc))]
-    data: [Box<TupleExtendErrorData<E, P, I>>; {
-        /// The internal data of a [`TupleExtendError`].
-        #[doc(hidden)]
-        pub struct TupleExtendErrorData<E, P, I> {
-            /// The error that occurred during extension.
-            pub error: E,
-            /// The pending item from the other side, if any.
-            pub pending: Option<P>,
-            /// The remaining iterator after the error occurred
-            pub remaining: I,
-        }
-    }],
+    #[cfg(all(not(doc), feature = "alloc"))]
+    data: Box<TupleExtendErrorData<E, P, I>>,
+    #[cfg(all(not(doc), not(feature = "alloc")))]
+    data: TupleExtendErrorData<E, P, I>,
 }
 
+/// The internal data of a [`TupleExtendError`].
+#[doc(hidden)]
+pub struct TupleExtendErrorData<E, P, I> {
+    /// The error that occurred during extension.
+    pub error: E,
+    /// The pending item from the other side, if any.
+    pub pending: Option<P>,
+    /// The remaining iterator after the error occurred
+    pub remaining: I,
+}
+
+#[doc(hidden)]
 impl<E, P, I> TupleExtendError<E, P, I> {
     /// Creates a new [`TupleExtendError`].
-    #[doc(hidden)]
     #[must_use]
+    #[cfg(feature = "alloc")]
     pub fn new(error: E, pending: Option<P>, remaining: I) -> Self {
         TupleExtendErrorData { error, pending, remaining }.pipe(Box::new).pipe(|data| Self { data })
     }
 
+    /// Creates a new [`TupleExtendError`].
+    #[must_use]
+    #[cfg(not(feature = "alloc"))]
+    pub fn new(error: E, pending: Option<P>, remaining: I) -> Self {
+        TupleExtendErrorData { error, pending, remaining }.pipe(|data| Self { data })
+    }
+}
+
+impl<E, P, I> TupleExtendError<E, P, I> {
     /// Consumes the error, returning the data.
     #[must_use]
+    #[cfg(feature = "alloc")]
     pub fn into_data(self) -> TupleExtendErrorData<E, P, I> {
         *self.data
+    }
+
+    /// Consumes the error, returning the data.
+    #[must_use]
+    #[cfg(not(feature = "alloc"))]
+    pub fn into_data(self) -> TupleExtendErrorData<E, P, I> {
+        self.data
     }
 }
 

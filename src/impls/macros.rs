@@ -214,12 +214,12 @@ macro_rules! impl_try_extend_one_for_colliding_type {
     ) => {
         impl<$($generics)*> $crate::TryExtendOne for $type {
             type Item = $item;
-            type Error = $crate::errors::collision::Collision<$item>;
+            type Error = $crate::errors::Collision<$item>;
 
             fn try_extend_one(&mut self, item: Self::Item) -> Result<(), Self::Error> {
 
                 match $crate::impls::macros::infer_contains::<Self, $item, _>($contains)(self, &item) {
-                    true => Err($crate::errors::collision::Collision::new(item)),
+                    true => Err($crate::errors::Collision::new(item)),
                     false => {
                         $crate::impls::macros::infer_insert::<Self, $item, _>($insert)(self, item);
                         Ok(())

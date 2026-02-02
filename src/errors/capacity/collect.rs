@@ -56,8 +56,9 @@ use crate::errors::capacity::CapacityErrorKind;
 /// assert_eq!(values, vec![3, 2, 1]);
 /// ```
 impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
-    /// Creates a new [`Bounds`](CapacityErrorKind::Bounds) [`CollectError`] for `iter` whose
-    /// [`size_hint`](Iterator::size_hint) is incompatible with `cap`.
+    /// Creates a new [`Bounds`](CapacityErrorKind::Bounds) [`CollectError`]
+    /// for `iter` whose [`size_hint`](Iterator::size_hint) is incompatible
+    /// with `cap`.
     ///
     /// # Arguments
     ///
@@ -66,7 +67,9 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     ///
     /// # Panics
     ///
-    /// Panics if `iter`'s size hint is invalid.
+    /// Panics if:
+    /// - `iter`'s size hint is invalid.
+    /// - `cap` and `iter`'s size hint [`overlap`](SizeHint::overlaps).
     ///
     /// # Examples
     ///
@@ -200,6 +203,10 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// * `overflow` - The overflow item that was consumed but couldn't be added to the collection
     /// * `cap` - The allowed capacity of the collection
     ///
+    /// # Panics
+    ///
+    /// Panics if `cap` has no upper bound.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -228,6 +235,10 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// * `collected` - The values that were collected before overflow
     /// * `overflow` - The overflow item that was consumed but couldn't be added to the collection
     /// * `collection` - The collection that overflowed
+    ///
+    /// # Panics
+    ///
+    /// Panics if `collection` has no upper bound.
     ///
     /// # Examples
     ///
@@ -264,6 +275,10 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     ///
     /// * `Col` - The type of the collection that overflowed.
     ///
+    /// # Panics
+    ///
+    /// Panics if `Col` has no upper bound.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -291,6 +306,11 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// * `collected` - The values that were collected before underflow,
     ///   also provides the count of collected items
     /// * `cap` - The allowed capacity of the collection
+    ///
+    /// # Panics
+    ///
+    /// Panics if the number of collected items is greater than or equal to
+    /// [`cap.lower()`](SizeHint::lower).
     ///
     /// # Examples
     ///

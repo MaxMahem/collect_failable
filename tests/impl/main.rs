@@ -1,8 +1,10 @@
 mod array;
+mod array_index;
 mod array_safety;
 mod arrayvec;
 mod collection_tests;
 mod collision_tests;
+mod ensure_empty;
 mod partial_array;
 
 mod result;

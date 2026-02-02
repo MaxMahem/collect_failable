@@ -1,10 +1,9 @@
 use fluent_result::into::IntoResult;
 
 use crate::TryFromIterator;
-use crate::errors::CollectError;
-use crate::errors::capacity::CapacityError;
 use crate::errors::capacity::{FixedCap, RemainingCap};
 use crate::errors::types::SizeHint;
+use crate::errors::{CapacityError, CollectError};
 use crate::impls::r#unsafe::IntoArrayError;
 
 use super::PartialArray;
@@ -60,7 +59,7 @@ where
         let mut partial_array = PartialArray::new();
 
         CollectError::ensure_fits_in::<Self>(into_iter.into_iter()).and_then(|mut iter| {
-            match iter.try_for_each(|item| partial_array.try_push(item)) {
+            match iter.try_for_each(|item| partial_array.try_push(item).map(drop)) {
                 Err(item) => CollectError::collect_overflow::<[T; N]>(iter, partial_array, item).into_err(),
                 Ok(()) => partial_array
                     .try_into()

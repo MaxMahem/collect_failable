@@ -1,4 +1,6 @@
+#[cfg(feature = "alloc")]
 use alloc::boxed::Box;
+
 use core::error::Error;
 use core::fmt::{Debug, Display, Formatter};
 use core::iter::Chain;
@@ -61,8 +63,10 @@ pub struct ExtendError<I, E> {
     /// The error that occurred.
     pub error: E,
 
-    #[cfg(not(doc))]
+    #[cfg(all(not(doc), feature = "alloc"))]
     data: Box<ExtendErrorData<I, E>>,
+    #[cfg(all(not(doc), not(feature = "alloc")))]
+    data: ExtendErrorData<I, E>,
 }
 
 /// The internal data of an [`ExtendError`].
@@ -94,8 +98,35 @@ impl<I, E> ExtendError<I, E> {
     /// assert_eq!(error.error.capacity, SizeHint::ZERO);
     /// assert_eq!(error.error.kind, CapacityErrorKind::Overflow { overflow: 4 });
     /// ```
+    #[must_use]
+    #[cfg(feature = "alloc")]
     pub fn new(remain: I, error: E) -> Self {
         ExtendErrorData { remain, error }.pipe(Box::new).pipe(|data| Self { data })
+    }
+
+    /// Creates a new [`ExtendError`].
+    ///
+    /// # Arguments
+    ///
+    /// * `remain` - The remaining iterator after the error occurred.
+    /// * `error` - The error that occurred.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
+    /// # use collect_failable::errors::types::SizeHint;
+    /// # use collect_failable::errors::ExtendError;
+    /// let error = ExtendError::new(1..=3, 4);
+    ///
+    /// assert_eq!(error.remain, 1..=3);
+    /// assert_eq!(error.error.capacity, SizeHint::ZERO);
+    /// assert_eq!(error.error.kind, CapacityErrorKind::Overflow { overflow: 4 });
+    /// ```
+    #[must_use]
+    #[cfg(not(feature = "alloc"))]
+    pub fn new(remain: I, error: E) -> Self {
+        ExtendErrorData { remain, error }.pipe(|data| Self { data })
     }
 
     /// Consumes the error, returning the internal data containing the
@@ -114,8 +145,30 @@ impl<I, E> ExtendError<I, E> {
     /// assert_eq!(data.error.kind, CapacityErrorKind::Overflow { overflow: 4 });
     /// ```
     #[must_use]
+    #[cfg(feature = "alloc")]
     pub fn into_data(self) -> ExtendErrorData<I, E> {
         *self.data
+    }
+
+    /// Consumes the error, returning the internal data containing the
+    /// [`remain`](ExtendError::remain) and [`error`](ExtendError::error).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
+    /// # use collect_failable::errors::types::SizeHint;
+    /// # use collect_failable::errors::ExtendError;
+    /// let data = ExtendError::new(1..=3, 4).into_data();
+    ///
+    /// assert_eq!(data.remain, 1..=3);
+    /// assert_eq!(data.error.capacity, SizeHint::ZERO);
+    /// assert_eq!(data.error.kind, CapacityErrorKind::Overflow { overflow: 4 });
+    /// ```
+    #[must_use]
+    #[cfg(not(feature = "alloc"))]
+    pub fn into_data(self) -> ExtendErrorData<I, E> {
+        self.data
     }
 }
 

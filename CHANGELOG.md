@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-02-02
+
 ### Added
 
 - Added helper constructors for `CapacityError`:
@@ -27,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ExtendError` type for `TryExtend` operations. Unlike `CollectError`, it has no `collected`
   field because `TryExtend` adds items directly to the target collection (basic error guarantee).
 - Added `ExtendError::ensure_fits_into` helper for bounds checking in extend operations.
+- Added `RemainingCap` and `FixedCap` implementations for `Vec`.
 
 - Implemented `TryFrom<PartialArray<T, N>>` for `[T; N]` to allow converting a full `PartialArray` (e.g. from an overflow error) into an array.
 
@@ -55,10 +58,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     The `error` and `remain` fields are still available.
 - **Breaking:** Moved capacity related types (`CapacityError`, `CapacityErrorKind`, `FixedCap`, `RemainingCap`) from `errors` to `errors::capacity`.
   - Migration: Update imports to `collect_failable::errors::capacity::*`.
+- **Breaking:** Renamed `RemainingSize` trait to `RemainingCap` and `MaxSize` trait to `FixedCap`.
+  - Migration: Update all references from `RemainingSize` to `RemainingCap` and `MaxSize` to `FixedCap`.
 - **Breaking:** Moved collision related types (`Collision`) from `errors` to `errors::collision`.
   - Migration: Update imports to `collect_failable::errors::collision::*`.
 - **Breaking:** Renamed `TupleExtensionError` to `TupleExtendError`.
   - Migration: Update all references from `TupleExtensionError` to `TupleExtendError`.
+- Refactored `ExtendError`, `CollectError`, `ResultCollectError`, `UnzipError`, and `TupleExtendError` to use conditional function definitions for `new` and `into_data` instead of inline `cfg` blocks.
+- Removed `alloc` dependency from `unsafe`, `tuple`, and `arrayvec` features. These features now work in `no_std` environments without an allocator (error types will store data inline).
+- **Breaking:** Renamed `tuple` feature to `tuples`.
+  - Migration: Update `Cargo.toml` to use `tuples` instead of `tuple` in dependencies or feature lists.
 
 ### Fixed
 

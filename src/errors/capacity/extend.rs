@@ -17,8 +17,9 @@ use crate::errors::capacity::CapacityErrorKind;
 ///
 /// * `I` - The [`Iterator`] that violates the capacity bounds
 impl<I: Iterator> ExtendError<I, CapacityError<I::Item>> {
-    /// Creates a new [`Bounds`](CapacityErrorKind::Bounds) [`ExtendError`] for `iter`,
-    /// indicating its [`size_hint`](Iterator::size_hint) is incompatible with `cap`
+    /// Creates a new [`Bounds`](CapacityErrorKind::Bounds) [`ExtendError`] for
+    /// `iter`, indicating its [`size_hint`](Iterator::size_hint) is incompatible
+    /// with `cap`
     ///
     /// # Arguments
     ///
@@ -27,7 +28,9 @@ impl<I: Iterator> ExtendError<I, CapacityError<I::Item>> {
     ///
     /// # Panics
     ///
-    /// Panics if the `iter`'s [`size_hint`](Iterator::size_hint) is invalid.
+    /// Panics if:
+    /// - `iter`'s [`size_hint`](Iterator::size_hint) is invalid.
+    /// - `cap` and `iter`'s size hint [`overlap`](SizeHint::overlaps).
     ///
     /// # Examples
     ///
@@ -58,9 +61,10 @@ impl<I: Iterator> ExtendError<I, CapacityError<I::Item>> {
     ///
     /// # Errors
     ///
-    /// Returns a [`Bounds`](CapacityErrorKind::Bounds) [`CapacityError`] if `iter`'s
-    /// [`size_hint`](Iterator::size_hint) is [`disjoint`](SizeHint::disjoint) with `collection`'s
-    /// [`remaining_cap`](RemainingCap::remaining_cap). Otherwise returns `iter`.
+    /// Returns a [`Bounds`](CapacityErrorKind::Bounds) [`CapacityError`] if
+    /// `iter`'s [`size_hint`](Iterator::size_hint) is [`disjoint`](SizeHint::disjoint)
+    /// with `collection`'s [`remaining_cap`](RemainingCap::remaining_cap).
+    /// Otherwise returns `iter`.
     ///
     /// # Panics
     ///
@@ -124,6 +128,10 @@ impl<I: Iterator> ExtendError<I, CapacityError<I::Item>> {
     /// * `iter` - The remaining [`Iterator`] after overflow occurred
     /// * `overflow` - The item that overflowed the collection
     /// * `collection` - The collection that overflowed
+    ///
+    /// # Panics
+    ///
+    /// Panics if `collection` has no upper bound.
     ///
     /// # Examples
     ///

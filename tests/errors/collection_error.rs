@@ -12,18 +12,14 @@ const COLLECTED_LEN: usize = 2;
 type Collection = [i32; COLLECTED_LEN];
 
 const REMAIN_ITER: Range<i32> = 3..5;
+const REMAIN_ITER_CAP: SizeHint = SizeHint::exact(2);
+
 const COLLECTED: Collection = [1, 2];
 const COLLECTED_CAP: SizeHint = Collection::CAP;
 
-const OVERFLOW_VALUE: i32 = 99;
-const OVERFLOW_ERR: CapacityError<i32> = CapacityError::overflow(COLLECTED_CAP, OVERFLOW_VALUE);
-const OVERFLOW_ERR_ZERO: CapacityError<i32> = CapacityError::overflow(SizeHint::ZERO, OVERFLOW_VALUE);
-
-const UNDERFLOW_CAP: SizeHint = SizeHint::exact(5);
-const UNDERFLOW_ERR: CapacityError<i32> = CapacityError::underflow(UNDERFLOW_CAP, COLLECTED_LEN);
-
-const COLLISION_VALUE: i32 = 99;
-const COLLISION_ERR: Collision<i32> = Collision::new(COLLISION_VALUE);
+type TooLargeCollection = [i32; 5];
+const TOO_LARGE_COLLECTION_CAP: SizeHint = TooLargeCollection::CAP;
+const BOUNDS_ERR: CapacityError<i32> = CapacityError::bounds(TOO_LARGE_COLLECTION_CAP, REMAIN_ITER_CAP);
 
 const ALL_VALUES: [i32; 4] = [1, 2, 3, 4];
 
@@ -55,50 +51,6 @@ mod ctors {
     );
 
     test_ctor!(
-        bounds,
-        CollectError::<_, Collection, _>::bounds(REMAIN_ITER, SizeHint::exact(5)),
-        remain => REMAIN_ITER,
-        collected => Collection::default(),
-        error => CapacityError::bounds(SizeHint::exact(5), SizeHint::exact(2))
-    );
-
-    test_ctor!(
-        overflow,
-        CollectError::overflow(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, COLLECTED_CAP),
-        remain => REMAIN_ITER,
-        collected => COLLECTED,
-        error => OVERFLOW_ERR
-    );
-
-    test_ctor!(
-        collect_overflowed,
-        CollectError::collect_overflow::<Collection>(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE),
-        remain => REMAIN_ITER,
-        collected => COLLECTED,
-        error => OVERFLOW_ERR
-    );
-
-    test_ctor!(
-        overflow_remaining_cap,
-        CollectError::overflow_remaining_cap(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, &COLLECTED),
-        remain => REMAIN_ITER,
-        collected => COLLECTED,
-        error => OVERFLOW_ERR_ZERO
-    );
-
-    test_ctor!(underflow, CollectError::<_, Collection, _>::underflow(REMAIN_ITER, COLLECTED, UNDERFLOW_CAP),
-        remain => REMAIN_ITER,
-        collected => COLLECTED,
-        error => UNDERFLOW_ERR
-    );
-
-    test_ctor!(collision, CollectError::collision(REMAIN_ITER, COLLECTED, COLLISION_VALUE),
-        remain => REMAIN_ITER,
-        collected => COLLECTED,
-        error => COLLISION_ERR
-    );
-
-    test_ctor!(
         into_data,
         CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR).into_data(),
         remain => REMAIN_ITER,
@@ -106,7 +58,106 @@ mod ctors {
         error => TEST_ERROR
     );
 
-    panics!(panic_bounds, CollectError::<_, Collection, _>::bounds(INVALID_ITER, SizeHint::exact(5)), "Invalid size hint");
+    mod bounds {
+        use super::*;
+
+        test_ctor!(
+            valid,
+            CollectError::<_, Collection, _>::bounds(REMAIN_ITER, TOO_LARGE_COLLECTION_CAP),
+            remain => REMAIN_ITER,
+            collected => Collection::default(),
+            error => BOUNDS_ERR
+        );
+
+        panics!(
+            invalid_iter,
+            CollectError::<_, Collection, _>::bounds(INVALID_ITER, TOO_LARGE_COLLECTION_CAP),
+            "Invalid size hint"
+        );
+
+        panics!(overlap, CollectError::<_, Collection, _>::bounds(REMAIN_ITER, REMAIN_ITER_CAP), "Bounds must not overlap");
+    }
+
+    mod overflow {
+        use super::*;
+
+        const UNBOUNDED_CAP: SizeHint = SizeHint::unbounded(0);
+        const OVERFLOW_VALUE: i32 = 99;
+        const OVERFLOW_ERR: CapacityError<i32> = CapacityError::overflow(COLLECTED_CAP, OVERFLOW_VALUE);
+        const OVERFLOW_ERR_ZERO: CapacityError<i32> = CapacityError::overflow(SizeHint::ZERO, OVERFLOW_VALUE);
+
+        test_ctor!(
+            valid,
+            CollectError::overflow(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, COLLECTED_CAP),
+            remain => REMAIN_ITER,
+            collected => COLLECTED,
+            error => OVERFLOW_ERR
+        );
+
+        panics!(
+            no_upper_bound,
+            CollectError::overflow(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, UNBOUNDED_CAP),
+            "Capacity must have an upper bound to overflow"
+        );
+
+        test_ctor!(
+            collect,
+            CollectError::collect_overflow::<Collection>(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE),
+            remain => REMAIN_ITER,
+            collected => COLLECTED,
+            error => OVERFLOW_ERR
+        );
+
+        panics!(
+            collect_no_upper_bound,
+            CollectError::collect_overflow::<Vec<i32>>(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE),
+            "Capacity must have an upper bound to overflow"
+        );
+
+        test_ctor!(
+            overflow_remaining_cap,
+            CollectError::overflow_remaining_cap(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, &COLLECTED),
+            remain => REMAIN_ITER,
+            collected => COLLECTED,
+            error => OVERFLOW_ERR_ZERO
+        );
+
+        panics!(
+            overflow_remaining_cap_no_upper_bound,
+            CollectError::overflow_remaining_cap(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, &vec![1]),
+            "Capacity must have an upper bound to overflow"
+        );
+    }
+
+    mod underflow {
+        use super::*;
+
+        const UNDERFLOW_CAP: SizeHint = SizeHint::exact(5);
+        const UNDERFLOW_ERR: CapacityError<i32> = CapacityError::underflow(UNDERFLOW_CAP, COLLECTED_LEN);
+
+        test_ctor!(
+            valid,
+            CollectError::<_, Collection, _>::underflow(REMAIN_ITER, COLLECTED, UNDERFLOW_CAP),
+            remain => REMAIN_ITER,
+            collected => COLLECTED,
+            error => UNDERFLOW_ERR
+        );
+
+        panics!(
+            panic_underflow_count_too_large,
+            CollectError::<_, Collection, _>::underflow(REMAIN_ITER, COLLECTED, SizeHint::exact(COLLECTED_LEN)),
+            "count must be less than capacity"
+        );
+    }
+
+    const COLLISION_VALUE: i32 = 99;
+    const COLLISION_ERR: Collision<i32> = Collision::new(COLLISION_VALUE);
+
+    test_ctor!(collision, CollectError::collision(REMAIN_ITER, COLLECTED, COLLISION_VALUE),
+        remain => REMAIN_ITER,
+        collected => COLLECTED,
+        error => COLLISION_ERR
+    );
 }
 
 test_source!(source, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR), TestError<i32>);
@@ -118,15 +169,11 @@ test_into_iter!(into_iter_data, CollectError::new(REMAIN_ITER, COLLECTED, TEST_E
 mod ensure_fits_in {
     use super::*;
 
-    type ToLargeCollection = [i32; 5];
-    const TO_LARGE_COLLECTION_CAP: SizeHint = ToLargeCollection::CAP;
-    const BOUNDS_ERR: CapacityError<i32> = CapacityError::bounds(TO_LARGE_COLLECTION_CAP, COLLECTED_CAP);
-
     test_ctor!(pass, CollectError::<_, Collection, _>::ensure_fits_in::<Collection>(REMAIN_ITER).expect("should be Ok"));
 
     test_ctor!(
         fail,
-        CollectError::<_, Collection, _>::ensure_fits_in::<ToLargeCollection>(REMAIN_ITER).expect_err("should be Err"),
+        CollectError::<_, Collection, _>::ensure_fits_in::<TooLargeCollection>(REMAIN_ITER).expect_err("should be Err"),
         remain => REMAIN_ITER,
         collected => Collection::default(),
         error => BOUNDS_ERR
