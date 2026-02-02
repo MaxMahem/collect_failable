@@ -40,7 +40,7 @@ display_as_debug = "0.5.1"
 
 # Public Dependencies
 either = "1.15.0"
-size_hinter = "0.4.0"
+size_hinter = "0.4.1"
 
 [dev-dependencies]
 collect_failable = { path = ".", features = ["hashbrown", "indexmap", "arrayvec"] }

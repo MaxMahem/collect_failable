@@ -616,9 +616,9 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "size_hinter"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2dfdfd50756cfba2b08d88bec947894485d12b2efa40d4b1ee390d510462d6e"
+checksum = "47aa9b75d925e386407e26eef2fd2ecb3f785b0808b1fee068440be6c6bb37ad"
 dependencies = [
  "fluent_result",
  "readonly",
