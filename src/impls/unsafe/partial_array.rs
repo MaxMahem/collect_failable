@@ -188,9 +188,8 @@ impl<T, const N: usize> Drop for Drain<T, N> {
     fn drop(&mut self) {
         let back = *self.partial_array.back;
 
-        if let Some(slice) = self.partial_array.array.get_mut(*self.next..back) {
+        self.partial_array.array[*self.next..back]
             // SAFETY: elements between `next` and `back` are owned and initialized
-            unsafe { slice.assume_init_drop() }
-        }
+            .pipe_ref_mut(|slice| unsafe { slice.assume_init_drop() });
     }
 }
