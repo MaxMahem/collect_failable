@@ -35,7 +35,7 @@ arrayvec = { version = "0.7.6", optional = true }
 sealed = "0.6.0"
 subdef = "0.1.2"
 fluent_result = "0.10.1"
-no_drop = "0.3.0"
+no_drop = "0.4.1"
 display_as_debug = "0.5.1"
 
 # Public Dependencies

@@ -378,9 +378,9 @@ checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 
 [[package]]
 name = "no_drop"
-version = "0.3.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3630f4a9f9728406f205a6e73093db3dbe96b5b5a99ea2fcaac8123e49c23dcc"
+checksum = "4983dfdfeafe3156ac42858e0986515664579c95c22c531e17680a7aa832d27c"
 dependencies = [
  "derive_more",
  "sealed",
