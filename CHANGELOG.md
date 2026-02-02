@@ -9,6 +9,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-02-02
+
+### Added
+
+- Added helper constructors for `CapacityError`:
+  - `ensure_fits`
+  - `ensure_fits_in`
+  - `ensure_fits_into`
+  - `collect_overflowed`
+  - `collect_underflowed`
+  - `extend_overflowed`
+- Added helper constructors for `CollectError`:
+  - `ensure_fits_in`
+  - `ensure_fits_into`
+  - `collect_overflowed`
+  - `collect_underflowed`
+  - `extend_overflowed`
+- Added `ExtendError` type for `TryExtend` operations. Unlike `CollectError`, it has no `collected`
+  field because `TryExtend` adds items directly to the target collection (basic error guarantee).
+- Added `ExtendError::ensure_fits_into` helper for bounds checking in extend operations.
+- Added `RemainingCap` and `FixedCap` implementations for `Vec`.
+
+- Implemented `TryFrom<PartialArray<T, N>>` for `[T; N]` to allow converting a full `PartialArray` (e.g. from an overflow error) into an array.
+
+### Changed
+
+- **Breaking:** `TupleExtendError` is no longer generic over the `Left` and `Right` error types. `TryExtend::Error` for tuples is now `Either<TupleExtendError<...>, TupleExtendError<...>>`.
+  - Migration: Remove explicit error type parameters if you were specifying them.
+- **Breaking:** `UnzipError` is no longer an enum with side-specific variants. It is now a struct `UnzipError<Failed, Partial, I>`. `TryUnzip` now returns `Either<UnzipError<FromA, FromB, Self>, UnzipError<FromB, FromA, Self>>`.
+  - Migration: Match on `Either` to determine which side failed, then access fields directly on the `UnzipError` struct.
+- **Breaking:** Renamed `UnzipError::successful` to `UnzipError::partial` to better reflect its purpose as a partial collection from the non-failing side.
+  - Migration: Rename usages of `err.successful` to `err.partial`.
+- **Breaking:** Renamed `unevaluated` field to `pending` in `UnzipError` and `TupleExtendError`.
+  - Migration: Rename `err.unevaluated` to `err.pending`.
+  - Note: `TupleExtendError` generic parameter `U` (Unevaluated) is now `P` (Pending).
+- **Breaking:** Renamed `CollectionError` to `CollectError`.
+  - Migration: Update all references from `CollectionError` to `CollectError`.
+- **Breaking:** Renamed `CollectError::iterator` field to `CollectError::remain`.
+  - Migration: Update all references from `CollectError::iterator` to `CollectError::remain`.
+- **Breaking:** Changed `ArrayVec` `TryFromIterator` and `TryExtend` implementations to return `ArrayVec` instead of `Vec` in `CollectError`.
+  - Migration: Update error handling to expect `ArrayVec` in the `collected` field.
+- **Breaking:** Changed `CollectError::overflowed` to `extend_overflowed`.
+  - Migration: Update error handling to use `extend_overflowed` ctor.
+- **Breaking:** `TryExtend` implementations now return `ExtendError` instead of `CollectError`.
+  - `ExtendError` has no `collected` field (items go directly into the target collection).
+  - Migration: Update error handling to use `ExtendError` instead of `CollectError`.
+    The `error` and `remain` fields are still available.
+- **Breaking:** Moved capacity related types (`CapacityError`, `CapacityErrorKind`, `FixedCap`, `RemainingCap`) from `errors` to `errors::capacity`.
+  - Migration: Update imports to `collect_failable::errors::capacity::*`.
+- **Breaking:** Renamed `RemainingSize` trait to `RemainingCap` and `MaxSize` trait to `FixedCap`.
+  - Migration: Update all references from `RemainingSize` to `RemainingCap` and `MaxSize` to `FixedCap`.
+- **Breaking:** Moved collision related types (`Collision`) from `errors` to `errors::collision`.
+  - Migration: Update imports to `collect_failable::errors::collision::*`.
+- **Breaking:** Renamed `TupleExtensionError` to `TupleExtendError`.
+  - Migration: Update all references from `TupleExtensionError` to `TupleExtendError`.
+- Refactored `ExtendError`, `CollectError`, `ResultCollectError`, `UnzipError`, and `TupleExtendError` to use conditional function definitions for `new` and `into_data` instead of inline `cfg` blocks.
+- Removed `alloc` dependency from `unsafe`, `tuple`, and `arrayvec` features. These features now work in `no_std` environments without an allocator (error types will store data inline).
+- **Breaking:** Renamed `tuple` feature to `tuples`.
+  - Migration: Update `Cargo.toml` to use `tuples` instead of `tuple` in dependencies or feature lists.
+
+### Fixed
+
+- Added missing `alloc` feature dependency to several features (`unsafe`, `tuple`, `hashbrown`, `indexmap`, `arrayvec`) whose error types require allocation.
+- Fixed incorrect `CapacityError` capacity reported when collecting into a fixed-size array overflows (via `PartialArray`). It now correctly reports the array's capacity instead of `SizeHint::ZERO`.
+
+### Removed
+
+- **Breaking:** Removed export of `PartialArray` type in the `errors` module. It is now only available under `errors::partial_array::PartialArray`.
+  - Migration: Update all references from `PartialArray` to `errors::partial_array::PartialArray`.
+- **Breaking:** Moved `SizeHint` export from crate root to `errors` module.
+  - Migration: Update all references from `collect_failable::SizeHint` to `collect_failable::errors::SizeHint`.
+- **Breaking:** Moved `Either` export from crate root to `errors` module.
+  - Migration: Update all references from `collect_failable::either::Either` to `collect_failable::errors::either::Either`.
+- **Breaking:** `TryExtendSafe` no longer extends `TryExtend`. It now has its own `Error` associated type.
+  - This reflects the semantic difference: `TryExtend::Error` may have an empty `collected` field
+    (items were added to target), while `TryExtendSafe::Error` includes rolled-back items.
+  - Migration: Update any manual `TryExtendSafe` implementations to add `type Error = ...`.
+- **Breaking:** Removed `TupleExtendError` new. This type is not intended for user construction.
+  - Migration: Do not internally construct `TupleExtendError`.
+
 ## [0.17.1] - 2026-01-25
 
 ### Changed

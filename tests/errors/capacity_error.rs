@@ -1,46 +1,109 @@
-use collect_failable::SizeHint;
-use collect_failable::errors::{CapacityError, CapacityErrorKind};
+use std::ops::Range;
 
-use crate::error_tests::test_ctor;
+use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind, FixedCap};
+use collect_failable::errors::types::SizeHint;
 
-test_ctor!(
-    bounds,
-    CapacityError::<()>::bounds(SizeHint::bounded(5, 10), SizeHint::bounded(11, 15)),
-    capacity => SizeHint::bounded(5, 10),
-    kind => CapacityErrorKind::Bounds { hint: SizeHint::bounded(11, 15) }
-);
+const ARRAY_SIZE: usize = 5;
 
-test_ctor!(
-    overflow,
-    CapacityError::overflow(SizeHint::bounded(5, 10), 42),
-    capacity => SizeHint::bounded(5, 10),
-    kind => CapacityErrorKind::Overflow { rejected: 42 }
-);
+type Collection = [i32; ARRAY_SIZE];
 
-test_ctor!(
-    underflow,
-    CapacityError::<()>::underflow(SizeHint::bounded(5, 10), 4),
-    capacity => SizeHint::bounded(5, 10),
-    kind => CapacityErrorKind::Underflow { count: 4 }
-);
+const COLLECTION_CAP: SizeHint = <Collection>::CAP;
+const DISJOINT_HINT: SizeHint = SizeHint::exact(4);
+const BOUNDS_ERR_KIND: CapacityErrorKind<i32> = CapacityErrorKind::Bounds { hint: DISJOINT_HINT };
+
+const OVERFLOW_VALUE: i32 = 42;
+const OVERFLOW_ERR_KIND: CapacityErrorKind<i32> = CapacityErrorKind::Overflow { overflow: OVERFLOW_VALUE };
+const UNBOUNDED_CAP: SizeHint = SizeHint::unbounded(0);
+
+const UNDERFLOW_COUNT: usize = 4;
+const UNDERFLOW_ERR_KIND: CapacityErrorKind<i32> = CapacityErrorKind::Underflow { count: UNDERFLOW_COUNT };
+const UNDERFLOW_COUNT_TOO_LARGE: usize = 10;
+
+const OVERLAPPING_ITER: Range<i32> = 1..6;
+const DISJOINT_ITER: Range<i32> = 1..5;
+
+mod ctors {
+    use super::*;
+    use crate::error_tests::{INVALID_ITER, test_ctor};
+    use crate::utils::panics;
+
+    test_ctor!(
+        bounds,
+        CapacityError::<i32>::bounds(COLLECTION_CAP, DISJOINT_HINT),
+        capacity => COLLECTION_CAP,
+        kind => BOUNDS_ERR_KIND
+    );
+
+    panics!(
+        bounds_overlap_panics,
+        CapacityError::<i32>::bounds(COLLECTION_CAP, OVERLAPPING_ITER.size_hint().try_into().unwrap()),
+        "Bounds must not overlap"
+    );
+
+    test_ctor!(
+        overflow,
+        CapacityError::overflow(COLLECTION_CAP, OVERFLOW_VALUE),
+        capacity => COLLECTION_CAP,
+        kind => OVERFLOW_ERR_KIND
+    );
+
+    panics!(
+        overflow_no_upper_bound_panics,
+        CapacityError::overflow(UNBOUNDED_CAP, OVERFLOW_VALUE),
+        "Capacity must have an upper bound to overflow"
+    );
+
+    test_ctor!(
+        underflow,
+        CapacityError::<i32>::underflow(COLLECTION_CAP, UNDERFLOW_COUNT),
+        capacity => COLLECTION_CAP,
+        kind => UNDERFLOW_ERR_KIND
+    );
+
+    panics!(
+        underflow_count_too_large_panics,
+        CapacityError::<i32>::underflow(COLLECTION_CAP, UNDERFLOW_COUNT_TOO_LARGE),
+        "count must be less than capacity"
+    );
+
+    test_ctor!(
+        underflow_of,
+        CapacityError::<i32>::underflow_of::<Collection>(UNDERFLOW_COUNT),
+        capacity => COLLECTION_CAP,
+        kind => UNDERFLOW_ERR_KIND
+    );
+
+    panics!(
+        underflow_of_count_too_large_panics,
+        CapacityError::<i32>::underflow_of::<Collection>(10),
+        "count must be less than capacity"
+    );
+
+    test_ctor!(
+        from_arrayvec_capacity_error,
+        CapacityError::from(arrayvec::CapacityError::new(OVERFLOW_VALUE)),
+        capacity => SizeHint::ZERO,
+        kind => OVERFLOW_ERR_KIND
+    );
+
+    mod ensure_fits {
+        use super::*;
+        use crate::error_tests::test_ctor;
+
+        test_ctor!(pass, CapacityError::<i32>::ensure_fits(&OVERLAPPING_ITER, COLLECTION_CAP).expect("should be Ok"));
+        test_ctor!(fail, CapacityError::<i32>::ensure_fits(&DISJOINT_ITER, COLLECTION_CAP).expect_err("should be Err"),
+            capacity => COLLECTION_CAP,
+            kind => BOUNDS_ERR_KIND
+        );
+
+        panics!(panic, CapacityError::<i32>::ensure_fits(&INVALID_ITER, COLLECTION_CAP), "Invalid size hint");
+    }
+}
 
 mod error_item_provider {
     use super::*;
-    use collect_failable::errors::ErrorItemProvider;
+    use crate::error_tests::test_item_present;
 
-    #[test]
-    fn item_present() {
-        let error = CapacityError::overflow(SizeHint::bounded(5, 10), 42);
-
-        assert_eq!(error.item(), Some(&42));
-        assert_eq!(error.into_item(), Some(42));
-    }
-
-    #[test]
-    fn item_absent() {
-        let error = CapacityError::<()>::bounds(SizeHint::bounded(5, 10), SizeHint::bounded(11, 15));
-
-        assert_eq!(error.item(), None);
-        assert_eq!(error.into_item(), None);
-    }
+    test_item_present!(present, CapacityError::overflow(COLLECTION_CAP, OVERFLOW_VALUE), Some(OVERFLOW_VALUE));
+    test_item_present!(absent, CapacityError::<i32>::bounds(COLLECTION_CAP, DISJOINT_HINT), None);
 }

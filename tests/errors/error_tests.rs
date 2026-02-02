@@ -22,6 +22,12 @@ impl<T> TestError<T> {
     }
 }
 
+/// A test error with an identity string.
+pub const TEST_ERROR: TestError<i32> = TestError::new("test");
+
+/// An invalid iterator for testing purposes.
+pub const INVALID_ITER: InvalidIterator<i32> = InvalidIterator::DEFAULT;
+
 impl<T> ErrorItemProvider for TestError<T> {
     type Item = T;
 
@@ -40,21 +46,6 @@ macro_rules! test_format {
         #[test]
         fn $name() {
             assert_eq!(format!($format, $setup), $expected);
-        }
-    };
-}
-
-/// Test that into_iterator produces the expected items (order-independent for HashSet)
-macro_rules! into_iterator {
-    ($name:ident, $setup:expr, expected_len = $len:expr, contains = [$($item:expr),* $(,)?]) => {
-        #[test]
-        fn $name() {
-            let items: Vec<_> = $setup.into_iter().collect();
-
-            assert_eq!(items.len(), $len);
-            $(
-                assert!(items.contains(&$item));
-            )*
         }
     };
 }
@@ -80,18 +71,50 @@ macro_rules! test_source {
 /// Usage:
 /// - `test_ctor!(test_name, constructor_expr, field1 => expected1, field2 => expected2);`
 macro_rules! test_ctor {
-    ($test_name:ident, $ctor:expr, $( $field:ident => $expected:expr ),+ $(,)?) => {
+    ($test_name:ident, $ctor:expr $(, $field:ident => $expected:expr )* $(,)?) => {
         #[test]
         fn $test_name() {
+            #[allow(unused_variables)]
             let value = $ctor;
             $(
                 assert_eq!(value.$field, $expected);
-            )+
+            )*
         }
     };
 }
 
-pub(crate) use into_iterator;
+/// Test that an error contains a specific item (or None)
+///
+/// Usage: `test_item_present!(test_name, error_expression, expected_option);`
+macro_rules! test_item_present {
+    ($name:ident, $ctor:expr, $expected:expr) => {
+        #[test]
+        fn $name() {
+            use collect_failable::errors::ErrorItemProvider;
+            let error = $ctor;
+            let expected: Option<_> = $expected;
+            assert_eq!(error.item(), expected.as_ref());
+            assert_eq!(error.into_item(), expected);
+        }
+    };
+}
+
+/// Test that an error's into_iter() method produces the expected items
+///
+/// Usage: `test_into_iter!(test_name, error_expression, expected_vector);`
+macro_rules! test_into_iter {
+    ($name:ident, $ctor:expr, $expected:expr) => {
+        #[test]
+        fn $name() {
+            let items: Vec<_> = $ctor.into_iter().collect();
+            assert_unordered::assert_eq_unordered!(items, $expected);
+        }
+    };
+}
+
+use size_hinter::InvalidIterator;
 pub(crate) use test_ctor;
 pub(crate) use test_format;
+pub(crate) use test_into_iter;
+pub(crate) use test_item_present;
 pub(crate) use test_source;

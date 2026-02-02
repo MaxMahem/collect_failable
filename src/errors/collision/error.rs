@@ -1,4 +1,4 @@
-use super::ErrorItemProvider;
+use crate::errors::ErrorItemProvider;
 
 /// Error type for when a single item cannot be added to a collection due to a collision.
 ///
@@ -11,8 +11,7 @@ use super::ErrorItemProvider;
 /// # Examples
 ///
 /// ```rust
-/// use collect_failable::errors::Collision;
-///
+/// # use collect_failable::errors::collision::Collision;
 /// let error = Collision::new(1);
 /// assert_eq!(error.item, 1);
 /// ```

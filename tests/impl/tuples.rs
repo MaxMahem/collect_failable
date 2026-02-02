@@ -19,12 +19,12 @@ macro_rules! test_try_extend_collision {
 
             let err = valid.try_extend($data).expect_err("should be err");
 
-            match (&err.side, stringify!($side)) {
-                (Either::Left(side), "A") => {
-                    assert_eq!(side.error.item, $expected_value, "left collision value should match");
+            match (err, stringify!($side)) {
+                (Either::Left(err), "A") => {
+                    assert_eq!(err.error.item, $expected_value, "left collision value should match");
                 }
-                (Either::Right(side), "B") => {
-                    assert_eq!(side.error.item, $expected_value, "right collision value should match");
+                (Either::Right(err), "B") => {
+                    assert_eq!(err.error.item, $expected_value, "right collision value should match");
                 }
                 _ => panic!("Error on wrong side"),
             }

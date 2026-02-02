@@ -1,38 +1,50 @@
 //! Error types returned by failable collection operations.
 
-mod capacity_error;
-mod collision;
+/// Error and traits relating to collections with fixed capacity.
+pub mod capacity;
+
+/// Errors relating to collections with collisions.
+pub mod collision;
+
 mod error_item_provider;
 
-#[cfg(feature = "alloc")]
-mod collection_error;
-#[cfg(feature = "alloc")]
+mod collect_error;
+mod extend_error;
 mod result_collection_error;
 
-#[cfg(feature = "tuple")]
-mod tuple_extension_error;
-#[cfg(feature = "tuple")]
+#[cfg(feature = "tuples")]
+mod tuple_extend_error;
+#[cfg(feature = "tuples")]
 mod unzip_error;
 
-pub use capacity_error::*;
-pub use collision::*;
 pub use error_item_provider::*;
 
-#[cfg(feature = "alloc")]
-pub use collection_error::*;
-#[cfg(feature = "alloc")]
+pub use collect_error::*;
+pub use extend_error::*;
 pub use result_collection_error::*;
 
-#[cfg(feature = "tuple")]
-pub use tuple_extension_error::*;
-#[cfg(feature = "tuple")]
+pub use capacity::CapacityError;
+pub use collision::Collision;
+
+#[cfg(feature = "tuples")]
+pub use tuple_extend_error::*;
+#[cfg(feature = "tuples")]
 pub use unzip_error::*;
 
-/// Types related to [`PartialArray`].
-#[cfg(feature = "unsafe")]
-pub mod partial_array {
-    pub use crate::impls::r#unsafe::{Drain, PartialArray};
+/// Foreign types used by the error types.
+pub mod types {
+    /// Re-export of the `Either` type from the `either` crate.
+    #[cfg(feature = "tuples")]
+    pub use either::Either;
+
+    /// Re-export of the [`SizeHint`] type from the `size_hinter` crate.
+    pub use size_hinter::SizeHint;
 }
 
+/// Types related to [`PartialArray`](crate::impls::unsafe::PartialArray).
 #[cfg(feature = "unsafe")]
-pub use partial_array::PartialArray;
+pub mod partial_array {
+    #[doc(hidden)]
+    pub use crate::impls::r#unsafe::{ArrayIndex, PostInc};
+    pub use crate::impls::r#unsafe::{Drain, IntoArrayError, PartialArray};
+}

@@ -3,7 +3,7 @@ use core::hash::{BuildHasher, Hash};
 use hashbrown::HashMap;
 use hashbrown::hash_map::RawEntryMut;
 
-use crate::errors::{CollectionError, Collision};
+use crate::errors::{CollectError, Collision};
 
 use crate::{TryExtendOne, TryExtendSafe};
 
@@ -14,14 +14,15 @@ crate::impls::macros::impl_try_from_iter_via_try_extend_one! (
 
 crate::impls::macros::impl_try_extend_via_try_extend_one! (
     type: HashMap<K, V, S> where [K: Eq + Hash, V, S: BuildHasher + Clone] of (K, V);
-    reserve: |map, iter| map.reserve(iter.size_hint().0);
-    build_empty: |map| { <HashMap<K, V, S>>::with_hasher(map.hasher().clone()) }
+    reserve: |map, iter| map.reserve(iter.size_hint().0)
 );
 
 impl<K: Eq + Hash, V, S: BuildHasher + Clone, I> TryExtendSafe<I> for HashMap<K, V, S>
 where
     I: IntoIterator<Item = (K, V)>,
 {
+    type Error = CollectError<I::IntoIter, Self, Collision<(K, V)>>;
+
     fn try_extend_safe(&mut self, iter: I) -> Result<(), Self::Error> {
         let mut iter = iter.into_iter();
 
@@ -45,7 +46,7 @@ where
             }
         })
         .map(|staging_map| self.extend(staging_map))
-        .map_err(|(staging_map, kvp)| CollectionError::collision(iter, staging_map, kvp))
+        .map_err(|(staging_map, kvp)| CollectError::collision(iter, staging_map, kvp))
     }
 }
 

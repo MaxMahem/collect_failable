@@ -3,9 +3,9 @@ use core::cell::RefCell;
 
 use tap::Pipe;
 
-use crate::SizeHint;
 use crate::TryFromIterator;
-use crate::errors::ResultCollectionError;
+use crate::errors::ResultCollectError;
+use crate::errors::types::SizeHint;
 
 /// Iterator adaptor that extracts [`Ok`] values from a [`Result`] [`Iterator`],
 /// storing the first encountered [`Err`] and remaining iterator for later retrieval.
@@ -106,7 +106,7 @@ where
     I: IntoIterator<Item = Result<T, E>>,
     C: TryFromIterator<ResultIter<I::IntoIter, E>>,
 {
-    type Error = ResultCollectionError<E, C, C::Error, I::IntoIter>;
+    type Error = ResultCollectError<E, C, C::Error, I::IntoIter>;
 
     /// Converts an [`IntoIterator`] of [`Result<T, E>`] into a `Result<C, C::Error>`.
     ///
@@ -118,8 +118,8 @@ where
     ///   successfully constructed.
     /// - `Ok(Err(C::Error))`: The [`IntoIterator`] completed successfully, but the container (`C`)
     ///   construction failed with `C::Error`.
-    /// - `Err(ResultCollectionError)`: The [`IntoIterator`] encountered an [`Err<E>`] before
-    ///   completion, producing a [`ResultCollectionError`].
+    /// - `Err(ResultCollectError)`: The [`IntoIterator`] encountered an [`Err<E>`] before
+    ///   completion, producing a [`ResultCollectError`].
     ///
     /// # Examples
     ///
@@ -183,16 +183,15 @@ where
     ///
     /// ## Recovering Data
     ///
-    /// In the case of an error during iteration, which produces a [`ResultCollectionError`], which
+    /// In the case of an error during iteration, which produces a [`ResultCollectError`], which
     /// provides access to:
-    /// - [`error`](ResultCollectionError::error): The error that was encountered
-    /// - [`result`](ResultCollectionError::result): The partial collection result (`Ok` or `Err`).
-    /// - [`iter`](ResultCollectionError::iter): The remaining unconsumed items from the original `Iterator`.
+    /// - [`error`](ResultCollectError::error): The error that was encountered
+    /// - [`result`](ResultCollectError::result): The partial collection result (`Ok` or `Err`).
+    /// - [`iter`](ResultCollectError::iter): The remaining unconsumed items from the original `Iterator`.
     ///
     /// ```rust
-    /// use collect_failable::TryCollectEx;
-    /// use std::collections::HashSet;
-    ///
+    /// # use collect_failable::TryCollectEx;
+    /// # use std::collections::HashSet;
     /// // Collect items until an error is encountered
     /// let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
     /// let result: Result<Result<HashSet<_>, _>, _> = data.into_iter().try_collect_ex();
@@ -200,27 +199,29 @@ where
     ///
     /// assert_eq!(err.error, "invalid", "error should be the iteration error");
     /// let collected = err.result.as_ref().expect("partial collection should succeed");
+    ///
     /// assert_eq!(collected, &HashSet::from([1, 2, 3]), "partial collection should contain first 3 items");
-    /// assert_eq!(err.iter.size_hint(), (1, Some(1)), "remaining iterator should have 1 item");
-    /// let next = err.into_data().iter.next();
-    /// assert_eq!(next, Some(Ok(5)), "remaining iterator should contain the unconsumed item");
+    ///
+    /// let remaining = err.into_data().iter.collect::<Vec<_>>();
+    /// assert_eq!(remaining, vec![Ok(5)], "remaining iterator should contain the unconsumed item");
     /// ```
     ///
     /// When both the success type (`C`) and error type (`CErr`) implement [`IntoIterator`], which
     /// all implementations from this crate do, you can use the [`either`] crate (or
     /// similar) to uniformly recover all partially collected data, regardless of whether the
     /// collection succeeded or failed. In other words it lets you go easily from a
-    /// [`ResultCollectionError::result`] value to an [Iterator<Item = T>].
+    /// [`ResultCollectError::result`] value to an [Iterator<Item = T>].
     ///
     /// ```rust
-    /// use collect_failable::TryCollectEx;
-    /// use collect_failable::errors::ResultCollectionErrorData;
-    /// use std::collections::HashSet;
-    /// use either::Either;
+    /// use std::collections::BTreeSet;
     /// use tap::Conv;
+    /// use collect_failable::TryCollectEx;
+    /// use collect_failable::errors::{ResultCollectError, CollectError};
+    /// use collect_failable::errors::types::Either;
+    /// use collect_failable::errors::capacity::CapacityError;
     ///
     /// let data = vec![Ok(1), Ok(2), Ok(3), Err("invalid"), Ok(5)];
-    /// let result: Result<Result<HashSet<_>, _>, _> = data.into_iter().try_collect_ex();
+    /// let result: Result<Result<BTreeSet<_>, _>, _> = data.into_iter().try_collect_ex();
     /// let err = result.expect_err("should fail on invalid item");
     ///
     /// let collected_items: Vec<_> = err
@@ -231,11 +232,7 @@ where
     ///     .collect();
     ///
     /// // Regardless of whether collection succeeded or failed, we get the consumed items
-    /// // since the underlying collection could be a hashset (or not) order is not guranteed.
-    /// assert_eq!(collected_items.len(), 3);
-    /// assert!(collected_items.contains(&1));
-    /// assert!(collected_items.contains(&2));
-    /// assert!(collected_items.contains(&3));
+    /// assert_eq!(collected_items, vec![1, 2, 3]);
     /// ```
     fn try_from_iter(into_iter: I) -> Result<Self, Self::Error> {
         let extractor = ResultIter::new(into_iter.into_iter());
@@ -245,7 +242,7 @@ where
         match (extractor.take_inner(), try_from_result) {
             (IterState::Active(_), Ok(v)) => Ok(Ok(v)),
             (IterState::Active(_), Err(e)) => Ok(Err(e)),
-            (IterState::Errored { error, remaining }, result) => Err(ResultCollectionError::new(error, result, remaining)),
+            (IterState::Errored { error, remaining }, result) => Err(ResultCollectError::new(error, result, remaining)),
             (IterState::Taken, _) => unreachable!("take_inner called multiple times"),
         }
     }

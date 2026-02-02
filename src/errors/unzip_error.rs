@@ -1,18 +1,17 @@
+#[cfg(feature = "alloc")]
+use alloc::boxed::Box;
+
 use core::error::Error;
 use core::fmt::{Debug, Display, Formatter};
 use core::ops::Deref;
 
-use alloc::boxed::Box;
-
 use display_as_debug::fmt::DebugStructExt;
-use display_as_debug::types::Short;
+use display_as_debug::types::{Full, Short};
+use display_as_debug::wrap::TypeNameOption;
+use nameof::name_of;
 use tap::Pipe;
 
 use crate::TryExtendOne;
-use crate::either::Either;
-
-#[cfg(doc)]
-use crate::TryUnzip;
 
 /// An error that occurs when unzipping an iterator into two collections fails.
 ///
@@ -25,87 +24,86 @@ use crate::TryUnzip;
 ///
 /// # Type Parameters
 ///
-/// - `FromA`: The type of the first collection.
-/// - `FromB`: The type of the second collection.
+/// - `E`: The error type from the failing collection.
+/// - `Failed`: The type of the collection that failed to extend.
+/// - `Partial`: The type of the collection that successfully extended.
+/// - `Pending`: The type of the pending item from the successful side.
 /// - `I`: The type of the remaining iterator.
 #[subdef::subdef]
-pub struct UnzipError<FromA, FromB, I>
-where
-    FromA: TryExtendOne,
-    FromB: TryExtendOne,
-{
+pub struct UnzipError<E, Failed, Partial, Pending, I> {
     #[cfg(doc)]
-    /// Which side failed: `Left(side_a)` when first collection fails,
-    /// `Right(side_b)` when second collection fails
-    pub side: [Either<UnzipErrorSide<FromA, FromB>, UnzipErrorSide<FromB, FromA>>; {
-        /// Information about which side of an unzip operation failed.
-        pub struct UnzipErrorSide<Failed: TryExtendOne, Successful: TryExtendOne> {
-            /// The error that occurred during extension.
-            pub error: Failed::Error,
-            /// The partial collection from the failed side.
-            pub failed: Failed,
-            /// The incomplete collection from the successful side.
-            pub successful: Successful,
-            /// The unevaluated item from the successful side, if any.
-            pub unevaluated: Option<Successful::Item>,
-        }
-    }],
+    /// The error that occurred during extension.
+    pub error: E,
+    #[cfg(doc)]
+    /// The partial collection from the failed side.
+    pub failed: Failed,
+    #[cfg(doc)]
+    /// The incomplete collection from the successful side.
+    pub partial: Partial,
+    #[cfg(doc)]
+    /// The pending item from the successful side, if any.
+    pub pending: Option<Pending>,
     #[cfg(doc)]
     /// The remaining iterator after the error occurred
     pub remaining: I,
 
-    #[cfg(not(doc))]
-    data: [Box<UnzipErrorData<FromA, FromB, I>>; {
-        /// The internal data of an [`UnzipError`].
-        #[doc(hidden)]
-        pub struct UnzipErrorData<FromA, FromB, I>
-        where
-            FromA: TryExtendOne,
-            FromB: TryExtendOne,
-        {
-            /// Which side failed: `Left(side_a)` when first collection fails,
-            /// `Right(side_b)` when second collection fails
-            pub side: Either<UnzipErrorSide<FromA, FromB>, UnzipErrorSide<FromB, FromA>>,
-            /// The remaining iterator after the error occurred
-            pub remaining: I,
-        }
-    }],
+    #[cfg(all(not(doc), feature = "alloc"))]
+    data: Box<UnzipErrorData<E, Failed, Partial, Pending, I>>,
+    #[cfg(all(not(doc), not(feature = "alloc")))]
+    data: UnzipErrorData<E, Failed, Partial, Pending, I>,
 }
 
-impl<FromA, FromB, I> UnzipError<FromA, FromB, I>
-where
-    FromA: TryExtendOne,
-    FromB: TryExtendOne,
-{
-    /// Creates a new [`UnzipError`] with the A side (first collection) having failed.
-    pub fn new_a(error: FromA::Error, failed: FromA, successful: FromB, unevaluated: Option<FromB::Item>, remaining: I) -> Self {
-        UnzipErrorData { side: Either::Left(UnzipErrorSide { error, failed, successful, unevaluated }), remaining }
-            .pipe(Box::new)
-            .pipe(|data| Self { data })
-    }
+/// The internal data of an [`UnzipError`].
+#[doc(hidden)]
+pub struct UnzipErrorData<E, Failed, Partial, Pending, I> {
+    /// The error that occurred during extension.
+    pub error: E,
+    /// The partial collection from the failed side.
+    pub failed: Failed,
+    /// The incomplete collection from the successful side.
+    pub partial: Partial,
+    /// The pending item from the successful side, if any.
+    pub pending: Option<Pending>,
+    /// The remaining iterator after the error occurred
+    pub remaining: I,
+}
 
-    /// Creates a new [`UnzipError`] with the B side (second collection) having failed.
-    pub fn new_b(error: FromB::Error, failed: FromB, successful: FromA, unevaluated: Option<FromA::Item>, remaining: I) -> Self {
-        UnzipErrorData { side: Either::Right(UnzipErrorSide { error, failed, successful, unevaluated }), remaining }
-            .pipe(Box::new)
-            .pipe(|data| Self { data })
-    }
-
-    /// Consumes the error, returning the data containing the [`UnzipError::side`]
-    /// and the remaining [`UnzipError::remaining`] iterator.
+#[doc(hidden)]
+impl<Failed: TryExtendOne, Partial: TryExtendOne, I: Iterator> UnzipError<Failed::Error, Failed, Partial, Partial::Item, I> {
+    /// Creates a new [`UnzipError`].
     #[must_use]
-    pub fn into_data(self) -> UnzipErrorData<FromA, FromB, I> {
+    #[cfg(feature = "alloc")]
+    pub fn new(error: Failed::Error, failed: Failed, partial: Partial, pending: Option<Partial::Item>, remaining: I) -> Self {
+        UnzipErrorData { error, failed, partial, pending, remaining }.pipe(Box::new).pipe(|data| Self { data })
+    }
+
+    /// Creates a new [`UnzipError`].
+    #[must_use]
+    #[cfg(not(feature = "alloc"))]
+    pub fn new(error: Failed::Error, failed: Failed, partial: Partial, pending: Option<Partial::Item>, remaining: I) -> Self {
+        UnzipErrorData { error, failed, partial, pending, remaining }.pipe(|data| Self { data })
+    }
+}
+
+impl<E, Failed, Partial, Pending, I> UnzipError<E, Failed, Partial, Pending, I> {
+    /// Consumes the error, returning the data.
+    #[must_use]
+    #[cfg(feature = "alloc")]
+    pub fn into_data(self) -> UnzipErrorData<E, Failed, Partial, Pending, I> {
         *self.data
+    }
+
+    /// Consumes the error, returning the data.
+    #[must_use]
+    #[cfg(not(feature = "alloc"))]
+    pub fn into_data(self) -> UnzipErrorData<E, Failed, Partial, Pending, I> {
+        self.data
     }
 }
 
 #[doc(hidden)]
-impl<FromA, FromB, I> Deref for UnzipError<FromA, FromB, I>
-where
-    FromA: TryExtendOne,
-    FromB: TryExtendOne,
-{
-    type Target = UnzipErrorData<FromA, FromB, I>;
+impl<E, Failed, Partial, Pending, I> Deref for UnzipError<E, Failed, Partial, Pending, I> {
+    type Target = UnzipErrorData<E, Failed, Partial, Pending, I>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
@@ -114,71 +112,51 @@ where
 
 #[doc(hidden)]
 #[allow(clippy::missing_fields_in_debug, reason = "All data is covered")]
-impl<FromA, FromB, I> Debug for UnzipErrorData<FromA, FromB, I>
-where
-    FromA: TryExtendOne,
-    FromB: TryExtendOne,
-    FromA::Error: Debug,
-    FromB::Error: Debug,
-{
+impl<E: Debug, Failed, Partial, Pending, I> Debug for UnzipErrorData<E, Failed, Partial, Pending, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("UnzipErrorData").field("side", &self.side).field_type::<I, Short>("remaining").finish()
-    }
-}
-
-#[allow(clippy::missing_fields_in_debug, reason = "All data is covered")]
-impl<Failed: TryExtendOne, Successful: TryExtendOne> Debug for UnzipErrorSide<Failed, Successful>
-where
-    Failed::Error: Debug,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("UnzipSide")
-            .field("error", &self.error)
-            .field_type::<Failed, Short>("failed")
-            .field_type::<Successful, Short>("successful")
-            .field_type::<Successful::Item, Short>("unevaluated")
+        f.debug_struct("UnzipErrorData")
+            .field(name_of!(error in Self), &self.error)
+            .field_type::<Failed, Short>(name_of!(failed in Self))
+            .field_type::<Partial, Short>(name_of!(partial in Self))
+            .field(name_of!(pending in Self), &TypeNameOption::borrow::<Short>(&self.pending))
+            .field_type::<I, Full>(name_of!(remaining in Self))
             .finish()
     }
 }
 
-impl<FromA, FromB, I> Debug for UnzipError<FromA, FromB, I>
-where
-    FromA: TryExtendOne,
-    FromB: TryExtendOne,
-    FromA::Error: Debug,
-    FromB::Error: Debug,
-{
+impl<E: Debug, Failed, Partial, Pending, I> Debug for UnzipError<E, Failed, Partial, Pending, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("UnzipError").field("side", &self.data.side).field_type::<I, Short>("remaining").finish()
+        f.debug_struct("UnzipError")
+            .field(name_of!(error in Self), &self.error)
+            .field_type::<Failed, Short>(name_of!(failed in Self))
+            .field_type::<Partial, Short>(name_of!(partial in Self))
+            .field(name_of!(pending in Self), &TypeNameOption::borrow::<Short>(&self.pending))
+            .field_type::<I, Full>(name_of!(remaining in Self))
+            .finish()
     }
 }
 
-impl<FromA, FromB, I> Display for UnzipError<FromA, FromB, I>
-where
-    FromA: TryExtendOne,
-    FromB: TryExtendOne,
-    FromA::Error: Display,
-    FromB::Error: Display,
-{
+impl<E: Display, Failed, Partial, Pending, I> Display for UnzipError<E, Failed, Partial, Pending, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        match &self.data.side {
-            Either::Left(side) => write!(f, "Failed while unzipping into first collection: {}", side.error),
-            Either::Right(side) => write!(f, "Failed while unzipping into second collection: {}", side.error),
-        }
+        write!(f, "Failed while unzipping collection: {}", self.error)
     }
 }
 
-impl<FromA, FromB, I> Error for UnzipError<FromA, FromB, I>
-where
-    FromA: TryExtendOne,
-    FromB: TryExtendOne,
-    FromA::Error: Error + 'static,
-    FromB::Error: Error + 'static,
-{
+impl<E: Error + 'static, Failed, Partial, Pending, Remaining> Error for UnzipError<E, Failed, Partial, Pending, Remaining> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match &self.data.side {
-            Either::Left(side) => Some(&side.error),
-            Either::Right(side) => Some(&side.error),
-        }
+        Some(&self.error)
+    }
+}
+#[doc(hidden)]
+impl<E: Display, Failed, Partial, Pending, I> Display for UnzipErrorData<E, Failed, Partial, Pending, I> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Failed while unzipping collection: {}", self.error)
+    }
+}
+
+#[doc(hidden)]
+impl<E: Error + 'static, Failed, Partial, Pending, I> Error for UnzipErrorData<E, Failed, Partial, Pending, I> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.error)
     }
 }

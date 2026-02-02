@@ -1,3 +1,8 @@
+mod ensure_empty;
+
+#[doc(hidden)]
+pub use ensure_empty::*;
+
 #[cfg(feature = "unsafe")]
 pub mod r#unsafe;
 
@@ -10,7 +15,10 @@ mod sets;
 #[cfg(feature = "alloc")]
 mod result;
 
-#[cfg(feature = "tuple")]
+#[cfg(feature = "alloc")]
+mod vec;
+
+#[cfg(feature = "tuples")]
 mod tuples;
 
-pub mod macros;
+mod macros;

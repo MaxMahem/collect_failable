@@ -1,6 +1,6 @@
 /// Trait for error types that may contain a rejected item.
 ///
-/// This trait allows [`CollectionError`](super::CollectionError) to extract rejected items from
+/// This trait allows [`CollectError`](super::CollectError) to extract rejected items from
 /// errors for reconstruction via [`IntoIterator::into_iter`].
 ///
 /// # Examples

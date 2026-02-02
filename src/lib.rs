@@ -11,16 +11,8 @@ extern crate std;
 extern crate alloc;
 
 pub mod errors;
-mod impls;
+#[doc(hidden)]
+pub mod impls;
 mod traits;
 
 pub use traits::*;
-
-/// Re-export of the `Either` type from the `either` crate.
-#[cfg(feature = "tuple")]
-pub mod either {
-    pub use either::Either;
-}
-
-/// Re-export of the `SizeHint` type from the `size_hinter` crate.
-pub use size_hinter::SizeHint;

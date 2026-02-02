@@ -1,6 +1,6 @@
 use crate::collection_tests::try_extend_one;
 use assert_unordered::assert_eq_unordered;
-use collect_failable::errors::{CollectionError, Collision, ErrorItemProvider};
+use collect_failable::errors::{CollectError, Collision, ErrorItemProvider, ExtendError};
 use collect_failable::{TryExtend, TryExtendOne, TryExtendSafe, TryFromIterator};
 use tap::Pipe;
 
@@ -59,7 +59,7 @@ const SET_PARAMS: TestParams<u32> = TestParams {
 };
 
 fn check_collision_error<T, C, const N: usize>(
-    err: &CollectionError<std::array::IntoIter<T, N>, C, Collision<T>>,
+    err: &CollectError<std::array::IntoIter<T, N>, C, Collision<T>>,
     data: &CollisionData<T, N>,
     expected_collected: &C,
 ) where
@@ -69,7 +69,16 @@ fn check_collision_error<T, C, const N: usize>(
     assert_eq!(&err.collected, expected_collected);
     assert_eq!(err.error, data.colliding_error());
     assert_eq!(err.error.item(), data.colliding_item());
-    assert_eq!(err.iterator.clone().collect::<Vec<_>>(), data.remaining().collect::<Vec<_>>());
+    assert_eq!(err.remain.clone().collect::<Vec<_>>(), data.remaining().collect::<Vec<_>>());
+}
+
+fn check_extend_error<T, const N: usize>(err: &ExtendError<std::array::IntoIter<T, N>, Collision<T>>, data: &CollisionData<T, N>)
+where
+    T: Copy + Debug + PartialEq,
+{
+    assert_eq!(err.error, data.colliding_error());
+    assert_eq!(err.error.item(), data.colliding_item());
+    assert_eq!(err.remain.clone().collect::<Vec<_>>(), data.remaining().collect::<Vec<_>>());
 }
 
 macro_rules! generate_collision_tests {
@@ -163,7 +172,7 @@ macro_rules! generate_collision_tests {
 
                 // collection may be modified, so state is not checked
 
-                super::check_collision_error(&err, &data, &Default::default());
+                super::check_extend_error(&err, &data);
 
                 let err_content: Vec<_> = err.into_iter().collect();
                 assert_eq_unordered!(
@@ -186,7 +195,7 @@ macro_rules! generate_collision_tests {
 
                 let err = collection.try_extend(data.add).expect_err("should collide");
 
-                super::check_collision_error(&err, &data, &Default::default());
+                super::check_extend_error(&err, &data);
 
                 let err_content: Vec<_> = err.into_iter().collect();
                 assert_eq_unordered!(

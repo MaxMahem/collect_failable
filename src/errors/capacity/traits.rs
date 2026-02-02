@@ -1,4 +1,4 @@
-use crate::SizeHint;
+use crate::errors::types::SizeHint;
 
 /// A trait for types with a dynamic item capacity, expressed as a [`SizeHint`].
 ///
@@ -6,15 +6,6 @@ use crate::SizeHint;
 /// and may change if the collection is modified.
 pub trait RemainingCap {
     /// Returns the remaining capacity of this collection as a [`SizeHint`].
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # use collect_failable::{RemainingCap, SizeHint};
-    /// # use arrayvec::ArrayVec;
-    /// let vec = ArrayVec::<i32, 4>::new();
-    /// assert_eq!(vec.remaining_cap(), SizeHint::at_most(4));
-    /// ```
     fn remaining_cap(&self) -> SizeHint;
 }
 

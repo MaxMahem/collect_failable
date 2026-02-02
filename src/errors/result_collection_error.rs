@@ -1,10 +1,11 @@
+#[cfg(feature = "alloc")]
+use alloc::boxed::Box;
+
 use core::error::Error;
 use core::fmt::{Debug, Display, Formatter};
 
-use alloc::boxed::Box;
-
 use display_as_debug::fmt::DebugStructExt;
-use display_as_debug::types::Short;
+use display_as_debug::types::{Full, Short};
 use display_as_debug::wrap::TypeNameResult;
 use tap::Pipe;
 
@@ -15,8 +16,8 @@ use tap::Pipe;
 /// or [`Err`] with a collection error), and the remaining iterator.
 ///
 /// Note this type is *read-only*. The fields are accessible via a hidden [`Deref`](std::ops::Deref)
-/// implementation into a hidden `ResultCollectionErrorData` type, with identical fields. If necessary,
-/// you can consume an instance of this type via [`ResultCollectionError::into_data`] to get owned data.
+/// implementation into a hidden `ResultCollectErrorData` type, with identical fields. If necessary,
+/// you can consume an instance of this type via [`ResultCollectError::into_data`] to get owned data.
 ///
 /// # Type Parameters
 ///
@@ -25,7 +26,7 @@ use tap::Pipe;
 /// - `CErr`: The type of the collection error.
 /// - `I`: The type of the remaining iterator.
 #[subdef::subdef]
-pub struct ResultCollectionError<E, C, CErr, I> {
+pub struct ResultCollectError<E, C, CErr, I> {
     #[cfg(doc)]
     /// The first [`Err`] encountered from the [`Result`] [`Iterator`]
     pub error: E,
@@ -36,39 +37,63 @@ pub struct ResultCollectionError<E, C, CErr, I> {
     /// The remaining [`Iterator`] (items not yet consumed when the error occurred)
     pub iter: I,
 
-    #[cfg(not(doc))]
-    data: [Box<ResultCollectionErrorData<E, C, CErr, I>>; {
-        /// The internal data of a [`ResultCollectionError`].
-        #[doc(hidden)]
-        pub struct ResultCollectionErrorData<E, C, CErr, I> {
-            /// The first [`Err`] encountered from the [`Result`] [`Iterator`]
-            pub error: E,
-            /// The partial collection result ([`Ok`] with partial collection, or [`Err`] with collection error)
-            pub result: Result<C, CErr>,
-            /// The remaining [`Iterator`] (items not yet consumed when the error occurred)
-            pub iter: I,
-        }
-    }],
+    #[cfg(all(not(doc), feature = "alloc"))]
+    data: Box<ResultCollectErrorData<E, C, CErr, I>>,
+    #[cfg(all(not(doc), not(feature = "alloc")))]
+    data: ResultCollectErrorData<E, C, CErr, I>,
 }
 
-impl<E, C, CErr, I> ResultCollectionError<E, C, CErr, I> {
-    /// Creates a new [`ResultCollectionError`] from an iterator error and collection result.
+/// The internal data of a [`ResultCollectError`].
+#[doc(hidden)]
+pub struct ResultCollectErrorData<E, C, CErr, I> {
+    /// The first [`Err`] encountered from the [`Result`] [`Iterator`]
+    pub error: E,
+    /// The partial collection result ([`Ok`] with partial collection, or [`Err`] with collection error)
+    pub result: Result<C, CErr>,
+    /// The remaining [`Iterator`] (items not yet consumed when the error occurred)
+    pub iter: I,
+}
+
+#[doc(hidden)]
+impl<E, C, CErr, I> ResultCollectError<E, C, CErr, I> {
+    /// Creates a new [`ResultCollectError`] from an iterator error and collection result.
+    #[must_use]
+    #[cfg(feature = "alloc")]
     pub fn new(error: E, result: Result<C, CErr>, iter: I) -> Self {
-        ResultCollectionErrorData { error, result, iter }.pipe(Box::new).pipe(|data| Self { data })
+        ResultCollectErrorData { error, result, iter }.pipe(Box::new).pipe(|data| Self { data })
     }
 
-    /// Consumes the error, returning a `ResultCollectionErrorData` containing the
-    /// [`ResultCollectionError::error`], [`ResultCollectionError::result`],
-    /// and [`ResultCollectionError::iter`].
+    /// Creates a new [`ResultCollectError`] from an iterator error and collection result.
     #[must_use]
-    pub fn into_data(self) -> ResultCollectionErrorData<E, C, CErr, I> {
+    #[cfg(not(feature = "alloc"))]
+    pub fn new(error: E, result: Result<C, CErr>, iter: I) -> Self {
+        ResultCollectErrorData { error, result, iter }.pipe(|data| Self { data })
+    }
+}
+
+impl<E, C, CErr, I> ResultCollectError<E, C, CErr, I> {
+    /// Consumes the error, returning a `ResultCollectErrorData` containing the
+    /// [`ResultCollectError::error`], [`ResultCollectError::result`],
+    /// and [`ResultCollectError::iter`].
+    #[must_use]
+    #[cfg(feature = "alloc")]
+    pub fn into_data(self) -> ResultCollectErrorData<E, C, CErr, I> {
         *self.data
+    }
+
+    /// Consumes the error, returning a `ResultCollectErrorData` containing the
+    /// [`ResultCollectError::error`], [`ResultCollectError::result`],
+    /// and [`ResultCollectError::iter`].
+    #[must_use]
+    #[cfg(not(feature = "alloc"))]
+    pub fn into_data(self) -> ResultCollectErrorData<E, C, CErr, I> {
+        self.data
     }
 }
 
 #[doc(hidden)]
-impl<E, C, CErr, I> core::ops::Deref for ResultCollectionError<E, C, CErr, I> {
-    type Target = ResultCollectionErrorData<E, C, CErr, I>;
+impl<E, C, CErr, I> core::ops::Deref for ResultCollectError<E, C, CErr, I> {
+    type Target = ResultCollectErrorData<E, C, CErr, I>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
@@ -77,27 +102,27 @@ impl<E, C, CErr, I> core::ops::Deref for ResultCollectionError<E, C, CErr, I> {
 
 #[doc(hidden)]
 #[allow(clippy::missing_fields_in_debug, reason = "All data is covered")]
-impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectionErrorData<E, C, CErr, I> {
+impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectErrorData<E, C, CErr, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("ResultCollectionErrorData")
+        f.debug_struct("ResultCollectErrorData")
             .field("error", &self.error)
             .field("result", &TypeNameResult::borrow::<Short>(&self.result))
-            .field_type::<I, Short>("iter")
+            .field_type::<I, Full>("iter")
             .finish()
     }
 }
 
-impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectionError<E, C, CErr, I> {
+impl<E: Debug, C, CErr: Debug, I> Debug for ResultCollectError<E, C, CErr, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("ResultCollectionError")
+        f.debug_struct("ResultCollectError")
             .field("error", &self.data.error)
             .field("result", &TypeNameResult::borrow::<Short>(&self.data.result))
-            .field_type::<I, Short>("iter")
+            .field_type::<I, Full>("iter")
             .finish()
     }
 }
 
-impl<E: Display, C, CErr: Display, I> Display for ResultCollectionError<E, C, CErr, I> {
+impl<E: Display, C, CErr: Display, I> Display for ResultCollectError<E, C, CErr, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "Iterator error: {}", self.data.error).and_then(|()| match &self.data.result {
             Err(e) => write!(f, "; Collection error: {e}"),
@@ -106,7 +131,7 @@ impl<E: Display, C, CErr: Display, I> Display for ResultCollectionError<E, C, CE
     }
 }
 
-impl<E: Error + 'static, C, CErr: Error, I> Error for ResultCollectionError<E, C, CErr, I> {
+impl<E: Error + 'static, C, CErr: Error, I> Error for ResultCollectError<E, C, CErr, I> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.data.error)
     }

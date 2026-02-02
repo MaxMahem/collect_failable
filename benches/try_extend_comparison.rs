@@ -1,5 +1,6 @@
 use arrayvec::ArrayVec;
 use criterion::{BatchSize, BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
+use display_as_debug::wrap::TypeName;
 use indexmap::{IndexMap, IndexSet};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hint::black_box;
@@ -16,19 +17,6 @@ fn gen_scalars(size: usize) -> Vec<usize> {
     (0..size).collect()
 }
 
-/// Get a short name for a type
-fn get_short_name<T>() -> &'static str {
-    let type_name = std::any::type_name::<T>();
-    type_name
-        .rsplit("::")
-        .next()
-        .unwrap_or(type_name)
-        // Remove generic parameters for cleaner names
-        .split('<')
-        .next()
-        .unwrap_or(type_name)
-}
-
 /// Generic benchmark comparing extend, try_extend, and try_extend_safe
 ///
 /// # Type Parameters
@@ -40,11 +28,11 @@ fn get_short_name<T>() -> &'static str {
 fn bench_extend_comparison<C, V, F>(c: &mut Criterion, sizes: &[usize], generate_data: F)
 where
     C: Default + Extend<V> + TryExtend<Vec<V>> + TryExtendSafe<Vec<V>>,
-    C::Error: std::fmt::Debug,
+    <C as TryExtend<Vec<V>>>::Error: std::fmt::Debug,
+    <C as TryExtendSafe<Vec<V>>>::Error: std::fmt::Debug,
     F: Fn(usize) -> Vec<V>,
 {
-    let group_name = get_short_name::<C>();
-    let mut group = c.benchmark_group(group_name);
+    let mut group = c.benchmark_group(format!("{:?}", TypeName::<C>::SHORT));
 
     for &size in sizes {
         group.throughput(Throughput::Elements(size as u64));
