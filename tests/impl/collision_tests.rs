@@ -72,8 +72,10 @@ fn check_collision_error<T, C, const N: usize>(
     assert_eq!(err.remain.clone().collect::<Vec<_>>(), data.remaining().collect::<Vec<_>>());
 }
 
-fn check_extend_error<T, const N: usize>(err: &ExtendError<std::array::IntoIter<T, N>, Collision<T>>, data: &CollisionData<T, N>)
-where
+fn check_extend_error<T, const N: usize>(
+    err: &ExtendError<std::array::IntoIter<T, N>, Collision<T>>,
+    data: &CollisionData<T, N>,
+) where
     T: Copy + Debug + PartialEq,
 {
     assert_eq!(err.error, data.colliding_error());
@@ -226,7 +228,9 @@ macro_rules! generate_collision_tests {
                     valid,
                     <$type>::from($params.values),
                     $params.valid_extension[0],
-                    Ok(<$type>::from_iter($params.values.into_iter().chain(std::iter::once($params.valid_extension[0]))))
+                    Ok(<$type>::from_iter(
+                        $params.values.into_iter().chain(std::iter::once($params.valid_extension[0]))
+                    ))
                 );
 
                 try_extend_one!(

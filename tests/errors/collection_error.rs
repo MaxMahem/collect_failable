@@ -35,8 +35,18 @@ mod format {
 
     test_format!(debug, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR), "{:?}", EXPECTED_DEBUG);
     test_format!(display, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR), "{}", EXPECTED_DISPLAY);
-    test_format!(debug_data, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR).into_data(), "{:?}", EXPECTED_DEBUG_DATA);
-    test_format!(display_data, CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR).into_data(), "{}", EXPECTED_DISPLAY);
+    test_format!(
+        debug_data,
+        CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR).into_data(),
+        "{:?}",
+        EXPECTED_DEBUG_DATA
+    );
+    test_format!(
+        display_data,
+        CollectError::new(REMAIN_ITER, COLLECTED, TEST_ERROR).into_data(),
+        "{}",
+        EXPECTED_DISPLAY
+    );
 }
 
 mod ctors {
@@ -75,7 +85,11 @@ mod ctors {
             "Invalid size hint"
         );
 
-        panics!(overlap, CollectError::<_, Collection, _>::bounds(REMAIN_ITER, REMAIN_ITER_CAP), "Bounds must not overlap");
+        panics!(
+            overlap,
+            CollectError::<_, Collection, _>::bounds(REMAIN_ITER, REMAIN_ITER_CAP),
+            "Bounds must not overlap"
+        );
     }
 
     mod overflow {
@@ -102,7 +116,7 @@ mod ctors {
 
         test_ctor!(
             collect,
-            CollectError::collect_overflow::<Collection>(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE),
+            CollectError::overflow_empty::<Collection>(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE),
             remain => REMAIN_ITER,
             collected => COLLECTED,
             error => OVERFLOW_ERR
@@ -110,13 +124,13 @@ mod ctors {
 
         panics!(
             collect_no_upper_bound,
-            CollectError::collect_overflow::<Vec<i32>>(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE),
+            CollectError::overflow_empty::<Vec<i32>>(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE),
             "Capacity must have an upper bound to overflow"
         );
 
         test_ctor!(
             overflow_remaining_cap,
-            CollectError::overflow_remaining_cap(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, &COLLECTED),
+            CollectError::overflow_remaining(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, &COLLECTED),
             remain => REMAIN_ITER,
             collected => COLLECTED,
             error => OVERFLOW_ERR_ZERO
@@ -124,7 +138,7 @@ mod ctors {
 
         panics!(
             overflow_remaining_cap_no_upper_bound,
-            CollectError::overflow_remaining_cap(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, &vec![1]),
+            CollectError::overflow_remaining(REMAIN_ITER, COLLECTED, OVERFLOW_VALUE, &vec![1]),
             "Capacity must have an upper bound to overflow"
         );
     }
@@ -169,7 +183,10 @@ test_into_iter!(into_iter_data, CollectError::new(REMAIN_ITER, COLLECTED, TEST_E
 mod ensure_fits_in {
     use super::*;
 
-    test_ctor!(pass, CollectError::<_, Collection, _>::ensure_fits_in::<Collection>(REMAIN_ITER).expect("should be Ok"));
+    test_ctor!(
+        pass,
+        CollectError::<_, Collection, _>::ensure_fits_in::<Collection>(REMAIN_ITER).expect("should be Ok")
+    );
 
     test_ctor!(
         fail,

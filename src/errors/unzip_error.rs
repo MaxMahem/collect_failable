@@ -69,18 +69,32 @@ pub struct UnzipErrorData<E, Failed, Partial, Pending, I> {
 }
 
 #[doc(hidden)]
-impl<Failed: TryExtendOne, Partial: TryExtendOne, I: Iterator> UnzipError<Failed::Error, Failed, Partial, Partial::Item, I> {
+impl<Failed: TryExtendOne, Partial: TryExtendOne, I: Iterator>
+    UnzipError<Failed::Error, Failed, Partial, Partial::Item, I>
+{
     /// Creates a new [`UnzipError`].
     #[must_use]
     #[cfg(feature = "alloc")]
-    pub fn new(error: Failed::Error, failed: Failed, partial: Partial, pending: Option<Partial::Item>, remaining: I) -> Self {
+    pub fn new(
+        error: Failed::Error,
+        failed: Failed,
+        partial: Partial,
+        pending: Option<Partial::Item>,
+        remaining: I,
+    ) -> Self {
         UnzipErrorData { error, failed, partial, pending, remaining }.pipe(Box::new).pipe(|data| Self { data })
     }
 
     /// Creates a new [`UnzipError`].
     #[must_use]
     #[cfg(not(feature = "alloc"))]
-    pub fn new(error: Failed::Error, failed: Failed, partial: Partial, pending: Option<Partial::Item>, remaining: I) -> Self {
+    pub fn new(
+        error: Failed::Error,
+        failed: Failed,
+        partial: Partial,
+        pending: Option<Partial::Item>,
+        remaining: I,
+    ) -> Self {
         UnzipErrorData { error, failed, partial, pending, remaining }.pipe(|data| Self { data })
     }
 }
@@ -142,7 +156,9 @@ impl<E: Display, Failed, Partial, Pending, I> Display for UnzipError<E, Failed, 
     }
 }
 
-impl<E: Error + 'static, Failed, Partial, Pending, Remaining> Error for UnzipError<E, Failed, Partial, Pending, Remaining> {
+impl<E: Error + 'static, Failed, Partial, Pending, Remaining> Error
+    for UnzipError<E, Failed, Partial, Pending, Remaining>
+{
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.error)
     }

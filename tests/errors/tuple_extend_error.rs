@@ -11,11 +11,9 @@ mod format {
     use super::*;
     use crate::error_tests::test_format;
 
-    const EXPECTED_DEBUG: &str =
-        r#"TupleExtendError { error: TestError("test"), pending: i32, remaining: core::ops::range::RangeInclusive<i32> }"#;
+    const EXPECTED_DEBUG: &str = r#"TupleExtendError { error: TestError("test"), pending: i32, remaining: core::ops::range::RangeInclusive<i32> }"#;
     const EXPECTED_DISPLAY: &str = "Error while extending collection: Test error: test";
-    const EXPECTED_DEBUG_DATA: &str =
-        r#"TupleExtendErrorData { error: TestError("test"), pending: i32, remaining: core::ops::range::RangeInclusive<i32> }"#;
+    const EXPECTED_DEBUG_DATA: &str = r#"TupleExtendErrorData { error: TestError("test"), pending: i32, remaining: core::ops::range::RangeInclusive<i32> }"#;
 
     test_format!(debug, TupleExtendError::new(TEST_ERROR, PENDING_VALUE, REMAIN_ITER), "{:?}", EXPECTED_DEBUG);
 
@@ -28,7 +26,12 @@ mod format {
         EXPECTED_DEBUG_DATA
     );
 
-    test_format!(display_data, TupleExtendError::new(TEST_ERROR, PENDING_VALUE, REMAIN_ITER).into_data(), "{}", EXPECTED_DISPLAY);
+    test_format!(
+        display_data,
+        TupleExtendError::new(TEST_ERROR, PENDING_VALUE, REMAIN_ITER).into_data(),
+        "{}",
+        EXPECTED_DISPLAY
+    );
 }
 
 mod ctors {

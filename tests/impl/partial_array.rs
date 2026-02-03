@@ -63,7 +63,9 @@ fn drain_drop() {
 
         drain.take(consume).for_each(drop);
 
-        viewers.iter().for_each(|viewer| assert_eq!(viewer.get(), 1, "Items should be dropped once (consume={})", consume));
+        viewers
+            .iter()
+            .for_each(|viewer| assert_eq!(viewer.get(), 1, "Items should be dropped once (consume={})", consume));
     });
 }
 
@@ -89,7 +91,8 @@ mod try_from {
             partial.try_push(i).ok();
         }
 
-        let IntoArrayError { partial_array, error } = Array::try_from(partial).expect_err("should fail since array is not full");
+        let IntoArrayError { partial_array, error } =
+            Array::try_from(partial).expect_err("should fail since array is not full");
 
         assert_eq!(error, UNDERFLOW_ERR);
         assert_eq!(partial_array, [1, 2, 3, 4][..]);

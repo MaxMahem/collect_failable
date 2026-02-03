@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** Renamed `CollectError::overflow_remaining_cap` to `CollectError::overflow_remaining`.
+  - Migration: Rename usages of `CollectError::overflow_remaining_cap` to `CollectError::overflow_remaining`.
+- **Breaking:** Renamed `CollectError::collect_overflow` to `CollectError::overflow_empty`.
+  - Migration: Rename usages of `CollectError::collect_overflow` to `CollectError::overflow_empty`.
+
 ## [0.18.0] - 2026-02-02
 
 ### Added

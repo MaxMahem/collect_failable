@@ -19,7 +19,8 @@ mod format {
 
     const EXPECTED_DEBUG: &str = r#"ExtendError { remain: core::ops::range::Range<i32>, error: TestError("test") }"#;
     const EXPECTED_DISPLAY: &str = "Extension Error: Test error: test";
-    const EXPECTED_DEBUG_DATA: &str = r#"ExtendErrorData { remain: core::ops::range::Range<i32>, error: TestError("test") }"#;
+    const EXPECTED_DEBUG_DATA: &str =
+        r#"ExtendErrorData { remain: core::ops::range::Range<i32>, error: TestError("test") }"#;
 
     test_format!(debug, ExtendError::new(ITER, TEST_ERROR), "{:?}", EXPECTED_DEBUG);
     test_format!(display, ExtendError::new(ITER, TEST_ERROR), "{}", EXPECTED_DISPLAY);

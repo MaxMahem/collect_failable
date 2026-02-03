@@ -19,7 +19,11 @@ try_collect!(too_short_data, Array, 1..=4, Err(BOUNDS_UNDER_ERR));
 try_collect!(too_long_data_hidden, Array, (1..=6).hide_size(), Err(OVERFLOW_ERR));
 try_collect!(too_short_data_hidden, Array, (1..=4).hide_size(), Err(UNDERFLOW_ERR));
 
-panics!(panic_on_invalid_iterator, Array::try_from_iter(InvalidIterator::DEFAULT), "Invalid size hint: InvalidSizeHint");
+panics!(
+    panic_on_invalid_iterator,
+    Array::try_from_iter(InvalidIterator::DEFAULT),
+    "Invalid size hint: InvalidSizeHint"
+);
 
 #[test]
 fn array_capacity() {

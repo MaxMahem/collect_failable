@@ -55,7 +55,7 @@ where
 
             match iter.ensure_empty() {
                 Ok(()) => Ok(array_vec),
-                Err(NotEmpty { iter, item }) => CollectError::collect_overflow::<Self>(iter, array_vec, item).into_err(),
+                Err(NotEmpty { iter, item }) => CollectError::overflow_empty::<Self>(iter, array_vec, item).into_err(),
             }
         })
     }
@@ -101,8 +101,8 @@ where
     fn try_extend(&mut self, iter: I) -> Result<(), Self::Error> {
         let iter = iter.into_iter();
 
-        ExtendError::ensure_fits_into(iter, self)
-            .and_then(|mut iter| iter.try_for_each(|item| self.try_extend_one(item)).map_err(|err| ExtendError::new(iter, err)))
+        let mut iter = ExtendError::ensure_fits_into(iter, self)?;
+        iter.try_for_each(|item| self.try_extend_one(item)).map_err(|err| ExtendError::new(iter, err))
     }
 }
 
@@ -150,7 +150,7 @@ where
             let len = self.len();
 
             iter.try_for_each(|item| self.try_push(item))
-                .map_err(|err| CollectError::overflow_remaining_cap(iter, self.drain(len..).collect(), err.element(), self))
+                .map_err(|err| CollectError::overflow_remaining(iter, self.drain(len..).collect(), err.element(), self))
         })
     }
 }

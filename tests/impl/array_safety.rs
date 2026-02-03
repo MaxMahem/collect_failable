@@ -56,7 +56,8 @@ fn drop_safety_failure_too_many() {
     {
         let items: Vec<DropTracker> = (0..4).map(|_| drop_tracker.clone()).collect();
         // Use HideSize to ensure we hit the runtime check
-        <[DropTracker; 3]>::try_from_iter(items.into_iter().hide_size()).expect_err("Should have failed to collect array");
+        <[DropTracker; 3]>::try_from_iter(items.into_iter().hide_size())
+            .expect_err("Should have failed to collect array");
         // All items consumed (3 for array) should be dropped
         assert_eq!(drop_tracker.count(), 4);
     }

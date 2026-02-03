@@ -60,7 +60,7 @@ where
 
         CollectError::ensure_fits_in::<Self>(into_iter.into_iter()).and_then(|mut iter| {
             match iter.try_for_each(|item| partial_array.try_push(item).map(drop)) {
-                Err(item) => CollectError::collect_overflow::<[T; N]>(iter, partial_array, item).into_err(),
+                Err(item) => CollectError::overflow_empty::<[T; N]>(iter, partial_array, item).into_err(),
                 Ok(()) => partial_array
                     .try_into()
                     .map_err(|IntoArrayError { partial_array, error }| CollectError::new(iter, partial_array, error)),

@@ -248,7 +248,7 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// # use collect_failable::errors::CollectError;
     /// # use arrayvec::ArrayVec;
     /// let collection = ArrayVec::<_, 5>::from_iter([1, 2]);
-    /// let error = CollectError::overflow_remaining_cap(1..=3, [1, 2], 3, &collection);
+    /// let error = CollectError::overflow_remaining(1..=3, [1, 2], 3, &collection);
     ///
     /// assert_eq!(error.remain, 1..=3);
     /// assert_eq!(error.collected, [1, 2]);
@@ -256,7 +256,7 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// assert_eq!(error.error.kind, CapacityErrorKind::Overflow { overflow: 3 });
     /// ```
     #[must_use]
-    pub fn overflow_remaining_cap<Col: RemainingCap>(remain: I, collected: C, overflow: I::Item, collection: &Col) -> Self {
+    pub fn overflow_remaining<Col: RemainingCap>(remain: I, collected: C, overflow: I::Item, collection: &Col) -> Self {
         Self::overflow(remain, collected, overflow, collection.remaining_cap())
     }
 
@@ -285,7 +285,7 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// # use collect_failable::errors::capacity::{CapacityError, CapacityErrorKind};
     /// # use collect_failable::errors::types::SizeHint;
     /// # use collect_failable::errors::CollectError;
-    /// let error = CollectError::collect_overflow::<[i32; 2]>(1..=3, [1, 2], 3);
+    /// let error = CollectError::overflow_empty::<[i32; 2]>(1..=3, [1, 2], 3);
     ///
     /// assert_eq!(error.remain, 1..=3);
     /// assert_eq!(error.collected, [1, 2]);
@@ -293,7 +293,7 @@ impl<I: Iterator, C> CollectError<I, C, CapacityError<I::Item>> {
     /// assert_eq!(error.error.kind, CapacityErrorKind::Overflow { overflow: 3 });
     /// ```
     #[must_use]
-    pub fn collect_overflow<Col: FixedCap>(iter: I, collected: C, overflow: I::Item) -> Self {
+    pub fn overflow_empty<Col: FixedCap>(iter: I, collected: C, overflow: I::Item) -> Self {
         Self::overflow(iter, collected, overflow, Col::CAP)
     }
 
