@@ -1,3 +1,5 @@
+<!-- markdownlint-disable no-inline-html table_allowed_elements br -->
+
 # `collect_failable`
 
 [![Build](https://github.com/MaxMahem/collect_failable/actions/workflows/build.yml/badge.svg)](https://github.com/MaxMahem/collect_failable/actions/workflows/build.yml)
@@ -25,7 +27,7 @@ Additionally, several implementations are provided for common and popular contai
 
 ## Error Recovery
 
-Implementations from this crate make a special emphasis on being able to recover all data in the case of collection or extension failure. The [`CollectError`](https://docs.rs/collect_failable/latest/collect_failable/errors/struct.CollectError.html) type will contain both the (potentially partially iterated) iterator, the items collected up to the point of failure, and the item that caused the failure, and can be converted back into an iterator if desired.
+Implementations from this crate make a special emphasis on being able to recover all data in the case of collection or extension failure. The [`CollectError`](https://docs.rs/collect_failable/latest/collect_failable/errors/struct.CollectError.html) and [`ExtendError`](https://docs.rs/collect_failable/latest/collect_failable/errors/struct.ExtendError.html) types will contain both the (potentially partially iterated) iterator, the items collected up to the point of failure (if any), and the item that caused the failure (if any), and can be converted back into an iterator if desired.
 
 ## Features
 
@@ -34,7 +36,7 @@ This crate provides the following optional features:
 | Feature | Description | Dependencies |
 | :--- | :--- | :--- |
 | **Default** | Default features of the crate | `alloc`, `std`, `unsafe`, `tuples` |
-| `alloc` | Enables support for allocation-dependent types (`BTreeMap`, `BTreeSet`) and built-in error types. | - |
+| `alloc` | Enables support for allocation-dependent types (`BTreeMap`, `BTreeSet`). | - |
 | `std` | Enables standard library support, including `HashMap` and `HashSet` implementations. When disabled, the crate is `no_std` compatible. | `alloc` |
 | `unsafe` | Enables `TryFromIterator` implementations for arrays using unsafe code. | - |
 | `tuples` | Enables tuple extension ([`TryExtend`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryExtend.html) for tuples) and [`TryUnzip`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryUnzip.html) trait. | [`either`](https://crates.io/crates/either) |
@@ -124,22 +126,12 @@ assert_eq!(chars, HashSet::from(['a', 'b', 'c']));
 
 ## Implementations
 
-Implementations for various containers are provided.
-
-- [HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html), [HashSet](https://doc.rust-lang.org/std/collections/struct.HashSet.html) (feature `std`, enabled by default)
-- [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html), [BTreeSet](https://doc.rust-lang.org/std/collections/struct.BTreeSet.html) (feature `alloc`, enabled by default)
-- [ArrayVec](https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html) (feature `arrayvec`)
-- [hashbrown::HashMap](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html), [hashbrown::HashSet](https://docs.rs/hashbrown/latest/hashbrown/struct.HashSet.html) (feature `hashbrown`)
-- [indexmap::IndexMap](https://docs.rs/indexmap/latest/indexmap/), [indexmap::IndexSet](https://docs.rs/indexmap/latest/indexmap/) (feature `indexmap`)
-
-### Tuples
-
-Tuples of arity 2 implement [`TryExtend`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryExtend.html) when their inner types do (requires feature `tuples`, enabled by default). For constructing tuple collections from `IntoIterator` [`TryUnzip`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryUnzip.html) is available.
-
-### Arrays
-
-Arrays implement [`TryFromIterator`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryFromIterator.html) for `IntoIterator` that yield exactly the right number of elements. This uses `unsafe` internally and is gated behind the `unsafe` feature (enabled by default).
-
-### Result
-
-[`TryFromIterator`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryFromIterator.html) is implemented for `Result<C, E>`, where `C` implements [`TryFromIterator<T>`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryFromIterator.html), similar to the [`FromIterator`](https://doc.rust-lang.org/std/result/enum.Result.html#impl-FromIterator%3CResult%3CA,+E%3E%3E-for-Result%3CV,+E%3E) implementation for `Result`. This allows short-circuiting collection of failable values into a container whose construction is also failable.
+| Feature | Description |
+| :--- | :--- |
+| `std` | `TryFromIterator` and `TryExtend` family of traits for [`HashMap`](https://doc.rust-lang.org/std/collections/struct.HashMap.html) and [`HashSet`](https://doc.rust-lang.org/std/collections/struct.HashSet.html). |
+| `alloc` | `TryFromIterator` and `TryExtend` family of traits for [`BTreeMap`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html) and [`BTreeSet`](https://doc.rust-lang.org/std/collections/struct.BTreeSet.html).<br>`TryFromIterator` for iterators of `Result<T, E>` |
+| `arrayvec` | `TryFromIterator` and `TryExtend` family of traits for [`ArrayVec`](https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html). |
+| `hashbrown` | `TryFromIterator` and `TryExtend` family of traits for [`HashMap`](https://docs.rs/hashbrown/latest/hashbrown/struct.HashMap.html) and [`HashSet`](https://docs.rs/hashbrown/latest/hashbrown/struct.HashSet.html). |
+| `indexmap` | `TryFromIterator` and `TryExtend` family of traits for [`IndexMap`](https://docs.rs/indexmap/latest/indexmap/struct.IndexMap.html) and [`IndexSet`](https://docs.rs/indexmap/latest/indexmap/struct.IndexSet.html). |
+| `tuples` | `TryExtend` and `TryUnzip` for Tuples of arity 2. |
+| `unsafe` | `TryFromIterator` for Arrays. |

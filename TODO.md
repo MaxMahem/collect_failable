@@ -10,4 +10,5 @@
 - [ ] Consider spinning of Capacity trait into its own crate, or as a part of `size_hinter` crate.
 - [ ] Add more implementations.
   - `TinyVec`
+- [ ] Investigate a no-`RC` version of `TryFromIterator` for `Result<T, E>`. Could `RefCell` alone be used?
   
