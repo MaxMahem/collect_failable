@@ -82,7 +82,7 @@ assert_eq!(map, HashMap::from([(1, "a"), (2, "b")]));
 
 ### [`TryExtend`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryExtend.html) and [`TryExtendSafe`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryExtendSafe.html)
 
-Extend an existing container with items that may violate its invariants. Two different trait exposes two styles of error behavior:
+Extend an existing container with items that may violate its invariants. Two different traits expose two styles of error behavior:
 
 - [`TryExtendSafe`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryExtendSafe.html) – **strong guarantee** On an error, the container must remain unchanged.
 - [`TryExtend`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryExtend.html) – **basic guarantee** The container may have partially ingested items, but must remain valid.
@@ -104,7 +104,7 @@ assert_eq!(map, HashMap::from([(1, 2), (2, 3)]));
 
 ### [`TryExtendOne`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryExtendOne.html)
 
-Extend a collection with a single item. This trait always provides a **strong guarantee**. On failure, the collection remains unchanged. Implemented as a seperate trait with no default implementation due to limitations imposed by the trait definition.
+Extend a collection with a single item. This trait always provides a **strong guarantee**. On failure, the collection remains unchanged. Implemented as a separate trait with no default implementation due to limitations imposed by the trait definition.
 
 ### [`TryUnzip`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryUnzip.html)
 
@@ -134,7 +134,7 @@ Implementations for various containers are provided.
 
 ### Tuples
 
-Tuples of arity 2 implement [`TryExtend`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryExtend.html) when their inner types do (requires feature `tuples`, enabled by default). For constructing tuple collections from `IntoIterator` [`TryUnzip`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryUnzip.html) is available.
+Tuples of arity 2 implement [`TryExtend`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryExtend.html) when their inner types do (requires feature `tuples`, enabled by default). For constructing tuple collections from an `IntoIterator`, [`TryUnzip`](https://docs.rs/collect_failable/latest/collect_failable/trait.TryUnzip.html) is available.
 
 ### Arrays
 

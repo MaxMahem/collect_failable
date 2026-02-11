@@ -1,9 +1,9 @@
 #[cfg(doc)]
 use std::collections::HashMap;
 
-/// Tries to convert a [`IntoIterator`] into a container that may fail to be constructed.
+/// Tries to convert an [`IntoIterator`] into a container that may fail to be constructed.
 ///
-/// This trait is similar to [`FromIterator`], but can uphold a containers invariant and
+/// This trait is similar to [`FromIterator`], but can uphold a container's invariant and
 /// returns an [`Err`] if it would be violated. And like with [`Iterator::collect`],
 /// containers implementing this trait can be collected into via
 /// [`TryCollectEx::try_collect_ex`].
@@ -19,9 +19,9 @@ pub trait TryFromIterator<I: IntoIterator>: Sized {
     /// The error that may occur when converting the iterator into the container.
     type Error;
 
-    /// Tries to converts an iterator into a container that may fail to be constructed.
+    /// Tries to convert an iterator into a container that may fail to be constructed.
     ///
-    /// Provided implementations all short-ciruit and error early if a constraint is violated,
+    /// Provided implementations all short-circuit and error early if a constraint is violated,
     /// but implementors are not required to do so.
     ///
     /// # Errors
@@ -52,11 +52,11 @@ pub trait TryFromIterator<I: IntoIterator>: Sized {
 ///
 /// This trait allows an iterator to return any collection that can be created via
 /// [`TryFromIterator`], similar to [`Iterator::collect`] and [`FromIterator::from_iter`],
-/// but with the ability to return a implementation specific error if the creation of the contaienr
+/// but with the ability to return an implementation-specific error if the creation of the container
 /// fails some invariant.
 #[sealed::sealed]
 pub trait TryCollectEx: Iterator {
-    /// Tries to collects the iterator into a container, returning an error if construcing the
+    /// Tries to collect the iterator into a container, returning an error if constructing the
     /// container fails.
     ///
     /// Exact behavior of this method depends on the container implementation, but generally it
