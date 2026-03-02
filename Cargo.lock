@@ -635,9 +635,9 @@ dependencies = [
 
 [[package]]
 name = "subdef"
-version = "0.1.2"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1b129909a0e58e1eb7f4e16318e3a4db537325f7dc3fcd0ee7c47f62c82ff80"
+checksum = "7269deaa0be1a2746d2d2d276cf77ac0378c1f90a9124fcbcb958d72151100c9"
 dependencies = [
  "proc-macro2",
  "quote",

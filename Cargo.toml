@@ -33,7 +33,7 @@ derive_more = { version = "2.1.1", features = ["constructor", "deref", "display"
 indexmap = { version = "2.13.0", optional = true }
 arrayvec = { version = "0.7.6", optional = true }
 sealed = "0.6.0"
-subdef = "0.1.2"
+subdef = "0.1.7"
 fluent_result = "0.10.1"
 no_drop = "0.4.1"
 display_as_debug = "0.5.1"
